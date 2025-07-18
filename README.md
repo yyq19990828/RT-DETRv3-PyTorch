@@ -62,3 +62,7 @@ RT-DETRv3 是一个基于 Transformer 的端到端目标检测器，具有以下
 ## 许可证
 
 Apache License 2.0
+
+## 更新日志
+
+- 2025-07-18：初始版本发布，完成 PaddlePaddle 到 PyTorch 的初步迁移，支持 COCO/LVIS 数据集、ResNet 系列骨干、ONNX 导出、完整训练/推理/评估/导出流程。(尚未验证，仍需完善)
