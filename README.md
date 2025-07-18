@@ -65,4 +65,5 @@ Apache License 2.0
 
 ## 更新日志
 
+- 2025-07-18：添加 Claude Code 集成，包括自定义命令 (`commit-info`, `execute-prp`, `generate-command`, `generate-prp`) 和项目级指令，以支持自动化开发工作流。
 - 2025-07-18：初始版本发布，完成 PaddlePaddle 到 PyTorch 的初步迁移，支持 COCO/LVIS 数据集、ResNet 系列骨干、ONNX 导出、完整训练/推理/评估/导出流程。(尚未验证，仍需完善)
