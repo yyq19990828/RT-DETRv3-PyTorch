@@ -7,15 +7,15 @@ import torch
 import numpy as np
 from unittest.mock import MagicMock
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from nn.backbone.resnet import ResNet, ResNetVD
-from nn.neck.hybrid_encoder import HybridEncoder
-from nn.transformer.rtdetr_transformerv3 import RTDETRTransformerV3
-from nn.head.rtdetr_head import RTDETRHead
-from nn.criterion.rtdetr_criterion import RTDETRCriterion, HungarianMatcher
-from zoo.rtdetrv3.rtdetrv3 import RTDETRv3
+from src.nn.backbone.resnet import ResNet, ResNetVD
+from src.nn.neck.hybrid_encoder import HybridEncoder
+from src.nn.transformer.rtdetr_transformerv3 import RTDETRTransformerV3
+from src.nn.head.rtdetr_head import RTDETRHead
+from src.nn.criterion.rtdetr_criterion import RTDETRCriterion, HungarianMatcher
+from src.zoo.rtdetrv3.rtdetrv3 import RTDETRv3
 
 
 class TestResNetBackbone:

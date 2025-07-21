@@ -1,0 +1,109 @@
+# Data Loading Configuration for RT-DETR
+# Converted from RT-DETRv3-paddle rtdetr_reader.yml
+
+# Worker configuration
+num_workers: 4
+
+# Training Data Configuration
+train_dataloader:
+  type: DataLoader
+  dataset:
+    transforms:
+      # Sample-level transforms
+      - type: LoadImageFromFile
+      - type: LoadAnnotations
+        with_bbox: true
+      - type: RandomDistort
+        prob: 0.8
+        brightness_delta: 32
+        contrast_range: [0.5, 1.5]
+        saturation_range: [0.5, 1.5]
+        hue_delta: 18
+      - type: Expand
+        prob: 0.5
+        mean: [123.675, 116.28, 103.53]  # fill_value
+        ratio_range: [1, 4]
+      - type: MinIoURandomCrop
+        prob: 0.8
+        min_ious: [0.1, 0.3, 0.7, 0.9]
+        min_crop_size: 0.3
+      - type: RandomFlip
+        prob: 0.5
+        direction: horizontal
+      
+      # Batch-level transforms  
+      - type: BatchRandomResize
+        target_sizes: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+        random_size: true
+        random_interp: true
+        keep_ratio: false
+      - type: Normalize
+        mean: [0., 0., 0.]
+        std: [1., 1., 1.]
+        norm_type: none
+      - type: BboxFormatConvert
+        src_format: xyxy
+        dst_format: xywh
+      - type: ToTensor
+      - type: PadGT
+        only_origin_box: true
+  
+  batch_size: 16
+  shuffle: true
+  num_workers: 4
+  pin_memory: true
+  drop_last: true
+  collate_fn: batch_collate  # collate_batch: false equivalent
+
+# Evaluation Data Configuration  
+val_dataloader:
+  type: DataLoader
+  dataset:
+    transforms:
+      - type: LoadImageFromFile
+      - type: LoadAnnotations
+        with_bbox: true
+      - type: Resize
+        img_scale: [640, 640]
+        keep_ratio: false
+        interpolation: bilinear  # interp: 2
+      - type: Normalize
+        mean: [0., 0., 0.]
+        std: [1., 1., 1.]
+        norm_type: none
+      - type: ToTensor
+  
+  batch_size: 16
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+
+# Test Data Configuration
+test_dataloader:
+  type: DataLoader
+  dataset:
+    inputs_def:
+      image_shape: [3, 640, 640]
+    transforms:
+      - type: LoadImageFromFile
+      - type: LoadAnnotations
+        with_bbox: true
+      - type: Resize
+        img_scale: [640, 640]
+        keep_ratio: false
+        interpolation: bilinear  # interp: 2
+      - type: Normalize
+        mean: [0., 0., 0.]
+        std: [1., 1., 1.]
+        norm_type: none
+      - type: ToTensor
+  
+  batch_size: 1
+  shuffle: false
+  num_workers: 1
+  pin_memory: true
+  drop_last: false
+
+# Memory optimization
+use_shared_memory: true

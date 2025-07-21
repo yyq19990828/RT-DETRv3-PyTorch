@@ -1,0 +1,132 @@
+# COCO Detection Dataset Configuration
+# Converted from RT-DETRv3-paddle coco_detection.yml
+
+# Dataset metadata
+metric: COCO
+num_classes: 80
+dataset_name: "COCO Detection"
+
+# Base dataset directory - can be overridden in specific configs
+dataset_dir: ${COCO_ROOT:-./datasets/COCO}
+
+# Training Dataset Configuration
+train_dataset:
+  type: CocoDataset
+  image_dir: train2017
+  ann_file: annotations/instances_train2017.json
+  dataset_dir: ${dataset_dir}
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
+  
+  # Data transformations for training
+  transforms:
+    - type: LoadImageFromFile
+    - type: LoadAnnotations
+      with_bbox: true
+      with_mask: false
+      with_seg: false
+    - type: RandomResize
+      sizes: [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+      max_size: 1333
+    - type: RandomFlip
+      prob: 0.5
+      direction: horizontal
+    - type: Normalize
+      mean: [123.675, 116.28, 103.53]
+      std: [58.395, 57.12, 57.375]
+      to_rgb: true
+    - type: Pad
+      size_divisor: 1
+    - type: DefaultFormatBundle
+    - type: Collect
+      keys: ['img', 'gt_bboxes', 'gt_labels']
+
+# Evaluation Dataset Configuration
+val_dataset:
+  type: CocoDataset
+  image_dir: val2017
+  ann_file: annotations/instances_val2017.json
+  dataset_dir: ${dataset_dir}
+  allow_empty: true
+  
+  # Data transformations for validation
+  transforms:
+    - type: LoadImageFromFile
+    - type: LoadAnnotations
+      with_bbox: true
+      with_mask: false
+      with_seg: false
+    - type: Resize
+      img_scale: [640, 640]
+      keep_ratio: false
+    - type: RandomFlip
+      prob: 0.0
+    - type: Normalize
+      mean: [123.675, 116.28, 103.53]
+      std: [58.395, 57.12, 57.375]
+      to_rgb: true
+    - type: Pad
+      size_divisor: 1
+    - type: DefaultFormatBundle
+    - type: Collect
+      keys: ['img', 'gt_bboxes', 'gt_labels']
+
+# Test Dataset Configuration
+test_dataset:
+  type: CocoDataset
+  image_dir: val2017  # Use val for testing if no test set
+  ann_file: annotations/instances_val2017.json
+  dataset_dir: ${dataset_dir}
+  test_mode: true
+  
+  # Data transformations for testing/inference
+  transforms:
+    - type: LoadImageFromFile
+    - type: MultiScaleFlipAug
+      img_scale: [640, 640]
+      flip: false
+      transforms:
+        - type: Resize
+          keep_ratio: false
+        - type: RandomFlip
+          prob: 0.0
+        - type: Normalize
+          mean: [123.675, 116.28, 103.53]
+          std: [58.395, 57.12, 57.375]
+          to_rgb: true
+        - type: Pad
+          size_divisor: 1
+        - type: DefaultFormatBundle
+        - type: Collect
+          keys: ['img']
+
+# Evaluation configuration
+evaluator:
+  type: CocoEvaluator
+  ann_file: ${dataset_dir}/annotations/instances_val2017.json
+  metric: bbox
+  format_only: false
+  
+# Data loader configurations
+dataloader_config:
+  train:
+    batch_size: 16
+    shuffle: true
+    num_workers: 4
+    pin_memory: true
+    drop_last: true
+    persistent_workers: true
+    
+  val:
+    batch_size: 16
+    shuffle: false
+    num_workers: 4
+    pin_memory: true
+    drop_last: false
+    persistent_workers: true
+    
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 1
+    pin_memory: true
+    drop_last: false

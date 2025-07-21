@@ -11,11 +11,11 @@ import torchvision
 from typing import Tuple, List, Dict, Any
 import json
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.config import load_config
-from core.workspace import create
+from src.core.config import load_config
+from src.core.workspace import create
 
 
 def parse_args():

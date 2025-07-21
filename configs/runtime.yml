@@ -1,0 +1,127 @@
+# Runtime Configuration for RT-DETRv3 PyTorch
+# Converted from RT-DETRv3-paddle runtime.yml
+
+# Device Configuration
+device_config:
+  use_gpu: true
+  use_xpu: false  # Intel XPU support
+  use_mlu: false  # MLU support
+  use_npu: false  # NPU support
+  device: "cuda"  # Primary device
+  gpu_ids: [0]    # GPU device IDs to use
+  
+# Logging Configuration  
+logging:
+  log_iter: 20           # Print training info every N iterations
+  log_level: "INFO"      # Logging level: DEBUG, INFO, WARNING, ERROR
+  log_file: null         # Log to file if specified, otherwise console only
+  log_config: null       # Detailed logging config file
+
+# Checkpoint Configuration
+checkpoint:
+  save_dir: "output"     # Directory to save checkpoints
+  snapshot_epoch: 1      # Save checkpoint every N epochs
+  max_keep_ckpts: 5      # Maximum number of checkpoints to keep
+  save_optimizer: true   # Save optimizer state in checkpoint
+  resume_from: null      # Path to resume training from
+  load_from: null        # Path to load pretrained model from
+  auto_resume: false     # Automatically resume from latest checkpoint
+
+# Model Analysis
+model_analysis:
+  print_flops: false     # Print model FLOPs
+  print_params: false    # Print model parameters count
+  print_model: false     # Print model architecture
+  
+# Training Configuration
+training:
+  # Mixed precision training
+  use_amp: false         # Use Automatic Mixed Precision
+  amp_level: "O1"        # AMP optimization level
+  
+  # Gradient settings
+  clip_grad_norm: 0.1    # Gradient clipping max norm
+  accumulate_grad_batches: 1  # Gradient accumulation steps
+  
+  # Synchronization
+  sync_bn: false         # Use synchronized batch normalization
+  find_unused_parameters: false  # Find unused parameters in DDP
+  
+  # Reproducibility
+  deterministic: false   # Use deterministic algorithms
+  benchmark: true        # Enable cudnn benchmark for better performance
+  
+# Validation Configuration  
+validation:
+  val_interval: 1        # Validate every N epochs
+  val_begin: 1           # Start validation from epoch N
+  by_epoch: true         # Validate by epoch rather than by iteration
+  save_best: "auto"      # Save best model based on metric
+  
+# Export Configuration
+export:
+  # Model export settings
+  post_process: true     # Include post-processing in exported model
+  nms: true             # Include NMS in exported model
+  benchmark: false      # Benchmark mode (excludes post-process and NMS)
+  fuse_conv_bn: false   # Fuse Conv and BatchNorm layers
+  
+  # Export formats
+  formats: ["onnx", "torchscript"]  # Supported export formats
+  
+  # ONNX specific settings
+  onnx:
+    opset_version: 11    # ONNX opset version
+    input_names: ["images"]
+    output_names: ["scores", "labels", "boxes"]
+    dynamic_axes:
+      images: {0: "batch_size"}
+      scores: {0: "batch_size"}
+      labels: {0: "batch_size"}  
+      boxes: {0: "batch_size"}
+      
+  # TorchScript specific settings
+  torchscript:
+    method: "trace"      # "trace" or "script"
+    example_inputs: null # Example inputs for tracing
+
+# Environment Configuration
+environment:
+  # CUDA settings
+  cuda_visible_devices: null  # Override CUDA_VISIBLE_DEVICES
+  
+  # Memory settings
+  pin_memory: true       # Pin memory for data loading
+  persistent_workers: true  # Keep data loading workers alive
+  
+  # Multiprocessing
+  workers_per_gpu: 2     # Number of data loading workers per GPU
+  
+# Experiment Configuration
+experiment:
+  name: "rtdetrv3_experiment"  # Experiment name
+  tags: []               # Experiment tags
+  notes: ""              # Experiment notes
+  
+  # Weights & Biases integration
+  wandb:
+    enabled: false       # Enable W&B logging
+    project: "rt-detrv3" # W&B project name
+    entity: null        # W&B entity name
+    
+  # TensorBoard integration  
+  tensorboard:
+    enabled: true        # Enable TensorBoard logging
+    log_dir: "runs"      # TensorBoard log directory
+    
+# Performance Optimization
+performance:
+  # Data loading optimization
+  prefetch_factor: 2     # Number of samples loaded in advance
+  
+  # Memory optimization
+  empty_cache_interval: 50  # Empty CUDA cache every N iterations
+  
+  # Compilation (PyTorch 2.0+)
+  compile_model: false   # Use torch.compile
+  compile_backend: "inductor"  # Compilation backend

@@ -1,0 +1,117 @@
+# RT-DETRv3 ResNet-50 VD 6x LVIS Configuration
+# Converted from RT-DETRv3-paddle rtdetrv3_r50vd_6x_lvis.yml
+
+# Include base configurations
+_base_: 
+  - _base_/optimizer_6x.yml
+  - _base_/rtdetr_reader.yml
+  - _base_/rtdetrv3_r50vd.yml
+
+# Model Configuration Override for LVIS
+model:
+  type: RTDETRv3_R50
+  num_classes: 1203  # LVIS has 1203 categories
+  aux_loss: true
+  
+  # Transformer - Simplified noise configuration for LVIS
+  transformer:
+    type: RTDETRTransformerV3
+    num_classes: 1203
+    hidden_dim: 256
+    num_queries: 300
+    num_decoder_layers: 6
+    nhead: 8
+    dim_feedforward: 1024
+    dropout: 0.0
+    activation: relu
+    position_embed_type: sine
+    feat_strides: [8, 16, 32]
+    num_levels: 3
+    num_denoising: 100
+    label_noise_ratio: 0.5
+    box_noise_scale: 1.0
+    learnt_init_query: false
+    # Simplified noise configuration for LVIS
+    num_noises: 1
+    num_noise_queries: [300]
+    num_noise_denoising: 300
+    
+  # Detection Head
+  head:
+    type: RTDETRHead
+    num_classes: 1203
+    hidden_dim: 256
+    num_queries: 300
+    num_decoder_layers: 6
+    aux_loss: true
+    
+  # Post Processor
+  post_processor:
+    type: RTDETRPostProcessor
+    num_classes: 1203
+    num_queries: 300
+    use_focal_loss: true
+    use_nms: false
+    score_threshold: 0.0
+    max_detections: 300
+
+# Loss Configuration for LVIS
+criterion:
+  type: RTDETRCriterion
+  num_classes: 1203
+  matcher:
+    type: HungarianMatcher
+    cost_class: 1.0
+    cost_bbox: 5.0
+    cost_giou: 2.0
+  weight_dict:
+    loss_ce: 1.0
+    loss_bbox: 5.0
+    loss_giou: 2.0
+  losses: ['labels', 'boxes', 'cardinality']
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  aux_loss: true
+
+# Dataset Configuration - LVIS
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: LvisDataset
+    image_dir: train2017
+    ann_file: annotations/lvis_v1_train.json
+  batch_size: 16
+  shuffle: true
+  num_workers: 4
+  pin_memory: true
+  drop_last: true
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: LvisDataset
+    image_dir: val2017
+    ann_file: annotations/lvis_v1_val.json
+  batch_size: 16
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+
+# Evaluation Settings for LVIS
+evaluator:
+  type: LvisEvaluator
+
+# Runtime Settings - More frequent snapshots for LVIS
+print_freq: 50
+checkpoint_freq: 2  # Save every 2 epochs for LVIS
+output_dir: "./outputs/rtdetrv3_r50vd_6x_lvis"
+device: "cuda"
+seed: 42
+
+# Model specific settings
+use_focal_loss: true
+eval_size: [640, 640]
+norm_type: sync_bn
+use_ema: true
+ema_decay: 0.9999

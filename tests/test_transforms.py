@@ -8,10 +8,10 @@ import numpy as np
 from PIL import Image
 from unittest.mock import patch, MagicMock
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from data.transforms import (
+from src.data.transforms import (
     Compose, ToTensor, Normalize, Resize, RandomResize, RandomHorizontalFlip,
     RandomVerticalFlip, RandomCrop, ColorJitter, GaussianBlur, RandomPhotometricDistort,
     PadToSize, build_transforms

@@ -4,53 +4,80 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Installation
+### 🔄 Project Awareness & Context
 
-Install the required dependencies using the `requirements.txt` file:
+- **Always read `PLANNING.md`** at the start of a new conversation to understand the project's architecture, goals, style, and constraints.
+- **Consult `TASK.md` before starting a new task:** Search for any 'Not Started' tasks and identify the one that best matches the current assignment. If a match is found, follow its TODO list, marking items as complete (`[x]`) as you progress. If no suitable task exists, create a new one using the standard format, including a TODO list, and then begin work.
+- **Use consistent naming conventions, file structure, and architecture patterns** as described in `PLANNING.md`.
+- **Use venv_linux** (the virtual environment) whenever executing Python commands, including for unit tests.
 
-```bash
-pip install -r requirements.txt
-```
+### 🧱 Code Structure & Modularity
 
-### Common Operations
+- **Never create a file longer than 500 lines of code.** If a file approaches this limit, refactor by splitting it into modules or helper files.
+- **Organize code into clearly separated modules**, grouped by feature or responsibility.
+  For agents this looks like:
+  - `agent.py` - Main agent definition and execution logic 
+  - `tools.py` - Tool functions used by the agent 
+  - `prompts.py` - System prompts
+- **Use clear, consistent imports** (prefer relative imports within packages).
+- **Use clear, consistent imports** (prefer relative imports within packages).
+- **Use python_dotenv and load_env()** for environment variables.
 
-The main entry points for using the model are located in the `tools/` directory.
+### 🧪 Testing & Reliability
 
-*   **Training**:
-    ```bash
-    python tools/train.py --config configs/rtdetrv3_r50vd_6x_coco.yml
-    ```
+- **Always create Pytest unit tests for new features** (functions, classes, routes, etc).
+- **After updating any logic**, check whether existing unit tests need to be updated. If so, do it.
+- **Tests should live in a `/tests` folder** mirroring the main app structure.
+  - Include at least:
+    - 1 test for expected use
+    - 1 edge case
+    - 1 failure case
 
-*   **Evaluation**:
-    ```bash
-    python tools/eval.py --config configs/rtdetrv3_r50vd_6x_coco.yml --checkpoint outputs/rtdetrv3_r50vd_6x_coco/best.pth
-    ```
+### ✅ Task Completion
 
-*   **Inference**:
-    ```bash
-    python tools/infer.py --config configs/rtdetrv3_r50vd_6x_coco.yml --checkpoint outputs/rtdetrv3_r50vd_6x_coco/best.pth --image test_image.jpg
-    ```
+- **Mark completed tasks in `TASK.md`** immediately after finishing them.
+- Add new sub-tasks or TODOs discovered during development to `TASK.md` under a “Discovered During Work” section.
 
-*   **Exporting to ONNX**:
-    ```bash
-    python tools/export.py --config configs/rtdetrv3_r50vd_6x_coco.yml --checkpoint outputs/rtdetrv3_r50vd_6x_coco/best.pth --format onnx
-    ```
+### 📎 Style & Conventions
 
-### Testing
+- **Use Python** as the primary language.
 
-This project contains tests in the `tests/` directory. Run tests using `pytest`:
+- **Follow PEP8**, use type hints, and format with `black`.
 
-```bash
-pytest
-```
+- **Use `pydantic` for data validation**.
 
-To run a specific test file:
+- Use `FastAPI` for APIs and `SQLAlchemy` or `SQLModel` for ORM if applicable.
 
-```bash
-pytest tests/test_model.py
-```
+- Write **docstrings for every function** using the Google style:
+  
+  ```python
+  def example():
+      """
+      Brief summary.
+  
+      Args:
+          param1 (type): Description.
+  
+      Returns:
+          type: Description.
+      """
+  ```
 
-## Architecture
+### 📚 Documentation & Explainability
+
+- **Update `README.md`** when new features are added, dependencies change, or setup steps are modified.
+- **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
+- When writing complex logic, **add an inline `# Reason:` comment** explaining the why, not just the what.
+
+### 🧠 AI Behavior Rules
+
+- **Never assume missing context. Ask questions if uncertain.**
+- **Never hallucinate libraries or functions** – only use known, verified Python packages.
+- **Always confirm file paths and module names** exist before referencing them in code or tests.
+- **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from `TASK.md`.
+
+
+### Architecture
 
 This repository is a PyTorch implementation of the RT-DETRv3 object detection model.
 

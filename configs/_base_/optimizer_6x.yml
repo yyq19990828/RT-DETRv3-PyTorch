@@ -1,0 +1,38 @@
+# Optimizer Configuration for 6x Training Schedule
+# Converted from RT-DETRv3-paddle optimizer_6x.yml
+
+# Training epochs for 6x schedule
+epoches: 72
+
+# Optimizer Configuration
+optimizer:
+  type: AdamW
+  lr: 0.0004  # base learning rate
+  weight_decay: 0.0001
+  # Parameter-specific learning rates
+  params:
+    - params: '^(?=.*backbone)(?!.*norm).*$'
+      lr: 0.00004  # 0.1x for backbone
+    - params: '^(?=.*norm).*$'
+      weight_decay: 0.0
+
+# Learning Rate Scheduler
+lr_scheduler:
+  type: MultiStepLR
+  milestones: [100]  # PiecewiseDecay milestones
+  gamma: 1.0
+  warmup:
+    type: linear
+    warmup_iters: 2000
+    warmup_ratio: 0.001  # start_factor
+
+# Gradient clipping
+clip_max_norm: 0.1
+
+# Training settings
+use_amp: false
+use_ema: true
+ema_decay: 0.9999
+ema_decay_type: "exponential"
+sync_bn: false
+find_unused_parameters: false

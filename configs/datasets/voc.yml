@@ -1,0 +1,151 @@
+# VOC Detection Dataset Configuration
+# Converted from RT-DETRv3-paddle voc.yml
+
+# Dataset metadata
+metric: VOC
+map_type: 11point
+num_classes: 20
+dataset_name: "Pascal VOC"
+
+# Base dataset directory - can be overridden in specific configs
+dataset_dir: ${VOC_ROOT:-./datasets/VOC}
+
+# Training Dataset Configuration
+train_dataset:
+  type: VOCDataset
+  dataset_dir: ${dataset_dir}
+  ann_file: trainval.txt  # List of training images
+  label_list: label_list.txt  # Class names
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'difficult']
+  
+  # Data transformations for training
+  transforms:
+    - type: LoadImageFromFile
+    - type: LoadAnnotations
+      with_bbox: true
+      with_mask: false
+      with_seg: false
+      with_difficult: true
+    - type: RandomResize
+      sizes: [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+      max_size: 1333
+    - type: RandomFlip
+      prob: 0.5
+      direction: horizontal
+    - type: Normalize
+      mean: [123.675, 116.28, 103.53]
+      std: [58.395, 57.12, 57.375]
+      to_rgb: true
+    - type: Pad
+      size_divisor: 1
+    - type: DefaultFormatBundle
+    - type: Collect
+      keys: ['img', 'gt_bboxes', 'gt_labels', 'gt_bboxes_ignore']
+
+# Evaluation Dataset Configuration
+val_dataset:
+  type: VOCDataset
+  dataset_dir: ${dataset_dir}
+  ann_file: test.txt  # List of test images
+  label_list: label_list.txt  # Class names
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'difficult']
+  
+  # Data transformations for validation
+  transforms:
+    - type: LoadImageFromFile
+    - type: LoadAnnotations
+      with_bbox: true
+      with_mask: false
+      with_seg: false
+      with_difficult: true
+    - type: Resize
+      img_scale: [640, 640]
+      keep_ratio: false
+    - type: RandomFlip
+      prob: 0.0
+    - type: Normalize
+      mean: [123.675, 116.28, 103.53]
+      std: [58.395, 57.12, 57.375]
+      to_rgb: true
+    - type: Pad
+      size_divisor: 1
+    - type: DefaultFormatBundle
+    - type: Collect
+      keys: ['img', 'gt_bboxes', 'gt_labels', 'gt_bboxes_ignore']
+
+# Test Dataset Configuration
+test_dataset:
+  type: VOCDataset
+  dataset_dir: ${dataset_dir}
+  ann_file: test.txt
+  label_list: label_list.txt
+  test_mode: true
+  
+  # Data transformations for testing/inference
+  transforms:
+    - type: LoadImageFromFile
+    - type: MultiScaleFlipAug
+      img_scale: [640, 640]
+      flip: false
+      transforms:
+        - type: Resize
+          keep_ratio: false
+        - type: RandomFlip
+          prob: 0.0
+        - type: Normalize
+          mean: [123.675, 116.28, 103.53]
+          std: [58.395, 57.12, 57.375]
+          to_rgb: true
+        - type: Pad
+          size_divisor: 1
+        - type: DefaultFormatBundle
+        - type: Collect
+          keys: ['img']
+
+# Evaluation configuration
+evaluator:
+  type: VOCEvaluator
+  label_list: ${dataset_dir}/label_list.txt
+  metric: mAP
+  map_type: 11point  # 11-point interpolation
+  format_only: false
+  
+# Data loader configurations
+dataloader_config:
+  train:
+    batch_size: 16
+    shuffle: true
+    num_workers: 4
+    pin_memory: true
+    drop_last: true
+    persistent_workers: true
+    
+  val:
+    batch_size: 16
+    shuffle: false
+    num_workers: 4
+    pin_memory: true
+    drop_last: false
+    persistent_workers: true
+    
+  test:
+    batch_size: 1
+    shuffle: false
+    num_workers: 1
+    pin_memory: true
+    drop_last: false
+
+# VOC class names (20 classes)
+class_names: [
+  'aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
+  'bus', 'car', 'cat', 'chair', 'cow',
+  'diningtable', 'dog', 'horse', 'motorbike', 'person',
+  'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
+]
+
+# VOC specific settings
+voc_config:
+  # Include difficult examples in training but not in evaluation
+  filter_empty_gt: true
+  # Use 11-point interpolation for mAP calculation
+  use_07_metric: true

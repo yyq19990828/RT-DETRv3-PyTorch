@@ -1,0 +1,142 @@
+# RT-DETRv3 ResNet-18 VD 6x COCO Configuration
+# Converted from RT-DETRv3-paddle rtdetrv3_r18vd_6x_coco.yml
+
+# Include base configurations
+_base_: 
+  - _base_/optimizer_6x.yml
+  - _base_/rtdetr_reader.yml
+
+# Model Configuration
+model:
+  type: RTDETRv3_R18
+  num_classes: 80
+  aux_loss: true
+  
+  # Pretrained weights for ResNet18-VD
+  pretrain_weights: "https://download.pytorch.org/models/resnet18-f37072fd.pth"
+  
+  # Backbone - ResNet18 VD
+  backbone:
+    type: ResNetVD
+    depth: 18  # ResNet18
+    variant: d
+    return_idx: [1, 2, 3]  # res3, res4, res5
+    norm_type: bn
+    freeze_at: 0
+    freeze_stem_only: true
+    lr_mult_list: [0.1, 0.1, 0.1, 0.1]
+    num_stages: 4
+    out_channels: [64, 128, 256, 512]  # ResNet18 channels
+    
+  # Neck - HybridEncoder
+  neck:
+    type: HybridEncoder
+    in_channels: [128, 256, 512]  # ResNet18 output channels
+    feat_strides: [8, 16, 32]
+    hidden_dim: 256
+    use_encoder_idx: [2]
+    num_encoder_layers: 1
+    nhead: 8
+    dim_feedforward: 1024
+    dropout: 0.0
+    activation: gelu
+    expansion: 1.0
+    
+  # Transformer - RTDETRTransformerV3
+  transformer:
+    type: RTDETRTransformerV3
+    num_classes: 80
+    hidden_dim: 256
+    num_queries: 450  # More queries for R18 one-to-many
+    num_decoder_layers: 3  # Fewer layers for R18
+    nhead: 8
+    dim_feedforward: 1024
+    dropout: 0.0
+    activation: relu
+    position_embed_type: sine
+    feat_strides: [8, 16, 32]
+    num_levels: 3
+    num_denoising: 100
+    label_noise_ratio: 0.5
+    box_noise_scale: 1.0
+    learnt_init_query: false
+    
+  # Detection Head
+  head:
+    type: RTDETRHead
+    num_classes: 80
+    hidden_dim: 256
+    num_queries: 450
+    num_decoder_layers: 3
+    aux_loss: true
+    
+  # Post Processor
+  post_processor:
+    type: RTDETRPostProcessor
+    num_classes: 80
+    num_queries: 450
+    use_focal_loss: true
+    use_nms: false
+    score_threshold: 0.0
+    max_detections: 300
+
+# Loss Configuration
+criterion:
+  type: RTDETRCriterion
+  num_classes: 80
+  matcher:
+    type: HungarianMatcher
+    cost_class: 1.0
+    cost_bbox: 5.0
+    cost_giou: 2.0
+  weight_dict:
+    loss_ce: 1.0
+    loss_bbox: 5.0
+    loss_giou: 2.0
+  losses: ['labels', 'boxes', 'cardinality']
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  aux_loss: true
+
+# Dataset Configuration - COCO
+train_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDataset
+    image_dir: train2017
+    ann_file: annotations/instances_train2017.json
+  batch_size: 16
+  shuffle: true
+  num_workers: 4
+  pin_memory: true
+  drop_last: true
+
+val_dataloader:
+  type: DataLoader
+  dataset:
+    type: CocoDataset
+    image_dir: val2017
+    ann_file: annotations/instances_val2017.json
+  batch_size: 16
+  shuffle: false
+  num_workers: 4
+  pin_memory: true
+  drop_last: false
+
+# Evaluation Settings
+evaluator:
+  type: CocoEvaluator
+
+# Runtime Settings
+print_freq: 50
+checkpoint_freq: 10
+output_dir: "./outputs/rtdetrv3_r18vd_6x_coco"
+device: "cuda"
+seed: 42
+
+# Model specific settings
+use_focal_loss: true
+eval_size: [640, 640]
+norm_type: sync_bn
+use_ema: true
+ema_decay: 0.9999

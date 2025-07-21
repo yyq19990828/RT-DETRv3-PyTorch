@@ -13,12 +13,12 @@ import json
 from typing import List, Dict, Any, Tuple
 import time
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.config import load_config
-from core.workspace import create
-from data.transforms import build_transforms
+from src.core.config import load_config
+from src.core.workspace import create
+from src.data.transforms import build_transforms
 
 
 def parse_args():

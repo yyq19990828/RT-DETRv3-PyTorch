@@ -1,0 +1,134 @@
+# RT-DETRv3 ResNet-50 VD Base Model Configuration
+# Converted from RT-DETRv3-paddle rtdetrv3_r50vd.yml
+
+# Model architecture
+model:
+  type: RTDETRv3
+  num_classes: 80  # Will be overridden by dataset-specific configs
+  aux_loss: true
+  
+  # Pretrained weights
+  pretrain_weights: "https://download.pytorch.org/models/resnet50-0676ba61.pth"
+  
+  # Backbone Configuration
+  backbone:
+    type: ResNetVD
+    depth: 50
+    variant: d
+    return_idx: [1, 2, 3]  # res3, res4, res5
+    norm_type: bn
+    freeze_at: 0
+    freeze_stem_only: true
+    lr_mult_list: [0.1, 0.1, 0.1, 0.1]  # Learning rate multipliers
+    num_stages: 4
+    
+  # Neck Configuration  
+  neck:
+    type: HybridEncoder
+    in_channels: [512, 1024, 2048]  # ResNet50 output channels
+    hidden_dim: 256
+    use_encoder_idx: [2]  # Only encode the last feature map
+    num_encoder_layers: 1
+    encoder_layer:
+      d_model: 256
+      nhead: 8
+      dim_feedforward: 1024
+      dropout: 0.0
+      activation: gelu
+    expansion: 1.0
+    feat_strides: [8, 16, 32]
+    
+  # Transformer Configuration
+  transformer:
+    type: RTDETRTransformerV3
+    hidden_dim: 256
+    num_queries: 300
+    position_embed_type: sine
+    feat_strides: [8, 16, 32]
+    num_levels: 3
+    nhead: 8
+    num_decoder_layers: 6
+    dim_feedforward: 1024
+    dropout: 0.0
+    activation: relu
+    num_denoising: 100
+    label_noise_ratio: 0.5
+    box_noise_scale: 1.0
+    learnt_init_query: false
+    num_noises: 0
+    num_noise_queries: []
+    num_noise_denoising: 100
+    
+  # Detection Head Configuration
+  head:
+    # Main DETR Head
+    detr_head:
+      type: DINOv3Head
+      hidden_dim: 256
+      num_classes: 80
+      o2m: 4  # one-to-many
+      aux_loss: true
+      use_focal_loss: true
+      
+    # Auxiliary O2M Head  
+    aux_o2m_head:
+      type: PPYOLOEHead
+      fpn_strides: [8, 16, 32]
+      grid_cell_scale: 5.0
+      grid_cell_offset: 0.5
+      static_assigner_epoch: 30
+      use_varifocal_loss: true
+      loss_weight:
+        class: 1.0
+        iou: 2.5
+        dfl: 0.5
+      static_assigner:
+        type: ATSSAssigner
+        topk: 9
+      assigner:
+        type: TaskAlignedAssigner
+        topk: 13
+        alpha: 1.0
+        beta: 6.0
+        
+  # Post Processing
+  post_processor:
+    type: DETRPostProcessor
+    num_top_queries: 300
+    nms:
+      type: MultiClassNMS
+      nms_top_k: 1000
+      keep_top_k: 300
+      score_threshold: 0.01
+      nms_threshold: 0.7
+
+# Loss Configuration
+criterion:
+  type: DINOv3Loss
+  num_classes: 80
+  loss_coeff:
+    class: 1
+    bbox: 5
+    giou: 2
+  aux_loss: true
+  use_vfl: true  # use_focal_loss
+  matcher:
+    type: HungarianMatcher
+    matcher_coeff:
+      class: 2
+      bbox: 5  
+      giou: 2
+
+# Model settings
+norm_type: sync_bn
+use_ema: true
+ema_decay: 0.9999
+ema_decay_type: "exponential"
+ema_filter_no_grad: true
+hidden_dim: 256
+use_focal_loss: true
+eval_size: [640, 640]
+
+# Runtime settings
+device: cuda
+sync_bn: true

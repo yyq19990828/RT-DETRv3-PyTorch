@@ -13,19 +13,19 @@ from PIL import Image
 import numpy as np
 from unittest.mock import MagicMock, patch
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.config import RTDETRConfig
-from core.workspace import create, register
-from data.dataset import CocoDetection, build_dataset
-from data.transforms import build_transforms
-from data.dataloader import build_dataloader, collate_fn
-from nn.criterion.rtdetr_criterion import RTDETRCriterion, HungarianMatcher
-from zoo.rtdetrv3.rtdetrv3 import RTDETRv3
-from solver.trainer import RTDETRTrainer
-from solver.evaluator import CocoEvaluator
-from optim.optimizer import build_optimizer
+from src.core.config import RTDETRConfig
+from src.core.workspace import create, register
+from src.data.dataset import CocoDetection, build_dataset
+from src.data.transforms import build_transforms
+from src.data.dataloader import build_dataloader, collate_fn
+from src.nn.criterion.rtdetr_criterion import RTDETRCriterion, HungarianMatcher
+from src.zoo.rtdetrv3.rtdetrv3 import RTDETRv3
+from src.solver.trainer import RTDETRTrainer
+from src.solver.evaluator import CocoEvaluator
+from src.optim.optimizer import build_optimizer
 
 
 class MockDataset(Dataset):

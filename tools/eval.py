@@ -11,14 +11,14 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from tqdm import tqdm
 import json
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Add project root to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.config import load_config
-from core.workspace import create
-from data import build_dataset, build_transforms, build_dataloader
-from solver import build_evaluator
-from misc.dist_utils import init_distributed_mode, cleanup_distributed_mode, is_main_process
+from src.core.config import load_config
+from src.core.workspace import create
+from src.data import build_dataset, build_transforms, build_dataloader
+from src.solver import build_evaluator
+from src.misc.dist_utils import init_distributed_mode, cleanup_distributed_mode, is_main_process
 
 
 def parse_args():
