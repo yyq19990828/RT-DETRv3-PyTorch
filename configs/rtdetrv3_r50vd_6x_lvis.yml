@@ -6,6 +6,7 @@ _base_:
   - _base_/optimizer_6x.yml
   - _base_/rtdetr_reader.yml
   - _base_/rtdetrv3_r50vd.yml
+  - _base_/runtime.yml
 
 # Model Configuration Override for LVIS
 model:
@@ -102,12 +103,9 @@ val_dataloader:
 evaluator:
   type: LvisEvaluator
 
-# Runtime Settings - More frequent snapshots for LVIS
-print_freq: 50
-checkpoint_freq: 2  # Save every 2 epochs for LVIS
+# Model-specific runtime overrides
+checkpoint_freq: 2  # Save every 2 epochs for LVIS (override default)
 output_dir: "./outputs/rtdetrv3_r50vd_6x_lvis"
-device: "cuda"
-seed: 42
 
 # Model specific settings
 use_focal_loss: true

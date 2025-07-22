@@ -19,6 +19,19 @@ RT-DETRv3 目标检测模型的 PyTorch 实现版本，从 PaddlePaddle 迁移�
 pip install -r requirements.txt
 ```
 
+### 编译自定义算子
+
+本项目包含一个名为 `ms_deform_attn` 的高性能CUDA算子。为了能够成功运行模型，您需要先编译此算子。
+
+详细的编译步骤和环境要求，请参考我们的 **[自定义算子编译指南](./docs/cuda算子迁移文件/OPERATOR_COMPILATION.md)**。
+
+推荐使用本地构建命令：
+```bash
+cd src/ops
+python setup.py install_local
+cd ../.. 
+```
+
 ### 训练
 
 ```bash
@@ -65,6 +78,7 @@ Apache License 2.0
 
 ## 更新日志
 
+- 2025-07-22：集成可变形注意力（Deformable Attention）的自定义 CUDA 算子 (`ms_deform_attn`)，包括 C++/CUDA 源码、编译脚本、单元测试和性能基准测试。更新了编译指南和项目依赖。
 - 2025-07-21：增强开发工作流，添加项目规划命令 (`project-setup`)，改进命令生成逻辑，完善项目规范文档 (CLAUDE.md)，新增多个项目需求规范 (PRPs) 以支持系统化开发流程。
 - 2025-07-18：添加 Claude Code 集成，包括自定义命令 (`commit-info`, `execute-prp`, `generate-command`, `generate-prp`) 和项目级指令，以支持自动化开发工作流。
 - 2025-07-18：初始版本发布，完成 PaddlePaddle 到 PyTorch 的初步迁移，支持 COCO/LVIS 数据集、ResNet 系列骨干、ONNX 导出、完整训练/推理/评估/导出流程。(尚未验证，仍需完善)

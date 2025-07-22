@@ -4,11 +4,14 @@ This directory contains various examples demonstrating different features and us
 
 ## Table of Contents
 
-1. [Basic PyTorch Scripts](#basic-pytorch-scripts)
-   - [Simple CNN](#simple-cnn)
-   - [Self-Attention Mechanism](#self-attention-mechanism)
-2. [RT-DETRv2 PyTorch Implementation](#rt-detrv2-pytorch-implementation)
-3. [PyTorch C++ Extension Example](#pytorch-c-extension-example)
+- [PyTorch Examples](#pytorch-examples)
+  - [Table of Contents](#table-of-contents)
+    - [Basic PyTorch Scripts](#basic-pytorch-scripts)
+      - [Simple CNN](#simple-cnn)
+      - [Self-Attention Mechanism](#self-attention-mechanism)
+    - [RT-DETRv2 PyTorch Implementation](#rt-detrv2-pytorch-implementation)
+    - [PyTorch C++ Extension Example](#pytorch-c-extension-example)
+    - [PaddlePaddle Custom Operator Example](#paddlepaddle-custom-operator-example)
 
 ---
 
@@ -53,3 +56,12 @@ These are standalone scripts demonstrating fundamental PyTorch concepts.
 - **Description**: This example demonstrates how to build a custom neural network operation in C++ and integrate it into PyTorch. This is useful for performance-critical code or for integrating existing C++ libraries.
 - **Details**: The directory contains the C++ source (`lltm.cpp`), a `setup.py` for compilation, and a `run.py` script for execution. For build and run instructions, see the README inside the directory:
   - [C++ Extension README](./cpp_extension_example/README.md)
+
+---
+
+### PaddlePaddle Custom Operator Example
+
+- **Directory**: `ext_op/`
+- **Description**: This directory contains a custom C++ operator for Multi-Scale Deformable Attention, specifically written for the PaddlePaddle framework. It serves as a reference for the original implementation.
+- **Details**: The directory includes C++ and CUDA source files, a `setup.py` for compilation, and a test script. For more details, refer to the README inside the directory:
+  - [ext_op README](./ext_op/README.md)

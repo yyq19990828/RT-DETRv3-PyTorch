@@ -9,3 +9,4 @@ Pillow>=8.3.0
 tqdm>=4.64.0
 matplotlib>=3.5.0
 scipy>=1.7.0
+ninja>=1.10.0

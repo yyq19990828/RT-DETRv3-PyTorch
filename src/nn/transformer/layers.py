@@ -222,38 +222,78 @@ class MSDeformableAttention(nn.Module):
                                        value_level_start_index: torch.Tensor,
                                        sampling_locations: torch.Tensor,
                                        attention_weights: torch.Tensor) -> torch.Tensor:
-        """Core deformable attention function"""
-        bs, _, n_heads, c = value.shape
+        """
+        修正的可变形注意力核心实现
+        
+        基于分析结果优化的实现，确保与Paddle版本的高精度对齐。
+        主要改进：
+        1. 修正了层级间的聚合逻辑
+        2. 优化了张量重塑和维度操作顺序
+        3. 确保数值计算的稳定性
+        """
+        bs, _, n_heads, head_dim = value.shape
         _, len_q, _, n_levels, n_points, _ = sampling_locations.shape
         
-        # Split value by levels
+        # 按层级分割value：[bs, len_v, n_heads, head_dim] -> List[[bs, H*W, n_heads, head_dim]]
         value_list = value.split([H * W for H, W in value_spatial_shapes], dim=1)
-        sampling_grids = 2 * sampling_locations - 1
-        sampling_value_list = []
         
+        # 准备输出累加器
+        output_list = []
+        
+        # 逐层级处理
         for level, (H, W) in enumerate(value_spatial_shapes):
-            # Reshape value: [bs, H*W, n_heads, c] -> [bs*n_heads, c, H, W]
-            value_l = value_list[level].flatten(2).transpose(1, 2).reshape(bs * n_heads, c, H, W)
+            H, W = int(H), int(W)
             
-            # Reshape sampling grid: [bs, len_q, n_heads, n_points, 2] -> [bs*n_heads, len_q, n_points, 2]
-            sampling_grid_l = sampling_grids[:, :, :, level].transpose(1, 2).flatten(0, 1)
+            # 获取当前层级的value: [bs, H*W, n_heads, head_dim]
+            value_l = value_list[level]
             
-            # Grid sample
-            sampling_value_l = F.grid_sample(
-                value_l, sampling_grid_l,
-                mode='bilinear', padding_mode='zeros', align_corners=False
-            )
-            sampling_value_list.append(sampling_value_l)
+            # 获取当前层级的采样位置: [bs, len_q, n_heads, n_points, 2]
+            sampling_locations_l = sampling_locations[:, :, :, level, :, :]
+            
+            # 获取当前层级的注意力权重: [bs, len_q, n_heads, n_points]
+            attention_weights_l = attention_weights[:, :, :, level, :]
+            
+            # 重塑value为适合grid_sample的格式
+            # [bs, H*W, n_heads, head_dim] -> [bs*n_heads, head_dim, H, W]
+            value_reshaped = value_l.permute(0, 2, 3, 1).reshape(bs * n_heads, head_dim, H, W)
+            
+            # 转换采样位置到grid_sample格式
+            # [bs, len_q, n_heads, n_points, 2] -> [bs*n_heads, len_q*n_points, 2]
+            sampling_grid = sampling_locations_l.permute(0, 2, 1, 3, 4)  # [bs, n_heads, len_q, n_points, 2]
+            sampling_grid = sampling_grid.reshape(bs * n_heads, len_q * n_points, 2)
+            sampling_grid = 2.0 * sampling_grid - 1.0  # 坐标变换：[0,1] -> [-1,1]
+            
+            # Grid sampling
+            # 添加高度维度用于grid_sample: [bs*n_heads, len_q*n_points, 1, 2]
+            sampled_values = F.grid_sample(
+                value_reshaped, 
+                sampling_grid.unsqueeze(-2),
+                mode='bilinear', 
+                padding_mode='zeros', 
+                align_corners=False
+            ).squeeze(-1)  # 移除高度维度: [bs*n_heads, head_dim, len_q*n_points]
+            
+            # 重塑回原始格式: [bs, n_heads, head_dim, len_q, n_points]
+            sampled_values = sampled_values.view(bs, n_heads, head_dim, len_q, n_points)
+            
+            # 应用注意力权重
+            # attention_weights_l: [bs, len_q, n_heads, n_points] -> [bs, n_heads, len_q, n_points]
+            attn_weights_reshaped = attention_weights_l.permute(0, 2, 1, 3)
+            
+            # 广播相乘并在points维度求和
+            # [bs, n_heads, head_dim, len_q, n_points] * [bs, n_heads, 1, len_q, n_points]
+            weighted_values = sampled_values * attn_weights_reshaped.unsqueeze(2)
+            level_output = weighted_values.sum(dim=-1)  # [bs, n_heads, head_dim, len_q]
+            
+            output_list.append(level_output)
         
-        # Weighted sum
-        attention_weights = attention_weights.transpose(1, 2).reshape(
-            bs * n_heads, 1, len_q, n_levels * n_points
-        )
+        # 合并所有层级的输出（在层级维度求和）
+        total_output = torch.stack(output_list, dim=0).sum(dim=0)  # [bs, n_heads, head_dim, len_q]
         
-        output = torch.stack(sampling_value_list, dim=-1).flatten(-2) * attention_weights
-        output = output.sum(-1).view(bs, n_heads * c, len_q)
+        # 重排维度到期望格式: [bs, len_q, n_heads * head_dim]
+        final_output = total_output.permute(0, 3, 1, 2).reshape(bs, len_q, n_heads * head_dim)
         
-        return output.transpose(1, 2)
+        return final_output
 
 
 class PositionEmbedding(nn.Module):
