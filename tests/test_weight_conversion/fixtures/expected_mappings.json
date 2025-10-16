@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "model": "rtdetrv3_test",
+  "mappings": {
+    "backbone.conv1.w_0": "backbone.conv1.weight",
+    "backbone.bn1._mean": "backbone.bn1.running_mean",
+    "backbone.bn1._variance": "backbone.bn1.running_var",
+    "backbone.bn1._scale": "backbone.bn1.weight",
+    "backbone.bn1._offset": "backbone.bn1.bias",
+    "encoder.layer.0.self_attn.q_proj.w_0": "encoder.layer.0.self_attn.q_proj.weight",
+    "encoder.layer.0.self_attn.q_proj.b_0": "encoder.layer.0.self_attn.q_proj.bias",
+    "decoder.output.w_0": "decoder.output.weight",
+    "decoder.output.b_0": "decoder.output.bias"
+  }
+}

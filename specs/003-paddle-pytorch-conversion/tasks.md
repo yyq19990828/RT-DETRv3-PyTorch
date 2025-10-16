@@ -22,13 +22,13 @@
 
 **Purpose**: Project initialization and module structure
 
-- [ ] T001 Create tools/weight_conversion/ module directory with __init__.py
-- [ ] T002 [P] Create tests/test_weight_conversion/ directory with __init__.py
-- [ ] T003 [P] Create tests/test_weight_conversion/fixtures/ directory for test data
-- [ ] T004 [P] Create tests/integration/ directory with __init__.py
-- [ ] T005 [P] Configure pytest with pytest.ini or pyproject.toml (test discovery, markers)
-- [ ] T006 [P] Add Python dependencies to requirements: torch>=2.0, paddlepaddle>=2.4, numpy>=1.21, pytest>=7.0
-- [ ] T007 [P] Create pretrained_models/pytorch/ output directory
+- [X] T001 Create tools/weight_conversion/ module directory with __init__.py
+- [X] T002 [P] Create tests/test_weight_conversion/ directory with __init__.py
+- [X] T003 [P] Create tests/test_weight_conversion/fixtures/ directory for test data
+- [X] T004 [P] Create tests/integration/ directory with __init__.py
+- [X] T005 [P] Configure pytest with pytest.ini or pyproject.toml (test discovery, markers)
+- [X] T006 [P] Add Python dependencies to requirements: torch>=2.0, paddlepaddle>=2.4, numpy>=1.21, pytest>=7.0
+- [X] T007 [P] Create pretrained_models/pytorch/ output directory
 
 ---
 
@@ -38,10 +38,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Implement data model classes in tools/weight_conversion/models.py (CheckpointFile, Parameter, ParameterMapping, ConversionSession, ConversionConfig, ConversionStatistics, ShapeMismatch, DtypeConversion)
-- [ ] T009 [P] Implement tensor conversion utilities in tools/weight_conversion/tensor_utils.py (paddle_to_numpy, numpy_to_torch, validate_tensor_shape, detect_dtype)
-- [ ] T010 [P] Implement logging infrastructure in tools/weight_conversion/__init__.py (configure_logging, get_logger)
-- [ ] T011 [P] Create test fixtures in tests/test_weight_conversion/fixtures/ (sample_paddle.pdparams, expected_mappings.json)
+- [X] T008 Implement data model classes in tools/weight_conversion/models.py (CheckpointFile, Parameter, ParameterMapping, ConversionSession, ConversionConfig, ConversionStatistics, ShapeMismatch, DtypeConversion)
+- [X] T009 [P] Implement tensor conversion utilities in tools/weight_conversion/tensor_utils.py (paddle_to_numpy, numpy_to_torch, validate_tensor_shape, detect_dtype)
+- [X] T010 [P] Implement logging infrastructure in tools/weight_conversion/__init__.py (configure_logging, get_logger)
+- [X] T011 [P] Create test fixtures in tests/test_weight_conversion/fixtures/ (sample_paddle.pdparams, expected_mappings.json)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -57,23 +57,23 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T012 [P] [US1] Unit test for paddle checkpoint loading in tests/test_weight_conversion/test_converter.py::test_load_paddle_checkpoint
-- [ ] T013 [P] [US1] Unit test for tensor conversion (paddle→numpy→torch) in tests/test_weight_conversion/test_tensor_utils.py::test_convert_tensor
-- [ ] T014 [P] [US1] Unit test for parameter name mapping generation in tests/test_weight_conversion/test_name_mapping.py::test_generate_name_mapping
-- [ ] T015 [P] [US1] Unit test for torch checkpoint saving in tests/test_weight_conversion/test_converter.py::test_save_torch_checkpoint
-- [ ] T016 [P] [US1] Integration test for end-to-end conversion in tests/integration/test_full_conversion.py::test_convert_r50vd_model
+- [X] T012 [P] [US1] Unit test for paddle checkpoint loading in tests/test_weight_conversion/test_converter.py::test_load_paddle_checkpoint
+- [X] T013 [P] [US1] Unit test for tensor conversion (paddle→numpy→torch) in tests/test_weight_conversion/test_tensor_utils.py::test_convert_tensor
+- [X] T014 [P] [US1] Unit test for parameter name mapping generation in tests/test_weight_conversion/test_name_mapping.py::test_generate_name_mapping
+- [X] T015 [P] [US1] Unit test for torch checkpoint saving in tests/test_weight_conversion/test_converter.py::test_save_torch_checkpoint
+- [X] T016 [P] [US1] Integration test for end-to-end conversion in tests/integration/test_full_conversion.py::test_convert_r50vd_model
 
 ### Implementation for User Story 1
 
-- [ ] T017 [P] [US1] Implement CheckpointFile loading logic in tools/weight_conversion/converter.py::load_paddle_checkpoint (uses paddle.load, validates format)
-- [ ] T018 [P] [US1] Implement automatic parameter name mapping in tools/weight_conversion/name_mapping.py (NameMapper class with _paddle_to_torch_name, apply_naming_rules: ._mean→.running_mean, ._variance→.running_var, .w_0→.weight, .b_0→.bias)
-- [ ] T019 [US1] Implement WeightConverter.convert_tensor in tools/weight_conversion/converter.py (paddle tensor → numpy → torch tensor with shape validation)
-- [ ] T020 [US1] Implement WeightConverter.convert_state_dict in tools/weight_conversion/converter.py (iterates mappings, converts tensors, tracks statistics)
-- [ ] T021 [US1] Implement CheckpointFile saving logic in tools/weight_conversion/converter.py::save_torch_checkpoint (saves state_dict + metadata)
-- [ ] T022 [US1] Implement ConversionSession orchestration in tools/weight_conversion/converter.py::WeightConverter.convert (coordinates load→map→convert→save workflow)
-- [ ] T023 [US1] Add conversion statistics tracking in WeightConverter (total, converted, skipped counts)
-- [ ] T024 [US1] Add progress logging for conversion (log every 100 parameters converted)
-- [ ] T025 [US1] Implement basic error handling (file not found, invalid checkpoint format, shape mismatch in strict mode)
+- [X] T017 [P] [US1] Implement CheckpointFile loading logic in tools/weight_conversion/converter.py::load_paddle_checkpoint (uses paddle.load, validates format)
+- [X] T018 [P] [US1] Implement automatic parameter name mapping in tools/weight_conversion/name_mapping.py (NameMapper class with _paddle_to_torch_name, apply_naming_rules: ._mean→.running_mean, ._variance→.running_var, .w_0→.weight, .b_0→.bias)
+- [X] T019 [US1] Implement WeightConverter.convert_tensor in tools/weight_conversion/converter.py (paddle tensor → numpy → torch tensor with shape validation)
+- [X] T020 [US1] Implement WeightConverter.convert_state_dict in tools/weight_conversion/converter.py (iterates mappings, converts tensors, tracks statistics)
+- [X] T021 [US1] Implement CheckpointFile saving logic in tools/weight_conversion/converter.py::save_torch_checkpoint (saves state_dict + metadata)
+- [X] T022 [US1] Implement ConversionSession orchestration in tools/weight_conversion/converter.py::WeightConverter.convert (coordinates load→map→convert→save workflow)
+- [X] T023 [US1] Add conversion statistics tracking in WeightConverter (total, converted, skipped counts)
+- [X] T024 [US1] Add progress logging for conversion (log every 100 parameters converted)
+- [X] T025 [US1] Implement basic error handling (file not found, invalid checkpoint format, shape mismatch in strict mode)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can convert .pdparams to .pth
 
@@ -87,20 +87,20 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Unit test for manual mapping override in tests/test_weight_conversion/test_name_mapping.py::test_apply_manual_mappings
-- [ ] T027 [P] [US2] Unit test for mapping export to JSON in tests/test_weight_conversion/test_name_mapping.py::test_export_mapping_to_json
-- [ ] T028 [P] [US2] Unit test for unmapped parameter detection in tests/test_weight_conversion/test_name_mapping.py::test_identify_unmapped_parameters
-- [ ] T029 [P] [US2] Integration test for mapping export workflow in tests/integration/test_full_conversion.py::test_conversion_with_mapping_export
+- [X] T026 [P] [US2] Unit test for manual mapping override in tests/test_weight_conversion/test_name_mapping.py::test_apply_manual_mappings
+- [X] T027 [P] [US2] Unit test for mapping export to JSON in tests/test_weight_conversion/test_name_mapping.py::test_export_mapping_to_json
+- [X] T028 [P] [US2] Unit test for unmapped parameter detection in tests/test_weight_conversion/test_name_mapping.py::test_identify_unmapped_parameters
+- [X] T029 [P] [US2] Integration test for mapping export workflow in tests/integration/test_full_conversion.py::test_conversion_with_mapping_export
 
 ### Implementation for User Story 2
 
-- [ ] T030 [P] [US2] Implement manual mapping loader in tools/weight_conversion/name_mapping.py::NameMapper.load_manual_mappings (reads JSON file, validates schema)
-- [ ] T031 [P] [US2] Implement manual mapping application in tools/weight_conversion/name_mapping.py::NameMapper.apply_manual_overrides (applies before auto-mapping)
-- [ ] T032 [US2] Implement mapping export functionality in tools/weight_conversion/name_mapping.py::NameMapper.export_to_json (generates exported mapping JSON with session metadata, mapping types, confidence scores)
-- [ ] T033 [US2] Implement unmapped parameter identification in tools/weight_conversion/name_mapping.py::NameMapper.find_unmapped_keys (compares source keys vs mapped keys, target keys vs populated keys)
-- [ ] T034 [US2] Add mapping export to ConversionSession in tools/weight_conversion/converter.py::WeightConverter.convert (optional --save-mapping argument)
-- [ ] T035 [US2] Add unmapped parameter reporting to ConversionStatistics in tools/weight_conversion/models.py (unmapped_source_keys, unmapped_target_keys lists)
-- [ ] T036 [US2] Update logging to warn about unmapped parameters during conversion
+- [X] T030 [P] [US2] Implement manual mapping loader in tools/weight_conversion/name_mapping.py::NameMapper.load_manual_mappings (reads JSON file, validates schema)
+- [X] T031 [P] [US2] Implement manual mapping application in tools/weight_conversion/name_mapping.py::NameMapper.apply_manual_overrides (applies before auto-mapping)
+- [X] T032 [US2] Implement mapping export functionality in tools/weight_conversion/name_mapping.py::NameMapper.export_to_json (generates exported mapping JSON with session metadata, mapping types, confidence scores)
+- [X] T033 [US2] Implement unmapped parameter identification in tools/weight_conversion/name_mapping.py::NameMapper.find_unmapped_keys (compares source keys vs mapped keys, target keys vs populated keys)
+- [X] T034 [US2] Add mapping export to ConversionSession in tools/weight_conversion/converter.py::WeightConverter.convert (optional --save-mapping argument)
+- [X] T035 [US2] Add unmapped parameter reporting to ConversionStatistics in tools/weight_conversion/models.py (unmapped_source_keys, unmapped_target_keys lists)
+- [X] T036 [US2] Update logging to warn about unmapped parameters during conversion
 
 **Checkpoint**: At this point, User Stories 1 AND 2 work independently - users can convert AND inspect mappings
 
@@ -114,20 +114,20 @@
 
 ### Tests for User Story 4
 
-- [ ] T037 [P] [US4] Unit test for shape validation in tools/weight_conversion/test_validation.py::test_validate_parameter_shapes
-- [ ] T038 [P] [US4] Unit test for strict mode error handling in tests/test_weight_conversion/test_converter.py::test_strict_mode_fails_on_mismatch
-- [ ] T039 [P] [US4] Unit test for permissive mode skip behavior in tests/test_weight_conversion/test_converter.py::test_permissive_mode_skips_mismatch
-- [ ] T040 [P] [US4] Integration test for shape mismatch reporting in tests/integration/test_full_conversion.py::test_conversion_with_shape_mismatches
+- [X] T037 [P] [US4] Unit test for shape validation in tests/test_weight_conversion/test_tensor_utils.py::test_validate_tensor_shape_* (match, mismatch_non_strict, mismatch_strict, check_shape_compatibility_*)
+- [X] T038 [P] [US4] Unit test for strict mode error handling in tests/test_weight_conversion/test_converter.py::test_convert_tensor_shape_mismatch_strict
+- [X] T039 [P] [US4] Unit test for permissive mode skip behavior in tests/test_weight_conversion/test_converter.py::test_convert_tensor_shape_mismatch_permissive
+- [X] T040 [P] [US4] Integration test for shape mismatch reporting in tests/integration/test_full_conversion.py::test_conversion_with_shape_mismatches
 
 ### Implementation for User Story 4
 
-- [ ] T041 [P] [US4] Implement shape validation logic in tools/weight_conversion/validation.py::ShapeValidator (compare_shapes, detect_mismatch_severity: ERROR vs WARNING)
-- [ ] T042 [P] [US4] Implement ShapeMismatch recording in tools/weight_conversion/models.py (parameter_name, source_shape, target_shape, severity, suggested_fix)
-- [ ] T043 [US4] Add strict mode handling to WeightConverter.convert_tensor in tools/weight_conversion/converter.py (raise ValueError on shape mismatch if strict=True)
-- [ ] T044 [US4] Add permissive mode handling to WeightConverter.convert_tensor in tools/weight_conversion/converter.py (log warning, skip parameter, continue if strict=False)
-- [ ] T045 [US4] Update ConversionStatistics to track shape_mismatches list in tools/weight_conversion/models.py
-- [ ] T046 [US4] Add shape mismatch reporting to final conversion summary (list all mismatched parameters with shapes)
-- [ ] T047 [US4] Implement suggested fix generation for shape mismatches in tools/weight_conversion/validation.py::ShapeValidator.suggest_fix (detect transpose, reshape, padding needs)
+- [X] T041 [P] [US4] Implement shape validation logic in tools/weight_conversion/validation.py::ShapeValidator (compare_shapes, detect_mismatch_severity: ERROR vs WARNING) - integrated in tensor_utils.py
+- [X] T042 [P] [US4] Implement ShapeMismatch recording in tools/weight_conversion/models.py (parameter_name, source_shape, target_shape, severity, suggested_fix)
+- [X] T043 [US4] Add strict mode handling to WeightConverter.convert_tensor in tools/weight_conversion/converter.py (raise ValueError on shape mismatch if strict=True)
+- [X] T044 [US4] Add permissive mode handling to WeightConverter.convert_tensor in tools/weight_conversion/converter.py (log warning, skip parameter, continue if strict=False)
+- [X] T045 [US4] Update ConversionStatistics to track shape_mismatches list in tools/weight_conversion/models.py
+- [X] T046 [US4] Add shape mismatch reporting to final conversion summary (list all mismatched parameters with shapes)
+- [ ] T047 [US4] Implement suggested fix generation for shape mismatches in tools/weight_conversion/validation.py::ShapeValidator.suggest_fix (detect transpose, reshape, padding needs) - deferred to Phase 8
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 4 work independently - robust error handling for shape issues
 
@@ -163,14 +163,14 @@
 
 **Purpose**: Provide command-line interface for all user stories per contracts/cli-interface.md
 
-- [ ] T058 [P] Implement CLI argument parser in tools/weight_conversion/cli.py::create_argument_parser (--input, --output, --model-config, --manual-mapping, --save-mapping, --strict, --permissive, --no-validate, --validate-numerical, --tolerance, --batch, --output-dir, --memory-efficient, --force, --log-level, --quiet, --version, --help per CLI contract)
-- [ ] T059 [P] Implement CLI argument validation in tools/weight_conversion/cli.py::validate_arguments (check mutual exclusivity: --strict vs --permissive, --input vs --batch; check required dependencies: --batch requires --output-dir, --validate-numerical requires --model-config)
-- [ ] T060 [P] Implement CLI main entry point in tools/weight_conversion/cli.py::main (parse args, configure logging, create ConversionConfig, call WeightConverter)
-- [ ] T061 [P] Update tools/convert_weights.py to use new CLI interface (replace existing main() with import from cli.py)
-- [ ] T062 [P] Implement progress bar for interactive mode in tools/weight_conversion/cli.py (use tqdm if available, show "Converting parameters: X/Y")
-- [ ] T063 [P] Implement log-based progress for non-interactive mode in tools/weight_conversion/cli.py (log every 100 params when stdout not a TTY)
-- [ ] T064 [P] Implement exit code handling in tools/weight_conversion/cli.py (0=success, 1=error, 2=invalid args, 3=validation failed, 130=interrupted)
-- [ ] T065 [P] Add environment variable support in tools/weight_conversion/cli.py (PADDLE_CONV_LOG_LEVEL, PADDLE_CONV_MEMORY_LIMIT)
+- [X] T058 [P] Implement CLI argument parser in tools/weight_conversion/cli.py::create_argument_parser (--input, --output, --model-config, --manual-mapping, --save-mapping, --strict, --permissive, --no-validate, --validate-numerical, --tolerance, --batch, --output-dir, --memory-efficient, --force, --log-level, --quiet, --version, --help per CLI contract)
+- [X] T059 [P] Implement CLI argument validation in tools/weight_conversion/cli.py::validate_arguments (check mutual exclusivity: --strict vs --permissive, --input vs --batch; check required dependencies: --batch requires --output-dir, --validate-numerical requires --model-config)
+- [X] T060 [P] Implement CLI main entry point in tools/weight_conversion/cli.py::main (parse args, configure logging, create ConversionConfig, call WeightConverter)
+- [X] T061 [P] Update tools/convert_weights.py to use new CLI interface (replace existing main() with import from cli.py)
+- [ ] T062 [P] Implement progress bar for interactive mode in tools/weight_conversion/cli.py (use tqdm if available, show "Converting parameters: X/Y") - deferred to Phase 8
+- [X] T063 [P] Implement log-based progress for non-interactive mode in tools/weight_conversion/cli.py (log every 100 params when stdout not a TTY)
+- [X] T064 [P] Implement exit code handling in tools/weight_conversion/cli.py (0=success, 1=error, 2=invalid args, 3=validation failed, 130=interrupted)
+- [X] T065 [P] Add environment variable support in tools/weight_conversion/cli.py (PADDLE_CONV_LOG_LEVEL, PADDLE_CONV_MEMORY_LIMIT)
 
 ---
 
@@ -178,15 +178,15 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T066 [P] Add comprehensive docstrings to all public classes and methods (Google style)
-- [ ] T067 [P] Add type hints to all function signatures (use typing module, PEP 484 compliant)
+- [X] T066 [P] Add comprehensive docstrings to all public classes and methods (Google style)
+- [X] T067 [P] Add type hints to all function signatures (use typing module, PEP 484 compliant)
 - [ ] T068 [P] Implement memory-efficient mode in tools/weight_conversion/converter.py::WeightConverter (chunked processing, batch_size=100 params, explicit gc.collect())
 - [ ] T069 [P] Add numerical validation support in tools/weight_conversion/validation.py::NumericalValidator (compare converted values vs source, check tolerance)
 - [ ] T070 [P] Implement performance profiling in tools/weight_conversion/converter.py (track conversion time, memory usage via tracemalloc)
-- [ ] T071 [P] Add checkpoint metadata embedding in tools/weight_conversion/converter.py::save_torch_checkpoint (source file, timestamp, tool version, conversion stats, validation results)
+- [X] T071 [P] Add checkpoint metadata embedding in tools/weight_conversion/converter.py::save_torch_checkpoint (source file, timestamp, tool version, conversion stats, validation results)
 - [ ] T072 [P] Create comprehensive README.md for tools/weight_conversion/ module (architecture overview, usage examples, API reference)
-- [ ] T073 [P] Add CLI usage examples to tools/convert_weights.py docstring (basic conversion, batch mode, strict mode, mapping export)
-- [ ] T074 [P] Run pytest test suite and ensure all tests pass (pytest tests/ -v)
+- [X] T073 [P] Add CLI usage examples to tools/convert_weights.py docstring (basic conversion, batch mode, strict mode, mapping export)
+- [X] T074 [P] Run pytest test suite and ensure all tests pass (pytest tests/ -v) - 40 passed, 1 skipped
 - [ ] T075 [P] Validate conversion tool against all 3 model variants (r18vd, r34vd, r50vd) per quickstart.md
 - [ ] T076 [P] Verify performance targets (SC-001: <2 min for 182MB; SC-006: ≤2x memory usage)
 - [ ] T077 [P] Run code quality checks (ruff or flake8 for linting, black for formatting)
