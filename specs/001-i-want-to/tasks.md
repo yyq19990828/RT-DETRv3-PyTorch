@@ -247,7 +247,16 @@
 
 ### Inference Implementation ✅ COMPLETE
 
-- [X] T036 [US1] Implement inference script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/infer.py`:
+- [X] T036 [US1] Implement DETRPostProcessor in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/models/post_process.py`:
+  - ✅ Coordinate conversion utilities (bbox_cxcywh_to_xyxy, bbox_xyxy_to_cxcywh)
+  - ✅ DETRPostProcessor class for standard DETR post-processing
+  - ✅ Multi-group query support (dual_queries, dual_groups for O2O/O2M)
+  - ✅ Sigmoid/Softmax classification modes
+  - ✅ Top-K detection selection
+  - ✅ Coordinate scaling from normalized to pixel space
+  - ✅ Scale factor and padding handling
+  - ✅ Unit tests (13/13 passing) in test_post_process.py
+- [X] T037 [US1] Implement inference script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/infer.py`:
   - ✅ Load config from YAML
   - ✅ Initialize model and load checkpoint
   - ✅ Load input images (single image or directory)
@@ -259,7 +268,7 @@
   - ✅ Support batch inference for efficiency
   - ✅ Image preprocessing with resize, pad, normalize
   - ✅ Post-processing with per-class NMS
-- [X] T037 [US1] Create inference validation test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_inference.py`:
+- [X] T038 [US1] Create inference validation test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_inference.py`:
   - ✅ Test image preprocessing (shape, normalization)
   - ✅ Test model forward pass in eval mode
   - ✅ Test post-processing output format
@@ -275,7 +284,7 @@
 
 ### COCO Evaluation Implementation ✅ COMPLETE
 
-- [X] T038 [US1] Implement COCO evaluator in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/evaluator.py`:
+- [X] T039 [US1] Implement COCO evaluator in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/evaluator.py`:
   - ✅ Load COCO ground truth annotations
   - ✅ Collect model predictions on entire val2017 dataset
   - ✅ Convert predictions to COCO format [x, y, width, height]
@@ -285,7 +294,7 @@
   - ✅ Compute recall metrics: AR1, AR10, AR100
   - ✅ Log evaluation metrics
   - ✅ Support distributed synchronization (placeholder for multi-GPU)
-- [X] T039 [US1] Implement evaluation script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/eval.py`:
+- [X] T040 [US1] Implement evaluation script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/eval.py`:
   - ✅ Load config and checkpoint
   - ✅ Initialize model and set to eval mode
   - ✅ Build COCO validation dataset with transforms
@@ -311,7 +320,7 @@
 
 ### Loss Functions
 
-- [X] T040 [US2] Implement DINOv3Loss in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/models/losses/detr_loss.py`:
+- [X] T041 [US2] Implement DINOv3Loss in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/models/losses/detr_loss.py`:
   - ✅ Varifocal Loss for classification (focal loss variant with target score weighting)
   - ✅ GIoU Loss for bounding box regression (generalized IoU)
   - ✅ L1 Loss for bounding box regression (smooth L1)
@@ -321,7 +330,7 @@
   - ✅ Support denoising queries (100 noise queries, reconstruction loss)
   - ✅ Support auxiliary branch loss (PPYOLOEHead outputs)
   - ✅ Loss weights: loss_cls_weight=1.0, loss_bbox_weight=5.0, loss_giou_weight=2.0, aux_loss_weight=1.0, o2m_loss_weight=1.0
-- [X] T041 [US2] Create unit test for loss functions in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/unit/test_losses.py`:
+- [X] T042 [US2] Create unit test for loss functions in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/unit/test_losses.py`:
   - ✅ Test Varifocal Loss computation with sample predictions and targets
   - ✅ Test GIoU Loss computation
   - ✅ Test Hungarian matching (verify assignment correctness)
@@ -331,16 +340,16 @@
 
 ### Training Infrastructure
 
-- [X] T042 [US2] Implement optimizer setup in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/optimizer.py`:
+- [X] T043 [US2] Implement optimizer setup in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/optimizer.py`:
   - ✅ AdamW optimizer (lr=0.0001, weight_decay=0.0001)
   - ✅ Support parameter groups (different lr for backbone vs decoder)
   - ✅ Gradient clipping (max_norm=0.1) to prevent training instability
   - ✅ Create optimizer from config
-- [X] T043 [US2] Implement LR scheduler in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/optimizer.py`:
+- [X] T044 [US2] Implement LR scheduler in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/optimizer.py`:
   - ✅ MultiStepLR (decay at epoch 60, gamma=0.1 for 72-epoch schedule)
   - ✅ Warmup phase (linear warmup for first 2000 iterations)
   - ✅ Create scheduler from config
-- [X] T044 [US2] Implement training loop in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/trainer.py`:
+- [X] T045 [US2] Implement training loop in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/engine/trainer.py`:
   - ✅ Initialize DDP if multi-GPU (dist.init_process_group)
   - ✅ Wrap model with DistributedDataParallel
   - ✅ Create dataloaders with DistributedSampler
@@ -351,7 +360,7 @@
   - ✅ Validation every N epochs
   - ✅ Loss logging (console output)
   - ✅ Resume from checkpoint support
-- [X] T045 [US2] Implement training script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/train.py`:
+- [X] T046 [US2] Implement training script in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tools/train.py`:
   - ✅ Parse command-line arguments (config path, resume checkpoint, distributed flag)
   - ✅ Load config from YAML
   - ✅ Initialize model, optimizer, scheduler
@@ -362,13 +371,13 @@
 
 ### Training Validation Tests
 
-- [ ] T046 [US2] Create training smoke test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_training.py`:
+- [ ] T047 [US2] Create training smoke test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_training.py`:
   - Train for 2 epochs on COCO train subset (100 images)
   - Verify loss decreases over iterations
   - Verify no NaN/Inf losses
   - Verify checkpoint saving works
   - Verify gradient flow (no zero gradients)
-- [ ] T047 [US2] Create DDP training test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_ddp_training.py`:
+- [ ] T048 [US2] Create DDP training test in `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/tests/integration/test_ddp_training.py`:
   - Launch training with torchrun (2 GPUs if available, else skip)
   - Train for 1 epoch
   - Verify synchronization across GPUs
@@ -376,14 +385,14 @@
 
 ### Training Convergence Validation
 
-- [ ] T048 [US2] Run full training on COCO train2017 for RT-DETRv3-R50 (72 epochs, 4 GPUs):
+- [ ] T049 [US2] Run full training on COCO train2017 for RT-DETRv3-R50 (72 epochs, 4 GPUs):
   - Use config `/home/tyjt/桌面/RT-DETRv3/rtdetrv3_pytorch/configs/rtdetrv3_r50_6x_coco.yml`
   - Train with batch_size=4 per GPU (total effective batch=16)
   - Enable mixed precision (amp=true)
   - Save checkpoints every 5 epochs
   - Evaluate on val2017 every 5 epochs
   - Log training curves (loss, mAP over epochs)
-- [ ] T049 [US2] Validate training convergence against PaddlePaddle baseline:
+- [ ] T050 [US2] Validate training convergence against PaddlePaddle baseline:
   - Compare loss curves (should follow same trajectory ±5%)
   - Compare epoch-wise mAP progression
   - Final mAP should be 53.4±0.5% for R50
