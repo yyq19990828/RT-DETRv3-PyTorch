@@ -1,0 +1,21 @@
+metric: WiderFace
+num_classes: 1
+
+TrainDataset:
+  !WIDERFaceDataSet
+    dataset_dir: dataset/wider_face
+    anno_path: wider_face_split/wider_face_train_bbx_gt.txt
+    image_dir: WIDER_train/images
+    data_fields: ['image', 'gt_bbox', 'gt_class']
+
+EvalDataset:
+  !WIDERFaceValDataset
+    dataset_dir: dataset/wider_face
+    image_dir: WIDER_val/images
+    anno_path: wider_face_split/wider_face_val_bbx_gt.txt
+    gt_mat_path: WIDER_val/ground_truth
+    data_fields: ['image', 'gt_bbox', 'gt_class', 'ori_gt_bbox']
+
+TestDataset:
+  !ImageFolder
+    use_default_label: true
