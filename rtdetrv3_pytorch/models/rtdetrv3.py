@@ -226,7 +226,8 @@ def build_rtdetrv3(
     o2m: int = 4,
     o2m_branch: bool = False,
     num_queries_o2m: int = 450,
-    use_aux_head: bool = False
+    use_aux_head: bool = False,
+    neck_expansion: float = None
 ) -> RTDETRv3:
     """
     Build RTDETRv3 model from config
@@ -246,6 +247,7 @@ def build_rtdetrv3(
         o2m_branch: Enable one-to-many branch
         num_queries_o2m: Number of one-to-many queries
         use_aux_head: Enable auxiliary detection head (PPYOLOEHead)
+        neck_expansion: Neck CSPRepLayer expansion ratio (None=auto-detect: 0.5 for R18/R34, 1.0 for R50/R101)
 
     Returns:
         RTDETRv3 instance
@@ -267,6 +269,11 @@ def build_rtdetrv3(
         # ResNet-50/101 use Bottleneck
         in_channels = [512, 1024, 2048]
 
+    # Auto-detect neck expansion if not specified
+    # Following PaddlePaddle convention: R18/R34 use 0.5, R50/R101 use 1.0
+    if neck_expansion is None:
+        neck_expansion = 0.5 if depth in [18, 34] else 1.0
+
     # Build auxiliary head if requested
     aux_head = None
     if use_aux_head:
@@ -287,6 +294,7 @@ def build_rtdetrv3(
         # Neck config
         neck_in_channels=in_channels,
         neck_hidden_dim=hidden_dim,
+        neck_expansion=neck_expansion,
         # Transformer config
         transformer_num_queries=num_queries,
         transformer_num_decoder_layers=num_decoder_layers,
