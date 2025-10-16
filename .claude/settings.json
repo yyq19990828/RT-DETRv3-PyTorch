@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.claude.com)",
+      "Bash(.specify/scripts/bash/create-new-feature.sh:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "mcp__mcpm_deep-wiki__read_wiki_structure",
+      "mcp__mcpm_deep-wiki__read_wiki_contents",
+      "WebFetch(domain:github.com)",
+      "Bash(python:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {}
+  //   "PreToolUse": [
+  //     {
+  //       "matcher": "*",
+  //       "hooks": [
+  //         {
+  //           "type": "command",
+  //           "command": "uv run .claude/hooks/pretooluse.py",
+  //           "timeout": 5
+  //         }
+  //       ]
+  //     }
+  //   ]
+  // }
+}
