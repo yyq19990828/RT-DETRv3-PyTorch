@@ -21,6 +21,7 @@ import math
 
 from .attention import MSDeformableAttention
 from .utils import MLP, inverse_sigmoid
+from .. import TRANSFORMER_REGISTRY
 
 
 class MultiHeadAttention(nn.Module):
@@ -402,8 +403,11 @@ def build_transformer_decoder(
     return decoder
 
 
+@TRANSFORMER_REGISTRY.register()
 class RTDETRTransformerv3(nn.Module):
     """
+
+    __category__ = 'transformer'
     Complete RT-DETRv3 Transformer with multi-group queries and self-attention perturbation
 
     This module implements the full transformer architecture including:
@@ -804,47 +808,71 @@ class RTDETRTransformerv3(nn.Module):
         return dec_out_bboxes, dec_out_logits, enc_topk_bboxes, enc_topk_logits, dn_meta
 
 
-def build_rtdetr_transformer(
-    num_queries: int = 300,
-    num_decoder_layers: int = 6,
-    num_levels: int = 3,
-    num_decoder_points: int = 4,
-    hidden_dim: int = 256,
-    num_heads: int = 8,
-    eval_idx: int = -1,
-    o2m_branch: bool = False,
-    num_queries_o2m: int = 450,
-    num_classes: int = 80,
-    **kwargs
-):
+def build_rtdetr_transformer(cfg: dict):
     """
-    Build RTDETRTransformerv3 from config
+    Build RTDETRTransformerv3 from config dictionary
 
     Args:
-        num_queries: Number of one-to-one queries
-        num_decoder_layers: Number of decoder layers
-        num_levels: Number of feature levels
-        num_decoder_points: Number of sampling points
-        hidden_dim: Hidden dimension
-        num_heads: Number of attention heads
-        eval_idx: Evaluation layer index
-        o2m_branch: Enable one-to-many branch
-        num_queries_o2m: Number of one-to-many queries
-        num_classes: Number of object classes
+        cfg: Configuration dictionary with keys:
+            - num_queries: Number of one-to-one queries (default: 300)
+            - num_decoder_layers: Number of decoder layers (default: 6)
+            - num_levels: Number of feature levels (default: 3)
+            - num_decoder_points: Number of sampling points (default: 4)
+            - hidden_dim: Hidden dimension (default: 256)
+            - num_heads: Number of attention heads (default: 8)
+            - eval_idx: Evaluation layer index (default: -1)
+            - o2m_branch: Enable one-to-many branch (default: False)
+            - num_queries_o2m: Number of one-to-many queries (default: 450)
+            - num_noises: Number of noise groups (default: 0 for inference)
+            - num_classes: Number of object classes (default: 80)
+            - dim_feedforward: FFN hidden dimension (default: 1024)
+            - dropout: Dropout rate (default: 0.0)
+            - activation: Activation function (default: 'relu')
+            - num_noise_queries: List of noise query counts (default: [100])
+            - num_denoising: Number of denoising queries (default: 100)
+            - label_noise_ratio: Label noise ratio (default: 0.5)
+            - box_noise_scale: Box noise scale (default: 1.0)
 
     Returns:
         RTDETRTransformerv3 instance
     """
+    # Extract parameters from config with defaults
+    num_queries = cfg.get('num_queries', 300)
+    num_decoder_layers = cfg.get('num_decoder_layers', 6)
+    num_levels = cfg.get('num_levels', 3)
+    num_decoder_points = cfg.get('num_decoder_points', 4)
+    hidden_dim = cfg.get('hidden_dim', 256)
+    num_heads = cfg.get('num_heads', 8)
+    eval_idx = cfg.get('eval_idx', -1)
+    o2m_branch = cfg.get('o2m_branch', False)
+    num_queries_o2m = cfg.get('num_queries_o2m', 450)
+    num_noises = cfg.get('num_noises', 0)
+    num_classes = cfg.get('num_classes', 80)
+    dim_feedforward = cfg.get('dim_feedforward', 1024)
+    dropout = cfg.get('dropout', 0.0)
+    activation = cfg.get('activation', 'relu')
+    num_noise_queries = cfg.get('num_noise_queries', [100])
+    num_denoising = cfg.get('num_denoising', 100)
+    label_noise_ratio = cfg.get('label_noise_ratio', 0.5)
+    box_noise_scale = cfg.get('box_noise_scale', 1.0)
+
     return RTDETRTransformerv3(
         num_classes=num_classes,
         hidden_dim=hidden_dim,
         num_queries=num_queries,
         num_decoder_layers=num_decoder_layers,
         num_heads=num_heads,
+        dim_feedforward=dim_feedforward,
+        dropout=dropout,
+        activation=activation,
         num_levels=num_levels,
         num_decoder_points=num_decoder_points,
+        num_noises=num_noises,
+        num_noise_queries=num_noise_queries,
         o2m_branch=o2m_branch,
         num_queries_o2m=num_queries_o2m,
         eval_idx=eval_idx,
-        **kwargs
+        num_denoising=num_denoising,
+        label_noise_ratio=label_noise_ratio,
+        box_noise_scale=box_noise_scale
     )

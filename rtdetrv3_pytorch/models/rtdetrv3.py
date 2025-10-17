@@ -16,8 +16,9 @@ Reference:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Dict, Tuple, List
+from typing import Optional, Dict, Tuple, List, Any
 
+from . import ARCHITECTURE_REGISTRY, create
 from .backbones.resnet import build_resnet
 from .necks.hybrid_encoder import build_hybrid_encoder
 from .transformers.rtdetr_transformer import build_rtdetr_transformer
@@ -25,6 +26,7 @@ from .heads.detr_head import build_dinov3_head
 from .heads.ppyoloe_head import build_ppyoloe_head
 
 
+@ARCHITECTURE_REGISTRY.register()
 class RTDETRv3(nn.Module):
     """
     RT-DETRv3: Real-time End-to-End Object Detection with Hierarchical Dense Positive Supervision
@@ -42,16 +44,19 @@ class RTDETRv3(nn.Module):
         - Only main detection branch active
         - No auxiliary branches
 
-    Following PaddlePaddle's implementation structure.
+    Following PaddlePaddle's implementation structure with dependency injection.
 
     Args:
-        backbone: Backbone network config or instance
-        neck: Neck network config or instance
-        transformer: Transformer config or instance
-        detr_head: Main detection head config or instance
-        aux_head: Auxiliary detection head config or instance (optional)
+        backbone: Backbone network instance (can be auto-injected from config)
+        neck: Neck network instance (can be auto-injected from config)
+        transformer: Transformer instance (can be auto-injected from config)
+        detr_head: Main detection head instance (can be auto-injected from config)
+        aux_head: Auxiliary detection head instance (optional, can be auto-injected)
         num_classes: Number of object classes (default: 80 for COCO)
     """
+
+    __category__ = 'architecture'
+    __inject__ = ['backbone', 'neck', 'transformer', 'detr_head', 'aux_head']  # Auto-inject from config
 
     def __init__(
         self,
@@ -108,16 +113,17 @@ class RTDETRv3(nn.Module):
             })
 
         if transformer is None:
-            transformer = build_rtdetr_transformer(
-                num_queries=transformer_num_queries,
-                num_decoder_layers=transformer_num_decoder_layers,
-                num_levels=transformer_num_levels,
-                num_decoder_points=transformer_num_points,
-                hidden_dim=transformer_hidden_dim,
-                eval_idx=head_eval_idx,
-                o2m_branch=head_o2m_branch,
-                num_queries_o2m=head_num_queries_o2m
-            )
+            transformer = build_rtdetr_transformer({
+                'num_queries': transformer_num_queries,
+                'num_decoder_layers': transformer_num_decoder_layers,
+                'num_levels': transformer_num_levels,
+                'num_decoder_points': transformer_num_points,
+                'hidden_dim': transformer_hidden_dim,
+                'eval_idx': head_eval_idx,
+                'o2m_branch': head_o2m_branch,
+                'num_queries_o2m': head_num_queries_o2m,
+                'num_classes': num_classes
+            })
 
         if detr_head is None:
             detr_head = build_dinov3_head(
@@ -133,6 +139,95 @@ class RTDETRv3(nn.Module):
         self.detr_head = detr_head
         self.aux_head = aux_head  # PPYOLOEHead (optional, for training)
         self.num_classes = num_classes
+
+    @classmethod
+    def from_config(cls, cfg: Dict[str, Any], global_config: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Build RT-DETRv3 components from config (PaddlePaddle-style).
+
+        This method creates module instances from configuration dicts and returns
+        them as kwargs dict for __init__. Supports dependency injection pattern.
+
+        Args:
+            cfg: RTDETRv3 configuration dict
+            global_config: Global configuration for shared values
+
+        Returns:
+            Dict of kwargs for RTDETRv3.__init__
+
+        Example config structure:
+            {
+                'backbone': {'type': 'ResNet', 'depth': 50, 'variant': 'd'},
+                'neck': {'type': 'HybridEncoder', 'hidden_dim': 256},
+                'transformer': {'type': 'RTDETRTransformerv3', 'num_queries': 300},
+                'detr_head': {'type': 'DINOv3Head'},
+                'aux_head': {'type': 'PPYOLOEHead'}  # optional
+            }
+        """
+        kwargs = {}
+
+        # Create backbone
+        if 'backbone' in cfg:
+            backbone_cfg = cfg['backbone'].copy()
+            if 'type' in backbone_cfg:
+                kwargs['backbone'] = create(backbone_cfg['type'], global_config, **{k: v for k, v in backbone_cfg.items() if k != 'type'})
+            else:
+                # Fallback to dict-based config (for build_resnet)
+                kwargs['backbone'] = build_resnet(backbone_cfg)
+
+        # Create neck with backbone output shape dependency
+        if 'neck' in cfg and 'backbone' in kwargs:
+            neck_cfg = cfg['neck'].copy()
+            # Inject backbone output shape
+            neck_kwargs = {k: v for k, v in neck_cfg.items() if k != 'type'}
+            if hasattr(kwargs['backbone'], 'out_shape'):
+                neck_kwargs['input_shape'] = kwargs['backbone'].out_shape
+            if 'type' in neck_cfg:
+                kwargs['neck'] = create(neck_cfg['type'], global_config, **neck_kwargs)
+            else:
+                kwargs['neck'] = build_hybrid_encoder(neck_cfg)
+
+        # Create transformer with neck output shape dependency
+        if 'transformer' in cfg:
+            transformer_cfg = cfg['transformer'].copy()
+            transformer_kwargs = {k: v for k, v in transformer_cfg.items() if k != 'type'}
+            # Inject shape info from neck or backbone
+            if 'neck' in kwargs and hasattr(kwargs['neck'], 'out_shape'):
+                transformer_kwargs['input_shape'] = kwargs['neck'].out_shape
+            elif 'backbone' in kwargs and hasattr(kwargs['backbone'], 'out_shape'):
+                transformer_kwargs['input_shape'] = kwargs['backbone'].out_shape
+            if 'type' in transformer_cfg:
+                kwargs['transformer'] = create(transformer_cfg['type'], global_config, **transformer_kwargs)
+            else:
+                kwargs['transformer'] = build_rtdetr_transformer(transformer_cfg)
+
+        # Create detr_head with transformer dependencies
+        if 'detr_head' in cfg and 'transformer' in kwargs:
+            head_cfg = cfg['detr_head'].copy()
+            head_kwargs = {k: v for k, v in head_cfg.items() if k != 'type'}
+            # Inject transformer properties
+            if hasattr(kwargs['transformer'], 'hidden_dim'):
+                head_kwargs['hidden_dim'] = kwargs['transformer'].hidden_dim
+            if hasattr(kwargs['transformer'], 'nhead'):
+                head_kwargs['nhead'] = kwargs['transformer'].nhead
+            if 'type' in head_cfg:
+                kwargs['detr_head'] = create(head_cfg['type'], global_config, **head_kwargs)
+            else:
+                kwargs['detr_head'] = build_dinov3_head(**head_kwargs)
+
+        # Create aux_head (optional)
+        if 'aux_head' in cfg and 'neck' in kwargs:
+            aux_cfg = cfg['aux_head'].copy()
+            aux_kwargs = {k: v for k, v in aux_cfg.items() if k != 'type'}
+            # Inject neck output shape
+            if hasattr(kwargs['neck'], 'out_shape'):
+                aux_kwargs['input_shape'] = kwargs['neck'].out_shape
+            if 'type' in aux_cfg:
+                kwargs['aux_head'] = create(aux_cfg['type'], global_config, **aux_kwargs)
+            else:
+                kwargs['aux_head'] = build_ppyoloe_head(aux_cfg)
+
+        return kwargs
 
     def forward(
         self,

@@ -22,6 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Optional
 import math
+from .. import NECK_REGISTRY
 
 
 class ConvNormAct(nn.Module):
@@ -335,8 +336,11 @@ class TransformerEncoder(nn.Module):
         return output
 
 
+@NECK_REGISTRY.register()
 class HybridEncoder(nn.Module):
     """
+
+    __category__ = 'neck'
     HybridEncoder: FPN + PAN neck with optional Transformer encoder
 
     This neck takes multi-scale features from the backbone and produces

@@ -1,5 +1,8 @@
 # Copyright (c) 2025 RT-DETRv3 PyTorch Authors. All Rights Reserved.
 
+# Import parent registry first to enable registration
+from .. import LOSS_REGISTRY  # noqa: F401
+
 from .detr_loss import (
     DINOv3Loss,
     GIoULoss,

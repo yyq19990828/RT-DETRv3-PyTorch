@@ -20,10 +20,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Tuple, Dict, List
+from .. import HEAD_REGISTRY
 
 
+@HEAD_REGISTRY.register()
 class DINOv3Head(nn.Module):
     """
+
+    __category__ = 'head'
     DINOv3 Detection Head
 
     This head processes the outputs from the RTDETRTransformerv3 decoder.

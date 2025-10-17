@@ -15,7 +15,10 @@ Reference:
 
 import torch
 import torch.nn as nn
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any, Optional
+
+# Import registry for PaddlePaddle-style registration
+from .. import BACKBONE_REGISTRY
 
 
 class BasicBlock(nn.Module):
@@ -197,19 +200,31 @@ class Bottleneck(nn.Module):
         return out
 
 
+@BACKBONE_REGISTRY.register()
 class ResNet(nn.Module):
     """
     ResNet Backbone with support for ResNet-vd variant
 
     Output: Multi-scale features [C3, C4, C5] at strides [8, 16, 32]
 
+    PaddlePaddle-style registration with @register decorator.
+
     Example:
+        >>> # Method 1: Direct instantiation
         >>> backbone = ResNet(depth=50, variant='d', return_idx=[1, 2, 3])
+        >>>
+        >>> # Method 2: PaddlePaddle-style create
+        >>> from models import create
+        >>> backbone = create('ResNet', depth=50, variant='d')
+        >>>
+        >>> # Forward pass
         >>> x = torch.randn(2, 3, 640, 640)
         >>> c3, c4, c5 = backbone(x)
         >>> print(c3.shape, c4.shape, c5.shape)
         torch.Size([2, 512, 80, 80]) torch.Size([2, 1024, 40, 40]) torch.Size([2, 2048, 20, 20])
     """
+
+    __category__ = 'backbone'
 
     # ResNet architecture specifications
     arch_settings = {
@@ -294,6 +309,60 @@ class ResNet(nn.Module):
 
         # Freeze stages if specified
         self._freeze_stages()
+
+        # Set output shape for dependency injection (PaddlePaddle pattern)
+        self._setup_out_shape()
+
+    def _setup_out_shape(self):
+        """Setup output shape info for dependency injection"""
+        # Calculate output channels for each stage
+        block = self.block
+        if self.depth in [18, 34]:
+            # BasicBlock expansion = 1
+            stage_channels = [64, 128, 256, 512]
+        else:
+            # Bottleneck expansion = 4
+            stage_channels = [256, 512, 1024, 2048]
+
+        # Create output shape list for return_idx
+        self.out_shape = []
+        for idx in self.return_idx:
+            channels = stage_channels[idx]
+            # Stride calculation: stage 0 (layer1) = 4, stage 1 = 8, stage 2 = 16, stage 3 = 32
+            stride = 2 ** (idx + 3)  # 2^3=8, 2^4=16, 2^5=32
+            self.out_shape.append({
+                'channels': channels,
+                'stride': stride
+            })
+
+    @classmethod
+    def from_config(cls, cfg: Dict[str, Any], global_config: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Build ResNet from config (PaddlePaddle-style).
+
+        Args:
+            cfg: ResNet configuration dict
+            global_config: Global configuration (unused for backbone)
+
+        Returns:
+            Dict of kwargs for ResNet.__init__
+
+        Example config:
+            {
+                'depth': 50,
+                'variant': 'd',
+                'frozen_stages': 1,
+                'return_idx': [1, 2, 3]
+            }
+        """
+        return {
+            'depth': cfg.get('depth', 50),
+            'variant': cfg.get('variant', 'd'),
+            'frozen_stages': cfg.get('frozen_stages', -1),
+            'return_idx': cfg.get('return_idx', [1, 2, 3]),
+            'use_dcn': cfg.get('use_dcn', False),
+            'num_stages': cfg.get('num_stages', 4)
+        }
 
     def _make_layer(
         self,

@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Dict, Optional, Tuple
+from .. import HEAD_REGISTRY
 
 
 class ESEAttn(nn.Module):
@@ -52,8 +53,11 @@ class ESEAttn(nn.Module):
         return self.conv(feat * weight)
 
 
+@HEAD_REGISTRY.register()
 class PPYOLOEHead(nn.Module):
     """PPYOLOEHead detection head for auxiliary branch.
+
+    __category__ = 'head'
 
     This head operates on multi-scale features from the neck and produces
     CNN-based detections. During training, it provides auxiliary supervision
