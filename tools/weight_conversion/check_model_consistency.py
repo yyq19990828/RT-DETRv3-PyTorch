@@ -67,6 +67,12 @@ def build_paddle_model(config_path: str):
         logger.info("Creating RT-DETRv3 model...")
         model = create(cfg.architecture)
 
+        # Disable post-processing for raw output comparison
+        # Post-processing includes NMS which changes output format
+        if hasattr(model, 'exclude_post_process'):
+            logger.info("Disabling post-processing for raw output comparison")
+            model.exclude_post_process = True
+
         # Load checkpoint if specified in config
         if 'checkpoint' in cfg and cfg['checkpoint']:
             checkpoint_path = Path(cfg['checkpoint'])
@@ -142,6 +148,7 @@ def build_pytorch_model(config_path: str):
     global_hidden_dim = cfg.get('hidden_dim', 256)
 
     # Build model with config parameters
+    # NOTE: Disable o2m_branch for consistency check to match Paddle's 300 queries
     model = build_rtdetrv3(
         num_classes=cfg.get('num_classes', 80),
         backbone=backbone,
@@ -154,7 +161,7 @@ def build_pytorch_model(config_path: str):
         num_points=4,  # Fixed parameter
         eval_idx=transformer_cfg.get('eval_idx', -1),
         o2m=cfg.get('DINOv3Head', {}).get('o2m', 4) if 'DINOv3Head' in cfg else 4,
-        o2m_branch=cfg.get('o2m_branch', False),
+        o2m_branch=False,  # Disable for consistency check
         num_queries_o2m=cfg.get('num_queries_o2m', 450),
         use_aux_head=False  # No auxiliary head for inference
     )

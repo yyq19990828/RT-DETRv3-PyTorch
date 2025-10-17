@@ -64,12 +64,37 @@ class ModelOutputValidator:
         torch_model.eval()
 
         # Convert input to appropriate format
-        paddle_input = paddle.to_tensor(sample_input, dtype='float32')
+        # Paddle RT-DETRv3 expects dict input with 'image', 'im_shape', 'scale_factor' keys
+        paddle_input_tensor = paddle.to_tensor(sample_input, dtype='float32')
+        batch_size, _, height, width = sample_input.shape
+
+        # Create Paddle-style input dict
+        paddle_input = {
+            'image': paddle_input_tensor,
+            'im_shape': paddle.to_tensor([[height, width]] * batch_size, dtype='float32'),
+            'scale_factor': paddle.to_tensor([[1.0, 1.0]] * batch_size, dtype='float32')
+        }
+
         torch_input = torch.from_numpy(sample_input).float()
 
         # Run forward pass
         with paddle.no_grad():
-            paddle_output = paddle_model(paddle_input)
+            # For Paddle RT-DETRv3, we need to extract raw transformer output
+            # because the model's forward includes post-processing
+            # Manually run: backbone -> neck -> transformer
+            body_feats = paddle_model.backbone(paddle_input)
+            neck_feats = paddle_model.neck(body_feats)
+            transformer_output = paddle_model.transformer(neck_feats, None, None)
+
+            # transformer_output is a tuple: (aux_boxes, aux_logits, pred_boxes, pred_logits, ...)
+            # We use the main outputs (last decoder layer): pred_boxes and pred_logits
+            if isinstance(transformer_output, (tuple, list)) and len(transformer_output) >= 4:
+                paddle_output = {
+                    'pred_boxes': transformer_output[2],  # [B, num_queries, 4]
+                    'pred_logits': transformer_output[3]  # [B, num_queries, num_classes]
+                }
+            else:
+                paddle_output = transformer_output
 
         with torch.no_grad():
             torch_output = torch_model(torch_input)
@@ -148,6 +173,7 @@ class ModelOutputValidator:
 
         # Check shape
         if paddle_array.shape != torch_array.shape:
+            logger.error(f"Shape mismatch for {name}: Paddle {paddle_array.shape} != PyTorch {torch_array.shape}")
             return ForwardPassResult(
                 passed=False,
                 max_abs_diff=float('inf'),
@@ -156,6 +182,17 @@ class ModelOutputValidator:
                 output_shape=paddle_array.shape,
                 details=f"Shape mismatch for {name}: Paddle {paddle_array.shape} != PyTorch {torch_array.shape}"
             )
+
+        # Check for NaN/Inf
+        paddle_has_nan = np.isnan(paddle_array).any()
+        paddle_has_inf = np.isinf(paddle_array).any()
+        torch_has_nan = np.isnan(torch_array).any()
+        torch_has_inf = np.isinf(torch_array).any()
+
+        if paddle_has_nan or paddle_has_inf:
+            logger.error(f"Paddle output for {name} contains NaN={paddle_has_nan}, Inf={paddle_has_inf}")
+        if torch_has_nan or torch_has_inf:
+            logger.error(f"PyTorch output for {name} contains NaN={torch_has_nan}, Inf={torch_has_inf}")
 
         # Compare outputs
         abs_diff = np.abs(paddle_array - torch_array)
