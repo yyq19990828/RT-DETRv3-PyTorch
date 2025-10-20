@@ -27,7 +27,7 @@ This module implements the loss function for DINOv3, which includes:
 """
 
 from typing import Dict, List, Optional, Tuple
-from .. import LOSS_REGISTRY
+from ppdet.core.workspace import register
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -377,7 +377,7 @@ class HungarianMatcher(nn.Module):
         return indices
 
 
-@LOSS_REGISTRY.register()
+@register
 class DINOv3Loss(nn.Module):
     """
 

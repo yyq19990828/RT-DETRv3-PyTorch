@@ -22,7 +22,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Optional
 import math
-from .. import NECK_REGISTRY
+from ppdet.core.workspace import register
 
 
 class ConvNormAct(nn.Module):
@@ -336,7 +336,7 @@ class TransformerEncoder(nn.Module):
         return output
 
 
-@NECK_REGISTRY.register()
+@register
 class HybridEncoder(nn.Module):
     """
     HybridEncoder: FPN + PAN neck with optional Transformer encoder

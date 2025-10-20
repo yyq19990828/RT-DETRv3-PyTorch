@@ -18,11 +18,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Dict, Tuple, List, Any
 
-from . import ARCHITECTURE_REGISTRY, create
+from ppdet.core.workspace import register
 
 
-@ARCHITECTURE_REGISTRY.register()
-class RTDETRv3(nn.Module):
+@register
+class RTDETRV3(nn.Module):
     """
     RT-DETRv3: Real-time End-to-End Object Detection with Hierarchical Dense Positive Supervision
 

@@ -20,10 +20,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Tuple, Dict, List
-from .. import HEAD_REGISTRY
+from ppdet.core.workspace import register
 
 
-@HEAD_REGISTRY.register()
+@register
 class DINOv3Head(nn.Module):
     """
     DINOv3 Detection Head

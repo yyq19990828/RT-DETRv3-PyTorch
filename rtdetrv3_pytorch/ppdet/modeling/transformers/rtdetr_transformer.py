@@ -21,7 +21,7 @@ import math
 
 from .attention import MSDeformableAttention
 from .utils import MLP, inverse_sigmoid
-from .. import TRANSFORMER_REGISTRY
+from ppdet.core.workspace import register
 
 
 class MultiHeadAttention(nn.Module):
@@ -360,7 +360,7 @@ class TransformerDecoder(nn.Module):
 # PaddlePaddle reference: ppdet/modeling/transformers/rtdetr_transformerv3.py:330-334
 
 
-@TRANSFORMER_REGISTRY.register()
+@register
 class RTDETRTransformerv3(nn.Module):
     """
     Complete RT-DETRv3 Transformer with multi-group queries and self-attention perturbation

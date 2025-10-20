@@ -18,7 +18,7 @@ import torch.nn as nn
 from typing import List, Tuple, Dict, Any, Optional
 
 # Import registry for PaddlePaddle-style registration
-from .. import BACKBONE_REGISTRY
+from ppdet.core.workspace import register
 
 
 class BasicBlock(nn.Module):
@@ -200,7 +200,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-@BACKBONE_REGISTRY.register()
+@register
 class ResNet(nn.Module):
     """
     ResNet Backbone with support for ResNet-vd variant
