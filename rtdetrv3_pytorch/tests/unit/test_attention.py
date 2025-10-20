@@ -14,7 +14,7 @@ Following PaddlePaddle implementation for numerical equivalence.
 import pytest
 import torch
 import torch.nn as nn
-from models.transformers.attention import (
+from rtdetrv3_pytorch.models.transformers.attention import (
     MSDeformableAttention,
     deformable_attention_core_func,
     build_ms_deformable_attention

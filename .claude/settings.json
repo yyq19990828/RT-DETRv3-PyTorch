@@ -13,17 +13,4 @@
     "ask": []
   },
   "hooks": {}
-  //   "PreToolUse": [
-  //     {
-  //       "matcher": "*",
-  //       "hooks": [
-  //         {
-  //           "type": "command",
-  //           "command": "uv run .claude/hooks/pretooluse.py",
-  //           "timeout": 5
-  //         }
-  //       ]
-  //     }
-  //   ]
-  // }
 }

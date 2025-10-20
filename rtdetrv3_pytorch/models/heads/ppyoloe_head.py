@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Dict, Optional, Tuple
+from .. import HEAD_REGISTRY
 
 
 class ESEAttn(nn.Module):
@@ -52,6 +53,7 @@ class ESEAttn(nn.Module):
         return self.conv(feat * weight)
 
 
+@HEAD_REGISTRY.register()
 class PPYOLOEHead(nn.Module):
     """PPYOLOEHead detection head for auxiliary branch.
 
@@ -66,6 +68,10 @@ class PPYOLOEHead(nn.Module):
         reg_max: Maximum regression value for DFL (default: 16)
         act: Activation function name (default: 'swish')
     """
+
+    __category__ = 'head'
+    __inject__ = []  # No component dependencies
+    __shared__ = ['num_classes']  # Shared from global config
 
     def __init__(
         self,
@@ -220,25 +226,30 @@ class PPYOLOEHead(nn.Module):
 
         return cls_scores, reg_dists
 
+    @classmethod
+    def from_config(cls, cfg: Dict, global_config: Optional[Dict] = None) -> Dict:
+        """Build PPYOLOEHead from config (PaddlePaddle-style).
 
-def build_ppyoloe_head(cfg: Dict) -> PPYOLOEHead:
-    """Build PPYOLOEHead from configuration.
+        Args:
+            cfg: Head configuration dict
+            global_config: Global configuration for shared values
 
-    Args:
-        cfg: Configuration dictionary with keys:
-            - in_channels: List[int] - Input channels per FPN level
-            - num_classes: int - Number of classes (default: 80)
-            - fpn_strides: List[int] - FPN strides (default: [8, 16, 32])
-            - reg_max: int - Maximum regression value (default: 16)
-            - act: str - Activation function (default: 'swish')
+        Returns:
+            Dict of kwargs for PPYOLOEHead.__init__
 
-    Returns:
-        PPYOLOEHead instance
-    """
-    return PPYOLOEHead(
-        in_channels=cfg.get('in_channels', [256, 256, 256]),
-        num_classes=cfg.get('num_classes', 80),
-        fpn_strides=tuple(cfg.get('fpn_strides', [8, 16, 32])),
-        reg_max=cfg.get('reg_max', 16),
-        act=cfg.get('act', 'swish')
-    )
+        Example config:
+            {
+                'in_channels': [256, 256, 256],
+                'num_classes': 80,
+                'fpn_strides': [8, 16, 32],
+                'reg_max': 16,
+                'act': 'swish'
+            }
+        """
+        return {
+            'in_channels': cfg.get('in_channels', [256, 256, 256]),
+            'num_classes': cfg.get('num_classes', 80),
+            'fpn_strides': tuple(cfg.get('fpn_strides', [8, 16, 32])),
+            'reg_max': cfg.get('reg_max', 16),
+            'act': cfg.get('act', 'swish')
+        }

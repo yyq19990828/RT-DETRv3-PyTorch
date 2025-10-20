@@ -27,6 +27,7 @@ This module implements the loss function for DINOv3, which includes:
 """
 
 from typing import Dict, List, Optional, Tuple
+from .. import LOSS_REGISTRY
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -376,8 +377,11 @@ class HungarianMatcher(nn.Module):
         return indices
 
 
+@LOSS_REGISTRY.register()
 class DINOv3Loss(nn.Module):
     """
+
+    __category__ = 'loss'
     DINOv3 Loss for RT-DETRv3.
 
     This loss function implements:

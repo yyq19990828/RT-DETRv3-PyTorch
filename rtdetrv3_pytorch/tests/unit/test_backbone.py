@@ -17,7 +17,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from models.backbones.resnet import ResNet, build_resnet
+from rtdetrv3_pytorch.models.backbones.resnet import ResNet
 
 
 class TestResNetOutputShapes:
@@ -253,6 +253,86 @@ class TestBuildResNet:
         assert model.variant == 'd'  # Default
         assert model.frozen_stages == -1  # Default
         assert model.return_idx == [1, 2, 3]  # Default
+
+
+class TestResNetOutShapeAttribute:
+    """Test ResNet.out_shape attribute for dependency injection (T031)"""
+
+    def test_resnet50_out_shape_exists(self):
+        """Test that ResNet provides out_shape attribute after initialization"""
+        model = ResNet(depth=50, variant='d', return_idx=[1, 2, 3])
+
+        # Verify out_shape exists
+        assert hasattr(model, 'out_shape'), "ResNet must have out_shape attribute"
+        assert isinstance(model.out_shape, list), "out_shape must be a list"
+
+    def test_resnet50_out_shape_structure(self):
+        """Test that out_shape has correct structure for dependency injection"""
+        model = ResNet(depth=50, variant='d', return_idx=[1, 2, 3])
+
+        # Should have 3 entries for return_idx=[1, 2, 3]
+        assert len(model.out_shape) == 3
+
+        # Each entry should have 'channels' and 'stride' keys
+        for i, shape_info in enumerate(model.out_shape):
+            assert 'channels' in shape_info, f"out_shape[{i}] must have 'channels' key"
+            assert 'stride' in shape_info, f"out_shape[{i}] must have 'stride' key"
+            assert isinstance(shape_info['channels'], int)
+            assert isinstance(shape_info['stride'], int)
+
+    def test_resnet50_out_shape_values(self):
+        """Test that out_shape contains correct channel and stride values for ResNet-50"""
+        model = ResNet(depth=50, variant='d', return_idx=[1, 2, 3])
+
+        # For ResNet-50 with return_idx=[1, 2, 3]:
+        # Stage 1 (layer2): channels=512, stride=8
+        # Stage 2 (layer3): channels=1024, stride=16
+        # Stage 3 (layer4): channels=2048, stride=32
+        expected = [
+            {'channels': 512, 'stride': 8},
+            {'channels': 1024, 'stride': 16},
+            {'channels': 2048, 'stride': 32}
+        ]
+
+        assert model.out_shape == expected, \
+            f"Expected {expected}, got {model.out_shape}"
+
+    def test_resnet18_out_shape_values(self):
+        """Test out_shape for ResNet-18 (BasicBlock expansion=1)"""
+        model = ResNet(depth=18, variant='d', return_idx=[1, 2, 3])
+
+        # For ResNet-18 with return_idx=[1, 2, 3]:
+        # BasicBlock has expansion=1, so channels are 128, 256, 512
+        expected = [
+            {'channels': 128, 'stride': 8},
+            {'channels': 256, 'stride': 16},
+            {'channels': 512, 'stride': 32}
+        ]
+
+        assert model.out_shape == expected
+
+    def test_out_shape_with_different_return_idx(self):
+        """Test that out_shape adjusts to different return_idx values"""
+        # Test with return_idx=[2, 3] (only C4, C5)
+        model = ResNet(depth=50, variant='d', return_idx=[2, 3])
+
+        assert len(model.out_shape) == 2
+        assert model.out_shape[0] == {'channels': 1024, 'stride': 16}
+        assert model.out_shape[1] == {'channels': 2048, 'stride': 32}
+
+    def test_out_shape_with_all_stages(self):
+        """Test out_shape when returning all 4 stages"""
+        model = ResNet(depth=50, variant='d', return_idx=[0, 1, 2, 3])
+
+        expected = [
+            {'channels': 256, 'stride': 4},   # C2
+            {'channels': 512, 'stride': 8},   # C3
+            {'channels': 1024, 'stride': 16}, # C4
+            {'channels': 2048, 'stride': 32}  # C5
+        ]
+
+        assert len(model.out_shape) == 4
+        assert model.out_shape == expected
 
 
 class TestResNetEdgeCases:

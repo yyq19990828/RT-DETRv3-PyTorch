@@ -21,7 +21,6 @@ from pathlib import Path
 # Import PyTorch implementation
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from models.necks.hybrid_encoder import build_hybrid_encoder
 
 
 def set_seed(seed=42):

@@ -14,13 +14,12 @@ Following PaddlePaddle implementation for numerical equivalence.
 import pytest
 import torch
 import torch.nn as nn
-from models.transformers.rtdetr_transformer import (
+from rtdetrv3_pytorch.models.transformers.rtdetr_transformer import (
     TransformerDecoderLayer,
     TransformerDecoder,
-    MultiHeadAttention,
-    build_transformer_decoder
+    MultiHeadAttention
 )
-from models.transformers.utils import MLP
+from rtdetrv3_pytorch.models.transformers.utils import MLP
 
 
 class TestMultiHeadAttention:
@@ -177,10 +176,19 @@ class TestTransformerDecoder:
 
     def test_forward_shape_training(self):
         """Test forward pass output shapes during training"""
-        decoder = build_transformer_decoder(
-            num_decoder_layers=6,
-            num_levels=3,
-            num_decoder_points=4
+        # Create decoder following PaddlePaddle style (direct instantiation)
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256,
+            n_head=8,
+            dim_feedforward=1024,
+            n_levels=3,
+            n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256,
+            decoder_layer=decoder_layer,
+            num_layers=6,
+            eval_idx=-1
         )
         decoder.train()
 
@@ -210,10 +218,18 @@ class TestTransformerDecoder:
 
     def test_forward_shape_eval(self):
         """Test forward pass output shapes during eval"""
-        decoder = build_transformer_decoder(
-            num_decoder_layers=6,
-            num_levels=3,
-            num_decoder_points=4,
+        # Create decoder following PaddlePaddle style
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256,
+            n_head=8,
+            dim_feedforward=1024,
+            n_levels=3,
+            n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256,
+            decoder_layer=decoder_layer,
+            num_layers=6,
             eval_idx=-1  # Use last layer
         )
         decoder.eval()
@@ -239,7 +255,8 @@ class TestTransformerDecoder:
 
     def test_iterative_refinement(self):
         """Test iterative bounding box refinement across layers"""
-        decoder = build_transformer_decoder(num_decoder_layers=6, num_levels=3)
+        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
+        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1)
         decoder.train()
 
         tgt = torch.randn(2, 300, 256)
@@ -266,7 +283,8 @@ class TestTransformerDecoder:
 
     def test_gradient_flow(self):
         """Test gradient flow through entire decoder"""
-        decoder = build_transformer_decoder(num_decoder_layers=3, num_levels=3)
+        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
+        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=3, eval_idx=-1)
         decoder.train()
 
         tgt = torch.randn(2, 100, 256, requires_grad=True)
@@ -292,20 +310,24 @@ class TestTransformerDecoder:
         # Note: ref_points_unact may be detached during training, so we don't check its gradient
 
 
-class TestBuildTransformerDecoder:
-    """Test decoder builder function"""
+class TestDirectInstantiation:
+    """Test direct decoder instantiation (PaddlePaddle style)"""
 
-    def test_build_from_config(self):
-        """Test building decoder with custom config"""
-        decoder = build_transformer_decoder(
-            hidden_dim=256,
-            num_heads=8,
+    def test_instantiate_with_custom_config(self):
+        """Test instantiating decoder with custom config"""
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256,
+            n_head=8,
             dim_feedforward=1024,
-            num_decoder_layers=6,
-            num_levels=4,
-            num_decoder_points=4,
             dropout=0.1,
             activation='relu',
+            n_levels=4,
+            n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256,
+            decoder_layer=decoder_layer,
+            num_layers=6,
             eval_idx=-1
         )
 
@@ -314,13 +336,14 @@ class TestBuildTransformerDecoder:
         assert decoder.hidden_dim == 256
         assert decoder.eval_idx == 5  # -1 means last layer (index 5)
 
-    def test_build_with_defaults(self):
-        """Test building decoder with default values"""
-        decoder = build_transformer_decoder()
+    def test_instantiate_with_defaults(self):
+        """Test instantiating decoder with default values"""
+        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
+        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1)
 
         assert isinstance(decoder, TransformerDecoder)
-        assert decoder.num_layers == 6  # Default
-        assert decoder.hidden_dim == 256  # Default
+        assert decoder.num_layers == 6
+        assert decoder.hidden_dim == 256
 
 
 class TestEdgeCases:

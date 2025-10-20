@@ -16,8 +16,8 @@ Note: Training mode tests for DINOv3Head will be added when loss computation is 
 import pytest
 import torch
 import torch.nn as nn
-from models.heads.detr_head import DINOv3Head, build_dinov3_head
-from models.heads.ppyoloe_head import PPYOLOEHead, build_ppyoloe_head
+from rtdetrv3_pytorch.models.heads.detr_head import DINOv3Head
+from rtdetrv3_pytorch.models.heads.ppyoloe_head import PPYOLOEHead
 
 
 class TestDINOv3Head:
@@ -416,16 +416,14 @@ class TestBuildPPYOLOEHead:
     """Test builder function for PPYOLOEHead"""
 
     def test_build_from_config(self):
-        """Test building head from config"""
-        config = {
-            'in_channels': [128, 256, 512],
-            'num_classes': 91,
-            'fpn_strides': [8, 16, 32],
-            'reg_max': 7,
-            'act': 'relu'
-        }
-
-        head = build_ppyoloe_head(config)
+        """Test building head using direct instantiation"""
+        head = PPYOLOEHead(
+            in_channels=[128, 256, 512],
+            num_classes=91,
+            fpn_strides=[8, 16, 32],
+            reg_max=7,
+            act='relu'
+        )
 
         assert isinstance(head, PPYOLOEHead)
         assert head.num_classes == 91
@@ -434,8 +432,7 @@ class TestBuildPPYOLOEHead:
 
     def test_build_with_defaults(self):
         """Test building head with default values"""
-        config = {}
-        head = build_ppyoloe_head(config)
+        head = PPYOLOEHead()
 
         assert isinstance(head, PPYOLOEHead)
         assert head.num_classes == 80  # Default

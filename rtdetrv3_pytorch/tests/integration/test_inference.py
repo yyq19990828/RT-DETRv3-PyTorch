@@ -22,7 +22,7 @@ import torch
 parent_path = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(parent_path))
 
-from models.rtdetrv3 import build_rtdetrv3
+from models import create
 from tools.infer import preprocess_image, postprocess
 
 
@@ -32,14 +32,15 @@ class TestInference:
     @pytest.fixture
     def model(self):
         """Build a small RT-DETRv3 model for testing"""
-        model = build_rtdetrv3(
-            num_classes=80,
-            backbone='resnet50',
-            hidden_dim=256,
-            num_queries=300,
-            num_decoder_layers=6,
-            use_aux_head=False
-        )
+        config = {
+            'type': 'RTDETRv3',
+            'num_classes': 80,
+            'backbone': {'type': 'ResNet', 'depth': 50, 'variant': 'd', 'return_idx': [1, 2, 3]},
+            'neck': {'type': 'HybridEncoder', 'hidden_dim': 256},
+            'transformer': {'type': 'RTDETRTransformerv3', 'num_queries': 300, 'num_decoder_layers': 6, 'hidden_dim': 256},
+            'detr_head': {'type': 'DINOv3Head', 'eval_idx': -1}
+        }
+        model = create('RTDETRv3', global_config=config, num_classes=80)
         model.eval()
         return model
 
