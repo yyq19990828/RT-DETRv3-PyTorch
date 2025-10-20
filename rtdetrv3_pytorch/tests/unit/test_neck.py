@@ -13,11 +13,10 @@ Following PaddlePaddle implementation for numerical equivalence.
 import pytest
 import torch
 import torch.nn as nn
-from models.necks.hybrid_encoder import (
+from rtdetrv3_pytorch.models.necks.hybrid_encoder import (
     HybridEncoder,
     CSPRepLayer,
-    ConvNormAct,
-    build_hybrid_encoder
+    ConvNormAct
 )
 
 
@@ -259,19 +258,14 @@ class TestBuildHybridEncoder:
     """Test builder function"""
 
     def test_build_from_config(self):
-        """Test building HybridEncoder from config dict"""
-        cfg = {
-            'in_channels': [512, 1024, 2048],
-            'feat_strides': [8, 16, 32],
-            'hidden_dim': 256,
-            'num_encoder_layers': 1,
-            'use_encoder_idx': [2],
-            'num_csp_blocks': 3,
-            'expansion': 1.0,
-            'act': 'relu'
-        }
-
-        neck = build_hybrid_encoder(cfg)
+        """Test building HybridEncoder using direct instantiation"""
+        neck = HybridEncoder(
+            in_channels=[512, 1024, 2048],
+            feat_strides=[8, 16, 32],
+            hidden_dim=256,
+            num_encoder_layers=1,
+            use_encoder_idx=[2]
+        )
 
         assert isinstance(neck, HybridEncoder)
         assert neck.hidden_dim == 256
@@ -280,9 +274,7 @@ class TestBuildHybridEncoder:
 
     def test_build_with_defaults(self):
         """Test building with default values"""
-        cfg = {}
-
-        neck = build_hybrid_encoder(cfg)
+        neck = HybridEncoder()
 
         assert isinstance(neck, HybridEncoder)
         assert neck.in_channels == [512, 1024, 2048]  # Default

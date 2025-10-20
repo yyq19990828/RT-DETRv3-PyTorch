@@ -17,7 +17,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from models.backbones.resnet import ResNet, build_resnet
+from rtdetrv3_pytorch.models.backbones.resnet import ResNet
 
 
 class TestResNetOutputShapes:

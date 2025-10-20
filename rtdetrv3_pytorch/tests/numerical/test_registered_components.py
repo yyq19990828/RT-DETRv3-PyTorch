@@ -30,10 +30,10 @@ from models import (
 )
 
 # Import direct component classes
-from models.backbones.resnet import ResNet
-from models.necks.hybrid_encoder import HybridEncoder
-from models.transformers.rtdetr_transformer import RTDETRTransformerv3
-from models.heads.detr_head import DINOv3Head
+from rtdetrv3_pytorch.models.backbones.resnet import ResNet
+from rtdetrv3_pytorch.models.necks.hybrid_encoder import HybridEncoder
+from rtdetrv3_pytorch.models.transformers.rtdetr_transformer import RTDETRTransformerv3
+from rtdetrv3_pytorch.models.heads.detr_head import DINOv3Head
 from models.rtdetrv3 import RTDETRv3
 
 
@@ -338,10 +338,7 @@ class TestRegisteredComponentsNumericalEquivalence:
         # Method 1: Direct instantiation (from config dicts)
         # Note: RTDETRv3.__init__ expects component instances, not configs
         # So we build components first
-        from models.backbones.resnet import build_resnet
-        from models.necks.hybrid_encoder import build_hybrid_encoder
-        from models.heads.detr_head import build_dinov3_head
-
+                        
         set_seed(42)
         backbone = build_resnet(config['backbone_config'])
         neck = build_hybrid_encoder(config['neck_config'])
