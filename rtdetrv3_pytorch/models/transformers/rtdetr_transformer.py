@@ -16,7 +16,7 @@ Reference:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Tuple, Dict, Any
 import math
 
 from .attention import MSDeformableAttention
@@ -355,59 +355,14 @@ class TransformerDecoder(nn.Module):
         return torch.stack(dec_out_bboxes), torch.stack(dec_out_logits)
 
 
-def build_transformer_decoder(
-    hidden_dim: int = 256,
-    num_heads: int = 8,
-    dim_feedforward: int = 1024,
-    num_decoder_layers: int = 6,
-    num_levels: int = 3,
-    num_decoder_points: int = 4,
-    dropout: float = 0.0,
-    activation: str = "relu",
-    eval_idx: int = -1
-) -> TransformerDecoder:
-    """
-    Build TransformerDecoder from config
-
-    Args:
-        hidden_dim: Hidden dimension
-        num_heads: Number of attention heads
-        dim_feedforward: FFN hidden dimension
-        num_decoder_layers: Number of decoder layers
-        num_levels: Number of feature levels
-        num_decoder_points: Number of sampling points for deformable attention
-        dropout: Dropout rate
-        activation: Activation function
-        eval_idx: Layer index to use during eval (-1 means last layer)
-
-    Returns:
-        TransformerDecoder instance
-    """
-    decoder_layer = TransformerDecoderLayer(
-        d_model=hidden_dim,
-        n_head=num_heads,
-        dim_feedforward=dim_feedforward,
-        dropout=dropout,
-        activation=activation,
-        n_levels=num_levels,
-        n_points=num_decoder_points
-    )
-
-    decoder = TransformerDecoder(
-        hidden_dim=hidden_dim,
-        decoder_layer=decoder_layer,
-        num_layers=num_decoder_layers,
-        eval_idx=eval_idx
-    )
-
-    return decoder
+# Note: build_transformer_decoder() function removed.
+# Following PaddlePaddle style: decoder is instantiated directly in RTDETRTransformerv3.__init__
+# PaddlePaddle reference: ppdet/modeling/transformers/rtdetr_transformerv3.py:330-334
 
 
 @TRANSFORMER_REGISTRY.register()
 class RTDETRTransformerv3(nn.Module):
     """
-
-    __category__ = 'transformer'
     Complete RT-DETRv3 Transformer with multi-group queries and self-attention perturbation
 
     This module implements the full transformer architecture including:
@@ -422,6 +377,10 @@ class RTDETRTransformerv3(nn.Module):
     Reference:
     - PaddlePaddle: ppdet/modeling/transformers/rtdetr_transformerv3.py:263-653
     """
+
+    __category__ = 'transformer'
+    __inject__ = []  # No component dependencies (receives features from neck)
+    __shared__ = ['num_classes', 'hidden_dim', 'o2m_branch', 'num_queries_o2m']  # Shared config following PaddlePaddle
 
     def __init__(
         self,
@@ -518,16 +477,20 @@ class RTDETRTransformerv3(nn.Module):
             for _ in range(self.num_groups)
         ])
 
-        # Decoder
-        self.decoder = build_transformer_decoder(
-            hidden_dim=hidden_dim,
-            num_heads=num_heads,
+        # Decoder (following PaddlePaddle: ppdet/modeling/transformers/rtdetr_transformerv3.py:330-334)
+        decoder_layer = TransformerDecoderLayer(
+            d_model=hidden_dim,
+            n_head=num_heads,
             dim_feedforward=dim_feedforward,
-            num_decoder_layers=num_decoder_layers,
-            num_levels=num_levels,
-            num_decoder_points=num_decoder_points,
             dropout=dropout,
             activation=activation,
+            n_levels=num_levels,
+            n_points=num_decoder_points
+        )
+        self.decoder = TransformerDecoder(
+            hidden_dim=hidden_dim,
+            decoder_layer=decoder_layer,
+            num_layers=num_decoder_layers,
             eval_idx=eval_idx
         )
 
@@ -807,72 +770,26 @@ class RTDETRTransformerv3(nn.Module):
 
         return dec_out_bboxes, dec_out_logits, enc_topk_bboxes, enc_topk_logits, dn_meta
 
+    @classmethod
+    def from_config(cls, cfg: Dict[str, Any], global_config: Optional[Dict] = None) -> Dict[str, Any]:
+        """
+        Build RTDETRTransformerv3 from config (PaddlePaddle-style).
 
-def build_rtdetr_transformer(cfg: dict):
-    """
-    Build RTDETRTransformerv3 from config dictionary
+        Following PaddlePaddle: ppdet/modeling/architectures/rtdetrv3.py:62-64
+        The transformer receives input_shape from neck but doesn't need to create sub-components.
 
-    Args:
-        cfg: Configuration dictionary with keys:
-            - num_queries: Number of one-to-one queries (default: 300)
-            - num_decoder_layers: Number of decoder layers (default: 6)
-            - num_levels: Number of feature levels (default: 3)
-            - num_decoder_points: Number of sampling points (default: 4)
-            - hidden_dim: Hidden dimension (default: 256)
-            - num_heads: Number of attention heads (default: 8)
-            - eval_idx: Evaluation layer index (default: -1)
-            - o2m_branch: Enable one-to-many branch (default: False)
-            - num_queries_o2m: Number of one-to-many queries (default: 450)
-            - num_noises: Number of noise groups (default: 0 for inference)
-            - num_classes: Number of object classes (default: 80)
-            - dim_feedforward: FFN hidden dimension (default: 1024)
-            - dropout: Dropout rate (default: 0.0)
-            - activation: Activation function (default: 'relu')
-            - num_noise_queries: List of noise query counts (default: [100])
-            - num_denoising: Number of denoising queries (default: 100)
-            - label_noise_ratio: Label noise ratio (default: 0.5)
-            - box_noise_scale: Box noise scale (default: 1.0)
+        Args:
+            cfg: Transformer configuration dict
+            global_config: Global configuration for shared values
 
-    Returns:
-        RTDETRTransformerv3 instance
-    """
-    # Extract parameters from config with defaults
-    num_queries = cfg.get('num_queries', 300)
-    num_decoder_layers = cfg.get('num_decoder_layers', 6)
-    num_levels = cfg.get('num_levels', 3)
-    num_decoder_points = cfg.get('num_decoder_points', 4)
-    hidden_dim = cfg.get('hidden_dim', 256)
-    num_heads = cfg.get('num_heads', 8)
-    eval_idx = cfg.get('eval_idx', -1)
-    o2m_branch = cfg.get('o2m_branch', False)
-    num_queries_o2m = cfg.get('num_queries_o2m', 450)
-    num_noises = cfg.get('num_noises', 0)
-    num_classes = cfg.get('num_classes', 80)
-    dim_feedforward = cfg.get('dim_feedforward', 1024)
-    dropout = cfg.get('dropout', 0.0)
-    activation = cfg.get('activation', 'relu')
-    num_noise_queries = cfg.get('num_noise_queries', [100])
-    num_denoising = cfg.get('num_denoising', 100)
-    label_noise_ratio = cfg.get('label_noise_ratio', 0.5)
-    box_noise_scale = cfg.get('box_noise_scale', 1.0)
+        Returns:
+            Empty dict (no special construction logic needed, all done in __init__)
+        """
+        # PaddlePaddle pattern: transformer = create(cfg['transformer'], **kwargs)
+        # where kwargs = {'input_shape': neck.out_shape}
+        # RTDETRTransformerv3 doesn't use input_shape, so we just return empty dict
+        return {}
 
-    return RTDETRTransformerv3(
-        num_classes=num_classes,
-        hidden_dim=hidden_dim,
-        num_queries=num_queries,
-        num_decoder_layers=num_decoder_layers,
-        num_heads=num_heads,
-        dim_feedforward=dim_feedforward,
-        dropout=dropout,
-        activation=activation,
-        num_levels=num_levels,
-        num_decoder_points=num_decoder_points,
-        num_noises=num_noises,
-        num_noise_queries=num_noise_queries,
-        o2m_branch=o2m_branch,
-        num_queries_o2m=num_queries_o2m,
-        eval_idx=eval_idx,
-        num_denoising=num_denoising,
-        label_noise_ratio=label_noise_ratio,
-        box_noise_scale=box_noise_scale
-    )
+
+# Note: build_rtdetr_transformer() function removed.
+# Use create('RTDETRTransformerv3', **kwargs) for PaddlePaddle-style instantiation instead.

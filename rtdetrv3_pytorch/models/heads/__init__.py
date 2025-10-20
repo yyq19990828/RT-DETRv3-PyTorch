@@ -6,12 +6,10 @@ Available heads:
 - PPYOLOEHead: Auxiliary CNN-based detection branch for training
 """
 
-from .detr_head import DINOv3Head, build_dinov3_head
-from .ppyoloe_head import PPYOLOEHead, build_ppyoloe_head
+from .detr_head import DINOv3Head
+from .ppyoloe_head import PPYOLOEHead
 
 __all__ = [
     'DINOv3Head',
-    'build_dinov3_head',
     'PPYOLOEHead',
-    'build_ppyoloe_head',
 ]

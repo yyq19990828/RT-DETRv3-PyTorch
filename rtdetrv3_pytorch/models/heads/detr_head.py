@@ -26,8 +26,6 @@ from .. import HEAD_REGISTRY
 @HEAD_REGISTRY.register()
 class DINOv3Head(nn.Module):
     """
-
-    __category__ = 'head'
     DINOv3 Detection Head
 
     This head processes the outputs from the RTDETRTransformerv3 decoder.
@@ -45,7 +43,13 @@ class DINOv3Head(nn.Module):
         o2m: One-to-many multiplier for auxiliary loss (default: 4)
         o2m_branch: Whether to use one-to-many branch (default: False)
         num_queries_o2m: Number of one-to-many queries (default: 450)
+        num_classes: Number of object classes (default: 80)
+        hidden_dim: Hidden dimension from transformer (default: 256)
     """
+
+    __category__ = 'head'
+    __inject__ = []  # No component dependencies
+    __shared__ = ['num_classes', 'hidden_dim']  # Shared from global config
 
     def __init__(
         self,
@@ -53,7 +57,9 @@ class DINOv3Head(nn.Module):
         eval_idx: int = -1,
         o2m: int = 4,
         o2m_branch: bool = False,
-        num_queries_o2m: int = 450
+        num_queries_o2m: int = 450,
+        num_classes: int = 80,
+        hidden_dim: int = 256
     ):
         super().__init__()
         self.loss_fn = loss_fn
@@ -61,6 +67,8 @@ class DINOv3Head(nn.Module):
         self.o2m = o2m
         self.o2m_branch = o2m_branch
         self.num_queries_o2m = num_queries_o2m
+        self.num_classes = num_classes
+        self.hidden_dim = hidden_dim
 
     def forward(
         self,
@@ -284,31 +292,32 @@ class DINOv3Head(nn.Module):
                 None  # No auxiliary outputs in eval mode
             )
 
+    @classmethod
+    def from_config(cls, cfg: Dict, global_config: Optional[Dict] = None) -> Dict:
+        """
+        Build DINOv3Head from config (PaddlePaddle-style).
 
-def build_dinov3_head(
-    loss_fn: Optional[nn.Module] = None,
-    eval_idx: int = -1,
-    o2m: int = 4,
-    o2m_branch: bool = False,
-    num_queries_o2m: int = 450
-) -> DINOv3Head:
-    """
-    Build DINOv3Head from config
+        Args:
+            cfg: Head configuration dict
+            global_config: Global configuration for shared values
 
-    Args:
-        loss_fn: Loss function module (DINOv3Loss instance)
-        eval_idx: Which decoder layer to use for evaluation (-1 means last layer)
-        o2m: One-to-many multiplier
-        o2m_branch: Whether to use one-to-many branch
-        num_queries_o2m: Number of one-to-many queries
+        Returns:
+            Dict of kwargs for DINOv3Head.__init__
 
-    Returns:
-        DINOv3Head instance
-    """
-    return DINOv3Head(
-        loss_fn=loss_fn,
-        eval_idx=eval_idx,
-        o2m=o2m,
-        o2m_branch=o2m_branch,
-        num_queries_o2m=num_queries_o2m
-    )
+        Example config:
+            {
+                'eval_idx': -1,
+                'o2m': 4,
+                'o2m_branch': False,
+                'num_queries_o2m': 450
+            }
+        """
+        return {
+            'loss_fn': cfg.get('loss_fn', None),
+            'eval_idx': cfg.get('eval_idx', -1),
+            'o2m': cfg.get('o2m', 4),
+            'o2m_branch': cfg.get('o2m_branch', False),
+            'num_queries_o2m': cfg.get('num_queries_o2m', 450),
+            'num_classes': cfg.get('num_classes', 80),
+            'hidden_dim': cfg.get('hidden_dim', 256)
+        }

@@ -33,7 +33,7 @@ from PIL import Image
 parent_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(parent_path))
 
-from models.rtdetrv3 import build_rtdetrv3
+from models import create
 from utils.config import load_config, apply_overrides
 from utils.checkpoint import load_checkpoint
 from utils.logger import setup_logger
@@ -382,22 +382,7 @@ def main():
 
     # Build model
     logger.info("Building model...")
-    model = build_rtdetrv3(
-        num_classes=cfg.get('num_classes', 80),
-        backbone=cfg.get('backbone', 'resnet50'),
-        variant=cfg.get('variant', 'd'),
-        frozen_stages=cfg.get('frozen_stages', -1),
-        hidden_dim=cfg.get('hidden_dim', 256),
-        num_queries=cfg.get('num_queries', 300),
-        num_decoder_layers=cfg.get('num_decoder_layers', 6),
-        num_levels=cfg.get('num_levels', 3),
-        num_points=cfg.get('num_points', 4),
-        eval_idx=cfg.get('eval_idx', -1),
-        o2m=cfg.get('o2m', 4),
-        o2m_branch=cfg.get('o2m_branch', False),
-        num_queries_o2m=cfg.get('num_queries_o2m', 450),
-        use_aux_head=False  # No auxiliary head needed for inference
-    )
+    model = create('RTDETRv3', global_config=cfg, num_classes=cfg.get('num_classes', 80))
 
     # Load checkpoint
     logger.info(f"Loading checkpoint from {args.checkpoint}...")

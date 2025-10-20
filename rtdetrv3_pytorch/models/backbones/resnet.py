@@ -225,6 +225,8 @@ class ResNet(nn.Module):
     """
 
     __category__ = 'backbone'
+    __inject__ = []  # No dependencies (backbone is root component)
+    __shared__ = []  # No shared config needed
 
     # ResNet architecture specifications
     arch_settings = {
@@ -325,11 +327,17 @@ class ResNet(nn.Module):
             stage_channels = [256, 512, 1024, 2048]
 
         # Create output shape list for return_idx
+        # Strides: layer1=4, layer2=8, layer3=16, layer4=32
+        # Formula: stride = 2^(idx+2) where idx is layer index (0,1,2,3)
         self.out_shape = []
         for idx in self.return_idx:
             channels = stage_channels[idx]
-            # Stride calculation: stage 0 (layer1) = 4, stage 1 = 8, stage 2 = 16, stage 3 = 32
-            stride = 2 ** (idx + 3)  # 2^3=8, 2^4=16, 2^5=32
+            # Stride calculation:
+            # idx=0 (layer1): 2^(0+2) = 4
+            # idx=1 (layer2): 2^(1+2) = 8
+            # idx=2 (layer3): 2^(2+2) = 16
+            # idx=3 (layer4): 2^(3+2) = 32
+            stride = 2 ** (idx + 2)
             self.out_shape.append({
                 'channels': channels,
                 'stride': stride
@@ -525,27 +533,3 @@ class ResNet(nn.Module):
             outputs.append(layer_outputs[idx])
 
         return tuple(outputs)
-
-
-def build_resnet(cfg: dict) -> ResNet:
-    """
-    Build ResNet backbone from config
-
-    Args:
-        cfg: Configuration dict with keys:
-            - depth: ResNet depth (18, 34, 50, 101, 152)
-            - variant: ResNet variant ('a', 'b', 'c', 'd')
-            - frozen_stages: Number of frozen stages
-            - return_idx: Indices of stages to return
-
-    Returns:
-        ResNet backbone instance
-    """
-    return ResNet(
-        depth=cfg.get('depth', 50),
-        variant=cfg.get('variant', 'd'),
-        frozen_stages=cfg.get('frozen_stages', -1),
-        return_idx=cfg.get('return_idx', [1, 2, 3]),
-        use_dcn=cfg.get('use_dcn', False),
-        num_stages=cfg.get('num_stages', 4)
-    )

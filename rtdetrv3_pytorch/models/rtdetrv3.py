@@ -19,11 +19,6 @@ import torch.nn.functional as F
 from typing import Optional, Dict, Tuple, List, Any
 
 from . import ARCHITECTURE_REGISTRY, create
-from .backbones.resnet import build_resnet
-from .necks.hybrid_encoder import build_hybrid_encoder
-from .transformers.rtdetr_transformer import build_rtdetr_transformer
-from .heads.detr_head import build_dinov3_head
-from .heads.ppyoloe_head import build_ppyoloe_head
 
 
 @ARCHITECTURE_REGISTRY.register()
@@ -57,6 +52,7 @@ class RTDETRv3(nn.Module):
 
     __category__ = 'architecture'
     __inject__ = ['backbone', 'neck', 'transformer', 'detr_head', 'aux_head']  # Auto-inject from config
+    __shared__ = ['num_classes']  # Shared from global config
 
     def __init__(
         self,
@@ -93,44 +89,50 @@ class RTDETRv3(nn.Module):
     ):
         super().__init__()
 
-        # Build components if not provided
+        # Build components if not provided (using create() for PaddlePaddle-style)
         if backbone is None:
-            backbone = build_resnet({
-                'depth': backbone_depth,
-                'variant': backbone_variant,
-                'frozen_stages': backbone_frozen_stages,
-                'return_idx': backbone_return_idx
-            })
+            backbone = create(
+                'ResNet',
+                depth=backbone_depth,
+                variant=backbone_variant,
+                frozen_stages=backbone_frozen_stages,
+                return_idx=backbone_return_idx
+            )
 
         if neck is None:
-            neck = build_hybrid_encoder({
-                'in_channels': neck_in_channels,
-                'feat_strides': neck_feat_strides,
-                'hidden_dim': neck_hidden_dim,
-                'use_encoder_idx': neck_use_encoder_idx,
-                'num_encoder_layers': neck_num_encoder_layers,
-                'expansion': neck_expansion
-            })
+            neck = create(
+                'HybridEncoder',
+                in_channels=neck_in_channels,
+                feat_strides=neck_feat_strides,
+                hidden_dim=neck_hidden_dim,
+                use_encoder_idx=neck_use_encoder_idx,
+                num_encoder_layers=neck_num_encoder_layers,
+                expansion=neck_expansion
+            )
 
         if transformer is None:
-            transformer = build_rtdetr_transformer({
-                'num_queries': transformer_num_queries,
-                'num_decoder_layers': transformer_num_decoder_layers,
-                'num_levels': transformer_num_levels,
-                'num_decoder_points': transformer_num_points,
-                'hidden_dim': transformer_hidden_dim,
-                'eval_idx': head_eval_idx,
-                'o2m_branch': head_o2m_branch,
-                'num_queries_o2m': head_num_queries_o2m,
-                'num_classes': num_classes
-            })
+            transformer = create(
+                'RTDETRTransformerv3',
+                num_queries=transformer_num_queries,
+                num_decoder_layers=transformer_num_decoder_layers,
+                num_levels=transformer_num_levels,
+                num_decoder_points=transformer_num_points,
+                hidden_dim=transformer_hidden_dim,
+                eval_idx=head_eval_idx,
+                o2m_branch=head_o2m_branch,
+                num_queries_o2m=head_num_queries_o2m,
+                num_classes=num_classes
+            )
 
         if detr_head is None:
-            detr_head = build_dinov3_head(
+            detr_head = create(
+                'DINOv3Head',
                 eval_idx=head_eval_idx,
                 o2m=head_o2m,
                 o2m_branch=head_o2m_branch,
-                num_queries_o2m=head_num_queries_o2m
+                num_queries_o2m=head_num_queries_o2m,
+                num_classes=num_classes,
+                hidden_dim=transformer_hidden_dim
             )
 
         self.backbone = backbone
@@ -166,66 +168,78 @@ class RTDETRv3(nn.Module):
         """
         kwargs = {}
 
-        # Create backbone
+        # Create backbone (only if it's a config dict, not an instance)
         if 'backbone' in cfg:
-            backbone_cfg = cfg['backbone'].copy()
-            if 'type' in backbone_cfg:
-                kwargs['backbone'] = create(backbone_cfg['type'], global_config, **{k: v for k, v in backbone_cfg.items() if k != 'type'})
+            if isinstance(cfg['backbone'], dict):
+                backbone_cfg = cfg['backbone'].copy()
+                backbone_type = backbone_cfg.pop('type', 'ResNet')  # Default to ResNet
+                kwargs['backbone'] = create(backbone_type, global_config, **backbone_cfg)
             else:
-                # Fallback to dict-based config (for build_resnet)
-                kwargs['backbone'] = build_resnet(backbone_cfg)
+                # Already an instance (from __inject__)
+                kwargs['backbone'] = cfg['backbone']
 
         # Create neck with backbone output shape dependency
-        if 'neck' in cfg and 'backbone' in kwargs:
-            neck_cfg = cfg['neck'].copy()
-            # Inject backbone output shape
-            neck_kwargs = {k: v for k, v in neck_cfg.items() if k != 'type'}
-            if hasattr(kwargs['backbone'], 'out_shape'):
-                neck_kwargs['input_shape'] = kwargs['backbone'].out_shape
-            if 'type' in neck_cfg:
-                kwargs['neck'] = create(neck_cfg['type'], global_config, **neck_kwargs)
-            else:
-                kwargs['neck'] = build_hybrid_encoder(neck_cfg)
+        if 'neck' in cfg:
+            if isinstance(cfg['neck'], dict):
+                neck_cfg = cfg['neck'].copy()
+                neck_type = neck_cfg.pop('type', 'HybridEncoder')  # Default to HybridEncoder
 
-        # Create transformer with neck output shape dependency
-        if 'transformer' in cfg:
-            transformer_cfg = cfg['transformer'].copy()
-            transformer_kwargs = {k: v for k, v in transformer_cfg.items() if k != 'type'}
-            # Inject shape info from neck or backbone
-            if 'neck' in kwargs and hasattr(kwargs['neck'], 'out_shape'):
-                transformer_kwargs['input_shape'] = kwargs['neck'].out_shape
-            elif 'backbone' in kwargs and hasattr(kwargs['backbone'], 'out_shape'):
-                transformer_kwargs['input_shape'] = kwargs['backbone'].out_shape
-            if 'type' in transformer_cfg:
-                kwargs['transformer'] = create(transformer_cfg['type'], global_config, **transformer_kwargs)
+                # Inject backbone output shape (convert to in_channels if not specified)
+                if 'backbone' in kwargs and hasattr(kwargs['backbone'], 'out_shape') and 'in_channels' not in neck_cfg:
+                    # Extract in_channels from backbone.out_shape
+                    neck_cfg['in_channels'] = [s['channels'] for s in kwargs['backbone'].out_shape]
+
+                kwargs['neck'] = create(neck_type, global_config, **neck_cfg)
             else:
-                kwargs['transformer'] = build_rtdetr_transformer(transformer_cfg)
+                # Already an instance (from __inject__)
+                kwargs['neck'] = cfg['neck']
+
+        # Create transformer
+        # Following PaddlePaddle: ppdet/modeling/architectures/rtdetrv3.py:62-64
+        if 'transformer' in cfg:
+            if isinstance(cfg['transformer'], dict):
+                transformer_cfg = cfg['transformer'].copy()
+                transformer_type = transformer_cfg.pop('type', 'RTDETRTransformerv3')  # Default type
+
+                # PaddlePaddle passes input_shape from neck, but RTDETRTransformerv3 doesn't use it
+                # Optionally pass input_shape for compatibility (will be ignored)
+                if 'neck' in kwargs and hasattr(kwargs['neck'], 'out_shape'):
+                    transformer_cfg['input_shape'] = kwargs['neck'].out_shape
+
+                kwargs['transformer'] = create(transformer_type, global_config, **transformer_cfg)
+            else:
+                # Already an instance (from __inject__)
+                kwargs['transformer'] = cfg['transformer']
 
         # Create detr_head with transformer dependencies
-        if 'detr_head' in cfg and 'transformer' in kwargs:
-            head_cfg = cfg['detr_head'].copy()
-            head_kwargs = {k: v for k, v in head_cfg.items() if k != 'type'}
-            # Inject transformer properties
-            if hasattr(kwargs['transformer'], 'hidden_dim'):
-                head_kwargs['hidden_dim'] = kwargs['transformer'].hidden_dim
-            if hasattr(kwargs['transformer'], 'nhead'):
-                head_kwargs['nhead'] = kwargs['transformer'].nhead
-            if 'type' in head_cfg:
-                kwargs['detr_head'] = create(head_cfg['type'], global_config, **head_kwargs)
+        if 'detr_head' in cfg:
+            if isinstance(cfg['detr_head'], dict):
+                head_cfg = cfg['detr_head'].copy()
+                head_type = head_cfg.pop('type', 'DINOv3Head')  # Default to DINOv3Head
+
+                # Inject transformer properties
+                if 'transformer' in kwargs and hasattr(kwargs['transformer'], 'hidden_dim'):
+                    head_cfg.setdefault('hidden_dim', kwargs['transformer'].hidden_dim)
+                if 'transformer' in kwargs and hasattr(kwargs['transformer'], 'nhead'):
+                    head_cfg.setdefault('nhead', kwargs['transformer'].nhead)
+
+                kwargs['detr_head'] = create(head_type, global_config, **head_cfg)
             else:
-                kwargs['detr_head'] = build_dinov3_head(**head_kwargs)
+                # Already an instance (from __inject__)
+                kwargs['detr_head'] = cfg['detr_head']
 
         # Create aux_head (optional)
-        if 'aux_head' in cfg and 'neck' in kwargs:
-            aux_cfg = cfg['aux_head'].copy()
-            aux_kwargs = {k: v for k, v in aux_cfg.items() if k != 'type'}
-            # Inject neck output shape
-            if hasattr(kwargs['neck'], 'out_shape'):
-                aux_kwargs['input_shape'] = kwargs['neck'].out_shape
-            if 'type' in aux_cfg:
-                kwargs['aux_head'] = create(aux_cfg['type'], global_config, **aux_kwargs)
+        if 'aux_head' in cfg:
+            if isinstance(cfg['aux_head'], dict):
+                aux_cfg = cfg['aux_head'].copy()
+                aux_type = aux_cfg.pop('type', 'PPYOLOEHead')  # Default to PPYOLOEHead
+                kwargs['aux_head'] = create(aux_type, global_config, **aux_cfg)
             else:
-                kwargs['aux_head'] = build_ppyoloe_head(aux_cfg)
+                # Already an instance (from __inject__)
+                kwargs['aux_head'] = cfg['aux_head']
+
+        # Remove 'type' key if present (it's config-only, not a __init__ parameter)
+        kwargs.pop('type', None)
 
         return kwargs
 
@@ -305,102 +319,3 @@ class RTDETRv3(nn.Module):
                 'pred_logits': pred_logits,  # (B, num_queries, num_classes)
                 'pred_boxes': pred_bboxes,   # (B, num_queries, 4)
             }
-
-
-def build_rtdetrv3(
-    num_classes: int = 80,
-    backbone: str = 'resnet50',
-    variant: str = 'd',
-    frozen_stages: int = 1,
-    hidden_dim: int = 256,
-    num_queries: int = 300,
-    num_decoder_layers: int = 6,
-    num_levels: int = 3,
-    num_points: int = 4,
-    eval_idx: int = -1,
-    o2m: int = 4,
-    o2m_branch: bool = False,
-    num_queries_o2m: int = 450,
-    use_aux_head: bool = False,
-    neck_expansion: float = None
-) -> RTDETRv3:
-    """
-    Build RTDETRv3 model from config
-
-    Args:
-        num_classes: Number of object classes
-        backbone: Backbone type ('resnet18', 'resnet50', 'resnet101')
-        variant: ResNet variant ('d' for ResNet-vd)
-        frozen_stages: Number of frozen backbone stages
-        hidden_dim: Hidden dimension for transformer
-        num_queries: Number of one-to-one queries
-        num_decoder_layers: Number of decoder layers
-        num_levels: Number of feature pyramid levels
-        num_points: Number of sampling points in deformable attention
-        eval_idx: Decoder layer index for evaluation (-1 for last layer)
-        o2m: One-to-many multiplier
-        o2m_branch: Enable one-to-many branch
-        num_queries_o2m: Number of one-to-many queries
-        use_aux_head: Enable auxiliary detection head (PPYOLOEHead)
-        neck_expansion: Neck CSPRepLayer expansion ratio (None=auto-detect: 0.5 for R18/R34, 1.0 for R50/R101)
-
-    Returns:
-        RTDETRv3 instance
-    """
-    # Parse backbone depth
-    backbone_depths = {
-        'resnet18': 18,
-        'resnet34': 34,
-        'resnet50': 50,
-        'resnet101': 101
-    }
-    depth = backbone_depths.get(backbone, 50)
-
-    # Determine backbone output channels
-    if depth in [18, 34]:
-        # ResNet-18/34 use BasicBlock
-        in_channels = [128, 256, 512]
-    else:
-        # ResNet-50/101 use Bottleneck
-        in_channels = [512, 1024, 2048]
-
-    # Auto-detect neck expansion if not specified
-    # Following PaddlePaddle convention: R18/R34 use 0.5, R50/R101 use 1.0
-    if neck_expansion is None:
-        neck_expansion = 0.5 if depth in [18, 34] else 1.0
-
-    # Build auxiliary head if requested
-    aux_head = None
-    if use_aux_head:
-        aux_head = build_ppyoloe_head({
-            'in_channels': [hidden_dim, hidden_dim, hidden_dim],  # Unified by neck
-            'num_classes': num_classes,
-            'fpn_strides': [8, 16, 32],
-            'reg_max': 16,
-            'act': 'swish'
-        })
-
-    return RTDETRv3(
-        num_classes=num_classes,
-        # Backbone config
-        backbone_depth=depth,
-        backbone_variant=variant,
-        backbone_frozen_stages=frozen_stages,
-        # Neck config
-        neck_in_channels=in_channels,
-        neck_hidden_dim=hidden_dim,
-        neck_expansion=neck_expansion,
-        # Transformer config
-        transformer_num_queries=num_queries,
-        transformer_num_decoder_layers=num_decoder_layers,
-        transformer_num_levels=num_levels,
-        transformer_num_points=num_points,
-        transformer_hidden_dim=hidden_dim,
-        # Head config
-        head_eval_idx=eval_idx,
-        head_o2m=o2m,
-        head_o2m_branch=o2m_branch,
-        head_num_queries_o2m=num_queries_o2m,
-        # Auxiliary head
-        aux_head=aux_head
-    )

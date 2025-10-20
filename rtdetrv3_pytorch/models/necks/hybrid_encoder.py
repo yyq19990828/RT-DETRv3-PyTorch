@@ -339,8 +339,6 @@ class TransformerEncoder(nn.Module):
 @NECK_REGISTRY.register()
 class HybridEncoder(nn.Module):
     """
-
-    __category__ = 'neck'
     HybridEncoder: FPN + PAN neck with optional Transformer encoder
 
     This neck takes multi-scale features from the backbone and produces
@@ -364,6 +362,10 @@ class HybridEncoder(nn.Module):
         >>> print(n3.shape, n4.shape, n5.shape)
         torch.Size([2, 256, 80, 80]) torch.Size([2, 256, 40, 40]) torch.Size([2, 256, 20, 20])
     """
+
+    __category__ = 'neck'
+    __inject__ = []  # No component dependencies (receives features directly)
+    __shared__ = []  # No shared config needed
 
     def __init__(
         self,
@@ -623,34 +625,37 @@ class HybridEncoder(nn.Module):
 
         return outs
 
+    @classmethod
+    def from_config(cls, cfg: dict, global_config: Optional[dict] = None) -> dict:
+        """
+        Build HybridEncoder from config (PaddlePaddle-style).
 
-def build_hybrid_encoder(cfg: dict) -> HybridEncoder:
-    """
-    Build HybridEncoder from config
+        Args:
+            cfg: HybridEncoder configuration dict
+            global_config: Global configuration (unused for neck)
 
-    Args:
-        cfg: Configuration dict with keys:
-            - in_channels: List of input channel numbers
-            - feat_strides: Feature strides
-            - hidden_dim: Hidden dimension
-            - num_encoder_layers: Number of encoder layers
-            - use_encoder_idx: Indices to apply encoder
-            - expansion: Channel expansion ratio
-            - depth_mult: Depth multiplier
-            - act: Activation function
+        Returns:
+            Dict of kwargs for HybridEncoder.__init__
 
-    Returns:
-        HybridEncoder instance
-    """
-    return HybridEncoder(
-        in_channels=cfg.get('in_channels', [512, 1024, 2048]),
-        feat_strides=cfg.get('feat_strides', [8, 16, 32]),
-        hidden_dim=cfg.get('hidden_dim', 256),
-        num_encoder_layers=cfg.get('num_encoder_layers', 1),
-        use_encoder_idx=cfg.get('use_encoder_idx', [2]),
-        pe_temperature=cfg.get('pe_temperature', 10000),
-        expansion=cfg.get('expansion', 1.0),
-        depth_mult=cfg.get('depth_mult', 1.0),
-        act=cfg.get('act', 'silu'),
-        eval_size=cfg.get('eval_size', None)
-    )
+        Example config:
+            {
+                'in_channels': [512, 1024, 2048],
+                'feat_strides': [8, 16, 32],
+                'hidden_dim': 256,
+                'num_encoder_layers': 1,
+                'use_encoder_idx': [2],
+                'expansion': 1.0
+            }
+        """
+        return {
+            'in_channels': cfg.get('in_channels', [512, 1024, 2048]),
+            'feat_strides': cfg.get('feat_strides', [8, 16, 32]),
+            'hidden_dim': cfg.get('hidden_dim', 256),
+            'num_encoder_layers': cfg.get('num_encoder_layers', 1),
+            'use_encoder_idx': cfg.get('use_encoder_idx', [2]),
+            'pe_temperature': cfg.get('pe_temperature', 10000),
+            'expansion': cfg.get('expansion', 1.0),
+            'depth_mult': cfg.get('depth_mult', 1.0),
+            'act': cfg.get('act', 'silu'),
+            'eval_size': cfg.get('eval_size', None)
+        }

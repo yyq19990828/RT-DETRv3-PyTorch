@@ -15,7 +15,7 @@ Following PaddlePaddle implementation for consistency.
 import pytest
 import torch
 import torch.nn as nn
-from models.rtdetrv3 import RTDETRv3, build_rtdetrv3
+from models import create
 
 
 class TestRTDETRv3Integration:
@@ -23,12 +23,15 @@ class TestRTDETRv3Integration:
 
     def test_forward_eval_mode(self):
         """Test forward pass in evaluation mode"""
-        model = build_rtdetrv3(
-            num_classes=80,
-            backbone='resnet50',
-            num_queries=300,
-            num_decoder_layers=6
-        )
+        config = {
+            'type': 'RTDETRv3',
+            'num_classes': 80,
+            'backbone': {'type': 'ResNet', 'depth': 50, 'variant': 'd', 'return_idx': [1, 2, 3]},
+            'neck': {'type': 'HybridEncoder', 'hidden_dim': 256},
+            'transformer': {'type': 'RTDETRTransformerv3', 'num_queries': 300, 'num_decoder_layers': 6, 'hidden_dim': 256},
+            'detr_head': {'type': 'DINOv3Head', 'eval_idx': -1}
+        }
+        model = create('RTDETRv3', global_config=config, num_classes=80)
         model.eval()
 
         # Prepare input

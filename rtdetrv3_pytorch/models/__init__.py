@@ -174,6 +174,91 @@ class Registry:
         return f"Registry(name={self._name}, items={list(self._registry.keys())})"
 
 
+def validate_component_protocol(cls: Type) -> bool:
+    """
+    Validate that a component class meets the registry protocol requirements.
+
+    Checks:
+    1. __inject__ fields exist as __init__ parameters
+    2. __shared__ fields exist as __init__ parameters with defaults
+    3. from_config() classmethod signature is correct (if defined)
+
+    Args:
+        cls: Component class to validate
+
+    Returns:
+        True if valid, raises ValueError otherwise
+
+    Raises:
+        ValueError: If component doesn't meet protocol requirements
+    """
+    import inspect
+
+    # Get __init__ signature
+    try:
+        init_sig = inspect.signature(cls.__init__)
+        init_params = init_sig.parameters
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"{cls.__name__}.__init__ signature cannot be inspected: {e}")
+
+    # Check __inject__ fields
+    if hasattr(cls, '__inject__'):
+        for field in cls.__inject__:
+            if field not in init_params:
+                raise ValueError(
+                    f"{cls.__name__}.__inject__ contains '{field}' "
+                    f"but __init__ has no such parameter. "
+                    f"Available parameters: {list(init_params.keys())}"
+                )
+
+    # Check __shared__ fields have defaults
+    if hasattr(cls, '__shared__'):
+        for field in cls.__shared__:
+            if field not in init_params:
+                raise ValueError(
+                    f"{cls.__name__}.__shared__ contains '{field}' "
+                    f"but __init__ has no such parameter. "
+                    f"Available parameters: {list(init_params.keys())}"
+                )
+            param = init_params[field]
+            if param.default == inspect.Parameter.empty and param.kind not in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD
+            ):
+                raise ValueError(
+                    f"{cls.__name__}.__shared__ field '{field}' "
+                    f"must have default value in __init__ (or use **kwargs)"
+                )
+
+    # Check from_config() signature if it exists
+    if hasattr(cls, 'from_config'):
+        from_config_method = getattr(cls, 'from_config')
+        if not callable(from_config_method):
+            raise ValueError(f"{cls.__name__}.from_config must be callable")
+
+        # Check if it's a classmethod
+        if not isinstance(inspect.getattr_static(cls, 'from_config'), classmethod):
+            logger.warning(
+                f"{cls.__name__}.from_config is not a classmethod. "
+                f"It should be decorated with @classmethod"
+            )
+
+        # Check signature
+        try:
+            from_config_sig = inspect.signature(from_config_method)
+            from_config_params = list(from_config_sig.parameters.keys())
+            # Should have at least 'cfg' parameter (and possibly 'global_config')
+            if 'cfg' not in from_config_params and len(from_config_params) < 1:
+                raise ValueError(
+                    f"{cls.__name__}.from_config should accept 'cfg' parameter. "
+                    f"Found parameters: {from_config_params}"
+                )
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Cannot inspect {cls.__name__}.from_config signature: {e}")
+
+    return True
+
+
 # Create global registries for different component types
 BACKBONE_REGISTRY = Registry('backbone')
 NECK_REGISTRY = Registry('neck')
@@ -257,34 +342,19 @@ def create(name: str, global_config: Optional[Dict] = None, **kwargs) -> Any:
     )
 
 
-# Convenience functions for building components (backward compatibility)
-def build_backbone(cfg: Dict[str, Any], global_config: Optional[Dict] = None, **kwargs):
-    """Build backbone from config"""
-    return build_from_config(cfg, BACKBONE_REGISTRY, global_config, **kwargs)
+# Note: Legacy build_* functions removed in favor of unified create() function
+# Use create() or build_from_config() instead
 
 
-def build_neck(cfg: Dict[str, Any], global_config: Optional[Dict] = None, **kwargs):
-    """Build neck from config"""
-    return build_from_config(cfg, NECK_REGISTRY, global_config, **kwargs)
-
-
-def build_transformer(cfg: Dict[str, Any], global_config: Optional[Dict] = None, **kwargs):
-    """Build transformer from config"""
-    return build_from_config(cfg, TRANSFORMER_REGISTRY, global_config, **kwargs)
-
-
-def build_head(cfg: Dict[str, Any], global_config: Optional[Dict] = None, **kwargs):
-    """Build detection head from config"""
-    return build_from_config(cfg, HEAD_REGISTRY, global_config, **kwargs)
-
-
-def build_loss(cfg: Dict[str, Any], global_config: Optional[Dict] = None, **kwargs):
-    """Build loss function from config"""
-    return build_from_config(cfg, LOSS_REGISTRY, global_config, **kwargs)
-
+# Import component modules to trigger registration
+from . import backbones  # noqa: F401
+from . import necks  # noqa: F401
+from . import transformers  # noqa: F401
+from . import heads  # noqa: F401
+from . import losses  # noqa: F401
 
 # Import main model
-from .rtdetrv3 import RTDETRv3, build_rtdetrv3
+from .rtdetrv3 import RTDETRv3
 
 
 __all__ = [
@@ -297,15 +367,11 @@ __all__ = [
     'LOSS_REGISTRY',
     'ARCHITECTURE_REGISTRY',
     'ALL_REGISTRIES',
+    # Validation helpers
+    'validate_component_protocol',
     # Builder functions
     'build_from_config',
-    'create',  # PaddlePaddle-style global create
-    'build_backbone',
-    'build_neck',
-    'build_transformer',
-    'build_head',
-    'build_loss',
+    'create',  # PaddlePaddle-style global create (recommended)
     # Main model
     'RTDETRv3',
-    'build_rtdetrv3',
 ]
