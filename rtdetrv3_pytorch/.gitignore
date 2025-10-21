@@ -44,7 +44,6 @@ wandb/
 outputs/
 
 # Data
-data/
 *.jpg
 *.jpeg
 *.png

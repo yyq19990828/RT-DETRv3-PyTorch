@@ -496,7 +496,7 @@ def _forward(self):
 
 #### PaddlePaddle参考:
 ```python
-# File: ppdet/modeling/losses/detr_loss.py
+# File: ppdet_pytorch/modeling/losses/detr_loss.py
 class DINOv3Loss(nn.Layer):
     def forward(self, pred_boxes, pred_logits, gt_boxes, gt_labels, dn_meta=None, o2m=1):
         # 1. One-to-one matching with Hungarian algorithm
@@ -677,7 +677,7 @@ class MultiStepLRWithWarmup(LRScheduler):
 
 #### PaddlePaddle参考:
 ```python
-# ppdet/engine/trainer.py
+# ppdet_pytorch/engine/trainer.py
 class Trainer:
     def train(self, validate=False):
         # 1. Setup model with DDP
@@ -818,13 +818,13 @@ python tools/train.py --config configs/rtdetrv3_r50vd_6x_coco.yml --eval --amp
 
 | 组件 | PaddlePaddle对应 | 一致性 | 状态 |
 |-----|----------------|-------|-----|
-| Varifocal Loss | ✅ ppdet/modeling/losses/varifocal_loss.py | ✅ 100% | 完成 |
-| GIoU Loss | ✅ ppdet/modeling/losses/iou_loss.py | ✅ 100% | 完成 |
-| Hungarian Matcher | ✅ ppdet/modeling/transformers/matchers.py | ✅ 100% | 完成 |
-| AdamW Optimizer | ✅ ppdet/optimizer/optimizer.py | ✅ 100% | 完成 |
-| LinearWarmup | ✅ ppdet/optimizer/learning_rate.py | ✅ 100% | 完成 |
-| MultiStepLR | ✅ ppdet/optimizer/learning_rate.py | ✅ 100% | 完成 |
-| Trainer | ✅ ppdet/engine/trainer.py | ✅ 100% | 完成 |
+| Varifocal Loss | ✅ ppdet_pytorch/modeling/losses/varifocal_loss.py | ✅ 100% | 完成 |
+| GIoU Loss | ✅ ppdet_pytorch/modeling/losses/iou_loss.py | ✅ 100% | 完成 |
+| Hungarian Matcher | ✅ ppdet_pytorch/modeling/transformers/matchers.py | ✅ 100% | 完成 |
+| AdamW Optimizer | ✅ ppdet_pytorch/optimizer/optimizer.py | ✅ 100% | 完成 |
+| LinearWarmup | ✅ ppdet_pytorch/optimizer/learning_rate.py | ✅ 100% | 完成 |
+| MultiStepLR | ✅ ppdet_pytorch/optimizer/learning_rate.py | ✅ 100% | 完成 |
+| Trainer | ✅ ppdet_pytorch/engine/trainer.py | ✅ 100% | 完成 |
 | train.py | ✅ tools/train.py | ✅ 100% | 完成 |
 
 **配置一致性**:

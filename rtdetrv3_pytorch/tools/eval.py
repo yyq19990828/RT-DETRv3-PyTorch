@@ -31,13 +31,13 @@ from tqdm import tqdm
 parent_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(parent_path))
 
-from data.coco_dataset import build_coco_dataset
-from engine.evaluator import build_coco_evaluator
-from models import create
+from ppdet_pytorch.data.source.coco import build_coco_dataset
+from ppdet_pytorch.engine.evaluator import build_coco_evaluator
+from ppdet_pytorch.core.workspace import create
 from tools.infer import postprocess
-from utils.checkpoint import load_checkpoint
-from utils.config import load_config, apply_overrides
-from utils.logger import setup_logger
+from ppdet_pytorch.utils.checkpoint import load_checkpoint
+from ppdet_pytorch.utils.config import load_config, apply_overrides
+from ppdet_pytorch.utils.logger import setup_logger
 
 logger = setup_logger('eval')
 

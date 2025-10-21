@@ -192,6 +192,7 @@ def should_transpose_weight(param_name: str) -> bool:
         'query_pos_head',  # Query position head
         'sampling_offsets.weight',  # Deformable attention
         'attention_weights.weight',  # Deformable attention
+        'in_proj_weight',  # MultiheadAttention combined QKV projection
     ]
 
     # Check if parameter name matches any linear pattern

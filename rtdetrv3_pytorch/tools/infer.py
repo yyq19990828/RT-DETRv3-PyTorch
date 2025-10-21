@@ -33,10 +33,10 @@ from PIL import Image
 parent_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(parent_path))
 
-from models import create
-from utils.config import load_config, apply_overrides
-from utils.checkpoint import load_checkpoint
-from utils.logger import setup_logger
+from ppdet_pytorch.core.workspace import create
+from ppdet_pytorch.utils.config import load_config, apply_overrides
+from ppdet_pytorch.utils.checkpoint import load_checkpoint
+from ppdet_pytorch.utils.logger import setup_logger
 
 logger = setup_logger('infer')
 
