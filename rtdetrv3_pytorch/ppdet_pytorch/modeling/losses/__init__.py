@@ -14,5 +14,7 @@
 # limitations under the License.
 
 from . import iou_loss
+from . import detr_loss
 
 from .iou_loss import *
+from .detr_loss import *

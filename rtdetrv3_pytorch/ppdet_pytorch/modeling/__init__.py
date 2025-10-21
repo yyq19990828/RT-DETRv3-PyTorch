@@ -18,6 +18,7 @@ from . import necks
 from . import transformers
 from . import heads
 from . import losses
+from . import post_process
 from . import architectures
 
 # Import main model
@@ -29,6 +30,7 @@ __all__ = [
     'transformers',
     'heads',
     'losses',
+    'post_process',
     'architectures',
     'RTDETRV3',
 ]

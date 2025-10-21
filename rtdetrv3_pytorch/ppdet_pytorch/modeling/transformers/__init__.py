@@ -19,7 +19,8 @@ from .attention import MSDeformableAttention, deformable_attention_core_func
 from .utils import (
     MLP,
     get_sine_pos_embed,
-    inverse_sigmoid
+    inverse_sigmoid,
+    bbox_cxcywh_to_xyxy
 )
 from .position_encoding import PositionEmbedding
 
@@ -33,6 +34,7 @@ from .hybrid_encoder import (
     TransformerLayer,
     CSPRepLayer
 )
+from .matchers import HungarianMatcher
 
 __all__ = [
     'MSDeformableAttention',
@@ -41,6 +43,7 @@ __all__ = [
     'MLP',
     'get_sine_pos_embed',
     'inverse_sigmoid',
+    'bbox_cxcywh_to_xyxy',
     'TransformerDecoderLayer',
     'TransformerDecoder',
     'MultiHeadAttention',
@@ -49,5 +52,6 @@ __all__ = [
     'HybridEncoder',
     'MaskHybridEncoder',
     'TransformerLayer',
-    'CSPRepLayer'
+    'CSPRepLayer',
+    'HungarianMatcher'
 ]

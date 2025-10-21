@@ -188,6 +188,61 @@ def bbox_xyxy_to_cxcywh(x: torch.Tensor) -> torch.Tensor:
     return torch.cat([(x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1], dim=-1)
 
 
+def sigmoid_focal_loss(logit: torch.Tensor, label: torch.Tensor, normalizer: float = 1.0, alpha: float = 0.25, gamma: float = 2.0) -> torch.Tensor:
+    """
+    Sigmoid focal loss for classification.
+
+    Args:
+        logit: Predicted logits, shape (N, num_classes)
+        label: Target labels (one-hot), shape (N, num_classes)
+        normalizer: Normalization factor
+        alpha: Weighting factor in [0, 1] to balance positive/negative examples
+        gamma: Exponent of the modulating factor (1 - p_t) ^ gamma
+
+    Returns:
+        Scalar loss value
+    """
+    prob = torch.sigmoid(logit)
+    ce_loss = F.binary_cross_entropy_with_logits(logit, label, reduction="none")
+    p_t = prob * label + (1 - prob) * (1 - label)
+    loss = ce_loss * ((1 - p_t) ** gamma)
+
+    if alpha >= 0:
+        alpha_t = alpha * label + (1 - alpha) * (1 - label)
+        loss = alpha_t * loss
+    return loss.mean(1).sum() / normalizer
+
+
+def varifocal_loss_with_logits(
+    pred_logits: torch.Tensor,
+    gt_score: torch.Tensor,
+    label: torch.Tensor,
+    normalizer: float = 1.0,
+    alpha: float = 0.75,
+    gamma: float = 2.0
+) -> torch.Tensor:
+    """
+    Varifocal loss for classification with quality estimation.
+
+    Args:
+        pred_logits: Predicted logits, shape (N, num_classes)
+        gt_score: Target quality scores (e.g., IoU), shape (N, num_classes)
+        label: Target labels (one-hot), shape (N, num_classes)
+        normalizer: Normalization factor
+        alpha: Weighting factor for negative examples
+        gamma: Focusing parameter
+
+    Returns:
+        Scalar loss value
+    """
+    pred_score = torch.sigmoid(pred_logits)
+    weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
+    loss = F.binary_cross_entropy_with_logits(
+        pred_logits, gt_score, weight=weight, reduction='none'
+    )
+    return loss.mean(1).sum() / normalizer
+
+
 def get_contrastive_denoising_training_group(
     targets: dict,
     num_classes: int,

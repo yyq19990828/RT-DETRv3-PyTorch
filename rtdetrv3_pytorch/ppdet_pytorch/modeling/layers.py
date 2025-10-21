@@ -30,9 +30,12 @@ import torch.nn.functional as F
 import torchvision.ops as ops
 from typing import Optional
 
+from ppdet_pytorch.core.workspace import register, serializable
+
 __all__ = ['MultiClassNMS', 'MultiHeadAttention']
 
 
+@register
 class MultiHeadAttention(nn.Module):
     """
     Multi-Head Attention module
@@ -120,7 +123,8 @@ class MultiHeadAttention(nn.Module):
 
         return output
 
-
+@register
+@serializable
 class MultiClassNMS(object):
     """Multi-class Non-Maximum Suppression (NMS)
 

@@ -1,83 +1,59 @@
-"""
-Configuration schema system for RT-DETRv3 PyTorch
+# Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-Provides PaddlePaddle-compatible schema validation for configuration objects.
-Migrated from PaddlePaddle RT-DETRv3/ppdet/core/config/schema.py
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import division
 
-Key features:
-- SchemaValue: Individual configuration value with type and default
-- SchemaDict: Dictionary with schema validation
-- SharedConfig: Shared configuration injection
-- extract_schema: Extract schema from class definition
-"""
-
-import importlib
 import inspect
+import importlib
 import re
-from typing import Any, Optional, Type
 
-# Optional dependencies
 try:
     from docstring_parser import parse as doc_parse
-except ImportError:
+except Exception:
+
     def doc_parse(*args):
-        """Fallback when docstring_parser not available"""
-        return None
+        pass
+
 
 try:
     from typeguard import check_type
-except ImportError:
+except Exception:
+
     def check_type(*args):
-        """Fallback when typeguard not available"""
         pass
 
 
 __all__ = ['SchemaValue', 'SchemaDict', 'SharedConfig', 'extract_schema']
 
 
-class SchemaValue:
-    """
-    Schema definition for a single configuration value.
-
-    Attributes:
-        name (str): Parameter name
-        doc (str): Documentation string
-        type: Expected type (for validation)
-        default: Default value (if has_default() is True)
-    """
-
-    def __init__(self, name: str, doc: str = '', type_: Optional[Type] = None):
+class SchemaValue(object):
+    def __init__(self, name, doc='', type=None):
         super(SchemaValue, self).__init__()
         self.name = name
         self.doc = doc
-        self.type = type_
+        self.type = type
 
-    def set_default(self, value: Any) -> None:
-        """Set default value for this parameter"""
+    def set_default(self, value):
         self.default = value
 
-    def has_default(self) -> bool:
-        """Check if this parameter has a default value"""
+    def has_default(self):
         return hasattr(self, 'default')
 
 
 class SchemaDict(dict):
-    """
-    Dictionary with schema validation.
-
-    Extends dict to support:
-    - Schema-based validation (required/optional params, type checking)
-    - Default values from schema
-    - Nested SchemaDict updates
-    - Strict mode (disallow extra keys)
-
-    Attributes:
-        schema (dict): Mapping of key -> SchemaValue
-        strict (bool): If True, reject keys not in schema
-        doc (str): Documentation for this schema
-        name (str): Name of the class this schema describes
-    """
-
     def __init__(self, **kwargs):
         super(SchemaDict, self).__init__()
         self.schema = {}
@@ -86,15 +62,14 @@ class SchemaDict(dict):
         self.update(kwargs)
 
     def __setitem__(self, key, value):
-        """Update value, merging SchemaDict if key already exists"""
-        if isinstance(value, dict) and key in self and isinstance(self[key], SchemaDict):
-            # Merge nested SchemaDict
+        # XXX also update regular dict to SchemaDict??
+        if isinstance(value, dict) and key in self and isinstance(self[key],
+                                                                  SchemaDict):
             self[key].update(value)
         else:
             super(SchemaDict, self).__setitem__(key, value)
 
     def __missing__(self, key):
-        """Return default value or schema when key not found"""
         if self.has_default(key):
             return self.schema[key].default
         elif key in self.schema:
@@ -103,48 +78,39 @@ class SchemaDict(dict):
             raise KeyError(key)
 
     def copy(self):
-        """Deep copy of SchemaDict"""
         newone = SchemaDict()
         newone.__dict__.update(self.__dict__)
         newone.update(self)
         return newone
 
-    def set_schema(self, key: str, value: SchemaValue) -> None:
-        """Set schema for a key"""
-        assert isinstance(value, SchemaValue), f"Schema value must be SchemaValue, got {type(value)}"
+    def set_schema(self, key, value):
+        assert isinstance(value, SchemaValue)
         self.schema[key] = value
 
-    def set_strict(self, strict: bool) -> None:
-        """Enable/disable strict mode (reject extra keys)"""
+    def set_strict(self, strict):
         self.strict = strict
 
-    def has_default(self, key: str) -> bool:
-        """Check if key has a default value in schema"""
+    def has_default(self, key):
         return key in self.schema and self.schema[key].has_default()
 
-    def is_default(self, key: str) -> bool:
-        """Check if current value is the default value"""
+    def is_default(self, key):
         if not self.has_default(key):
             return False
         if hasattr(self[key], '__dict__'):
-            # Object with __dict__ is considered default if it has default value
             return True
         else:
             return key not in self or self[key] == self.schema[key].default
 
     def find_default_keys(self):
-        """Find all keys using default values"""
         return [
             k for k in list(self.keys()) + list(self.schema.keys())
             if self.is_default(k)
         ]
 
-    def mandatory(self) -> bool:
-        """Check if any schema key is mandatory (no default)"""
+    def mandatory(self):
         return any([k for k in self.schema.keys() if not self.has_default(k)])
 
     def find_missing_keys(self):
-        """Find required keys that are missing or placeholder values"""
         missing = [
             k for k in self.schema.keys()
             if k not in self and not self.has_default(k)
@@ -153,192 +119,130 @@ class SchemaDict(dict):
         return missing + placeholders
 
     def find_extra_keys(self):
-        """Find keys in dict but not in schema"""
         return list(set(self.keys()) - set(self.schema.keys()))
 
     def find_mismatch_keys(self):
-        """Find keys with values that don't match schema type"""
         mismatch_keys = []
         for arg in self.schema.values():
-            if arg.type is not None and arg.name in self:
+            if arg.type is not None:
                 try:
-                    check_type(f"{self.name}.{arg.name}", self[arg.name], arg.type)
+                    check_type("{}.{}".format(self.name, arg.name),
+                               self[arg.name], arg.type)
                 except Exception:
                     mismatch_keys.append(arg.name)
         return mismatch_keys
 
-    def validate(self) -> None:
-        """
-        Validate configuration against schema.
-
-        Raises:
-            ValueError: If required keys are missing or extra keys in strict mode
-            TypeError: If value types don't match schema
-        """
+    def validate(self):
         missing_keys = self.find_missing_keys()
         if missing_keys:
-            raise ValueError(
-                f"Missing param for class<{self.name}>: {', '.join(missing_keys)}"
-            )
-
+            raise ValueError("Missing param for class<{}>: {}".format(
+                self.name, ", ".join(missing_keys)))
         extra_keys = self.find_extra_keys()
         if extra_keys and self.strict:
-            raise ValueError(
-                f"Extraneous param for class<{self.name}>: {', '.join(extra_keys)}"
-            )
-
+            raise ValueError("Extraneous param for class<{}>: {}".format(
+                self.name, ", ".join(extra_keys)))
         mismatch_keys = self.find_mismatch_keys()
         if mismatch_keys:
-            raise TypeError(
-                f"Wrong param type for class<{self.name}>: {', '.join(mismatch_keys)}"
-            )
+            raise TypeError("Wrong param type for class<{}>: {}".format(
+                self.name, ", ".join(mismatch_keys)))
 
 
-class SharedConfig:
+class SharedConfig(object):
     """
-    Representation for `__shared__` annotations.
+    Representation class for `__shared__` annotations, which work as follows:
 
-    Shared config allows parameter injection from global config with fallback:
-    1. If `key` is set for the module in config, use that value
-    2. If `key` is not set but present in global config, use global value
-    3. Otherwise, use the provided `default_value`
+    - if `key` is set for the module in config file, its value will take
+      precedence
+    - if `key` is not set for the module but present in the config file, its
+      value will be used
+    - otherwise, use the provided `default_value` as fallback
 
     Args:
-        key (str): Config key to inject (e.g., 'num_classes')
-        default_value: Fallback value if key not found
-
-    Example:
-        >>> class Detector:
-        >>>     __shared__ = ['num_classes']
-        >>>     def __init__(self, backbone, num_classes=80):
-        >>>         pass
-        >>>
-        >>> # If global config has num_classes=91, it will be injected
-        >>> # Otherwise, defaults to 80
+        key: config[key] will be injected
+        default_value: fallback value
     """
 
-    def __init__(self, key: str, default_value: Any = None):
+    def __init__(self, key, default_value=None):
         super(SharedConfig, self).__init__()
         self.key = key
         self.default_value = default_value
 
 
-def extract_schema(cls: Type) -> SchemaDict:
+def extract_schema(cls):
     """
-    Extract configuration schema from a class.
-
-    Analyzes class constructor to build a SchemaDict with:
-    - Parameter names, types, and defaults
-    - Documentation from docstrings
-    - __inject__ and __shared__ annotations
-    - Category metadata
+    Extract schema from a given class
 
     Args:
-        cls (type): Class from which to extract schema
+        cls (type): Class from which to extract.
 
     Returns:
-        SchemaDict: Extracted schema with validation rules
-
-    Example:
-        >>> @register
-        >>> class ResNet:
-        >>>     __inject__ = ['norm_layer']
-        >>>     __shared__ = ['num_classes']
-        >>>     def __init__(self, depth: int, num_classes: int = 80):
-        >>>         '''ResNet backbone
-        >>>
-        >>>         Args:
-        >>>             depth: Network depth (18, 34, 50, 101, 152)
-        >>>             num_classes: Number of output classes
-        >>>         '''
-        >>>         pass
-        >>>
-        >>> schema = extract_schema(ResNet)
-        >>> # schema.name = 'ResNet'
-        >>> # schema.schema['depth'] = SchemaValue(name='depth', type=int, no default)
-        >>> # schema.schema['num_classes'] = SchemaValue(name='num_classes', type=int, default=SharedConfig('num_classes', 80))
+        schema (SchemaDict): Extracted schema.
     """
     ctor = cls.__init__
-
-    # Get constructor signature
+    # python 2 compatibility
     if hasattr(inspect, 'getfullargspec'):
         argspec = inspect.getfullargspec(ctor)
         annotations = argspec.annotations
         has_kwargs = argspec.varkw is not None
     else:
-        # Python 2 compatibility (not needed for PyTorch, but kept for completeness)
-        argspec = inspect.getargspec(ctor)
+        argspec = inspect.getfullargspec(ctor)
+        # python 2 type hinting workaround, see pep-3107
+        # however, since `typeguard` does not support python 2, type checking
+        # is still python 3 only for now
         annotations = getattr(ctor, '__annotations__', {})
-        has_kwargs = argspec.keywords is not None
+        has_kwargs = argspec.varkw is not None
 
     names = [arg for arg in argspec.args if arg != 'self']
     defaults = argspec.defaults
-    num_defaults = len(argspec.defaults) if argspec.defaults is not None else 0
+    num_defaults = argspec.defaults is not None and len(argspec.defaults) or 0
     num_required = len(names) - num_defaults
 
-    # Parse docstring
     docs = cls.__doc__
     if docs is None and getattr(cls, '__category__', None) == 'op':
         docs = cls.__call__.__doc__
-
     try:
         docstring = doc_parse(docs)
     except Exception:
         docstring = None
 
-    # Extract parameter comments from docstring
     if docstring is None:
         comments = {}
     else:
         comments = {}
-        if hasattr(docstring, 'params'):
-            for p in docstring.params:
-                match_obj = re.match(r'^([a-zA-Z_]+[a-zA-Z_0-9]*).*', p.arg_name)
-                if match_obj is not None:
-                    comments[match_obj.group(1)] = p.description
+        for p in docstring.params:
+            match_obj = re.match('^([a-zA-Z_]+[a-zA-Z_0-9]*).*', p.arg_name)
+            if match_obj is not None:
+                comments[match_obj.group(1)] = p.description
 
-    # Build schema
     schema = SchemaDict()
     schema.name = cls.__name__
     schema.doc = ""
-
-    # Extract class docstring summary
     if docs is not None:
-        start_pos = 1 if docs[0] == '\n' else 0
+        start_pos = docs[0] == '\n' and 1 or 0
         schema.doc = docs[start_pos:].split("\n")[0].strip()
-
-    # Handle PaddlePaddle's weird doc convention (**text**)
-    if schema.doc.startswith('**') and schema.doc.endswith('**'):
+    # XXX handle paddle's weird doc convention
+    if '**' == schema.doc[:2] and '**' == schema.doc[-2:]:
         schema.doc = schema.doc[2:-2].strip()
-
-    schema.category = getattr(cls, '__category__', 'module')
+    schema.category = hasattr(cls, '__category__') and getattr(
+        cls, '__category__') or 'module'
     schema.strict = not has_kwargs
     schema.pymodule = importlib.import_module(cls.__module__)
     schema.inject = getattr(cls, '__inject__', [])
     schema.shared = getattr(cls, '__shared__', [])
-
-    # Build schema for each parameter
     for idx, name in enumerate(names):
-        comment = comments.get(name, name)
-
-        # Injected parameters don't have type validation
+        comment = name in comments and comments[name] or name
         if name in schema.inject:
             type_ = None
         else:
-            type_ = annotations.get(name, None)
-
+            type_ = name in annotations and annotations[name] or None
         value_schema = SchemaValue(name, comment, type_)
-
-        # Handle shared config
         if name in schema.shared:
-            assert idx >= num_required, f"Shared config '{name}' must have default value"
+            assert idx >= num_required, "shared config must have default value"
             default = defaults[idx - num_required]
             value_schema.set_default(SharedConfig(name, default))
         elif idx >= num_required:
-            # Regular default value
             default = defaults[idx - num_required]
             value_schema.set_default(default)
-
         schema.set_schema(name, value_schema)
 
     return schema

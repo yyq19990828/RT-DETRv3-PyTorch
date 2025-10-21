@@ -53,7 +53,7 @@ class DINOv3Head(nn.Module):
 
     def __init__(
         self,
-        loss: Optional[nn.Module] = None,  # Renamed to match Paddle: 'loss' instead of 'loss_fn'
+        loss='DINOLoss',  # Match Paddle: default to 'DINOLoss' string
         eval_idx: int = -1,
         o2m: int = 4,
         o2m_branch: bool = False,
@@ -293,13 +293,16 @@ class DINOv3Head(nn.Module):
             )
 
     @classmethod
-    def from_config(cls, cfg: Dict, global_config: Optional[Dict] = None) -> Dict:
+    def from_config(cls, cfg: Dict, hidden_dim=None, nhead=None, input_shape=None, **kwargs) -> Dict:
         """
         Build DINOv3Head from config (PaddlePaddle-style).
 
         Args:
             cfg: Head configuration dict
-            global_config: Global configuration for shared values
+            hidden_dim: Hidden dimension (ignored, DINOv3Head doesn't use it)
+            nhead: Number of heads (ignored, DINOv3Head doesn't use it)
+            input_shape: Input shape (ignored, DINOv3Head doesn't use it)
+            **kwargs: Additional kwargs
 
         Returns:
             Dict of kwargs for DINOv3Head.__init__
