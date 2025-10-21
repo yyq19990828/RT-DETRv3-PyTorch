@@ -1,4 +1,4 @@
-# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+# Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 # Copyright (c) 2025 PyTorch Migration. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import iou_loss
+from . import utils
+from . import atss_assigner
+from . import task_aligned_assigner
 
-from .iou_loss import *
+from .utils import *
+from .atss_assigner import *
+from .task_aligned_assigner import *

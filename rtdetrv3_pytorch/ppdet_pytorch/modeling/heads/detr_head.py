@@ -48,12 +48,12 @@ class DINOv3Head(nn.Module):
     """
 
     __category__ = 'head'
-    __inject__ = []  # No component dependencies
-    __shared__ = ['num_classes', 'hidden_dim']  # Shared from global config
+    __inject__ = ['loss']  # Inject loss function from config
+    __shared__ = ['o2m_branch', 'num_queries_o2m']  # Shared from global config
 
     def __init__(
         self,
-        loss_fn: Optional[nn.Module] = None,
+        loss: Optional[nn.Module] = None,  # Renamed to match Paddle: 'loss' instead of 'loss_fn'
         eval_idx: int = -1,
         o2m: int = 4,
         o2m_branch: bool = False,
@@ -62,7 +62,7 @@ class DINOv3Head(nn.Module):
         hidden_dim: int = 256
     ):
         super().__init__()
-        self.loss_fn = loss_fn
+        self.loss = loss  # Match Paddle's naming
         self.eval_idx = eval_idx
         self.o2m = o2m
         self.o2m_branch = o2m_branch
@@ -104,7 +104,7 @@ class DINOv3Head(nn.Module):
             # Following Paddle: ppdet/modeling/heads/detr_head.py:558-642
             assert inputs is not None, "inputs must be provided in training mode"
             assert 'gt_bbox' in inputs and 'gt_class' in inputs, "inputs must contain 'gt_bbox' and 'gt_class'"
-            assert self.loss_fn is not None, "loss_fn must be set for training mode"
+            assert self.loss is not None, "loss must be set for training mode"
 
             # Case 1: Multi-group denoising (dn_meta is a list of dicts)
             # Following Paddle: ppdet/modeling/heads/detr_head.py:562-625
@@ -144,7 +144,7 @@ class DINOv3Head(nn.Module):
                     out_bboxes_o2m = [enc_topk_bboxes_o2m] + [dec_out_bboxes_o2m[i] for i in range(dec_out_bboxes_o2m.shape[0])]
                     out_logits_o2m = [enc_topk_logits_o2m] + [dec_out_logits_o2m[i] for i in range(dec_out_logits_o2m.shape[0])]
 
-                    loss_o2m = self.loss_fn(
+                    loss_o2m = self.loss(
                         out_bboxes_o2m,
                         out_logits_o2m,
                         inputs['gt_bbox'],
@@ -199,7 +199,7 @@ class DINOv3Head(nn.Module):
                     }
 
                     # Compute loss for this group
-                    loss_gid = self.loss_fn(
+                    loss_gid = self.loss(
                         out_bboxes_gid,
                         out_logits_gid,
                         inputs['gt_bbox'],
@@ -273,13 +273,13 @@ class DINOv3Head(nn.Module):
 
                 # Compute loss
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:634-642
-                return self.loss_fn(
+                return self.loss(
                     out_bboxes,
                     out_logits,
                     inputs['gt_bbox'],
                     inputs['gt_class'],
                     dn_meta=dn_meta_arg,
-                    o2m=1  # No o2m multiplication in non-branch mode
+                    gt_score=inputs.get('gt_score', None)  # Support gt_score like Paddle line 642
                 )
         else:
             # Evaluation mode: return predictions from specified decoder layer
@@ -313,7 +313,7 @@ class DINOv3Head(nn.Module):
             }
         """
         return {
-            'loss_fn': cfg.get('loss_fn', None),
+            'loss': cfg.get('loss', None),  # Match Paddle's naming
             'eval_idx': cfg.get('eval_idx', -1),
             'o2m': cfg.get('o2m', 4),
             'o2m_branch': cfg.get('o2m_branch', False),
