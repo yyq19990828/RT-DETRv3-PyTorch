@@ -1,0 +1,224 @@
+# Configuration Schema for RT-DETRv3 PaddlePaddle-Style Config
+#
+# Feature: 004-paddle-pytorch-migration
+# Date: 2025-10-17
+# Purpose: Document and provide example of YAML configuration structure
+#
+# This file serves as both documentation and a working example config.
+
+#------------------------------------------------------------------------------
+# TOP-LEVEL STRUCTURE
+#------------------------------------------------------------------------------
+
+# The 'architecture' key specifies which model to build
+# Must match a registered component in ARCHITECTURE_REGISTRY
+architecture: RTDETRv3
+
+#------------------------------------------------------------------------------
+# GLOBAL SHARED CONFIGURATION
+#------------------------------------------------------------------------------
+# These values are accessible to all components via __shared__ annotation
+
+# Number of object classes to detect (COCO has 80)
+num_classes: 80
+
+# Feature dimension used throughout the model
+hidden_dim: 256
+
+# Number of object queries for the transformer decoder
+num_queries: 300
+
+#------------------------------------------------------------------------------
+# COMPONENT-SPECIFIC CONFIGURATION
+#------------------------------------------------------------------------------
+# Configuration for the main model (RTDETRv3)
+# Key name must match the 'architecture' value above
+
+RTDETRv3:
+  # Backbone Configuration
+  # Each component config requires a 'type' key specifying the class name
+  backbone:
+    type: ResNet                # Registered in BACKBONE_REGISTRY
+    depth: 50                   # ResNet-50 variant
+    variant: d                  # ResNet-D improvement (avg pool in downsample)
+    frozen_stages: 1            # Freeze first stage during training
+    return_idx: [1, 2, 3]       # Return C3, C4, C5 feature maps
+
+  # Neck Configuration (Feature Pyramid)
+  neck:
+    type: HybridEncoder         # Registered in NECK_REGISTRY
+    # input_shape: auto-injected from backbone.out_shape via from_config()
+    in_channels: [512, 1024, 2048]  # C3, C4, C5 channels
+    hidden_dim: 256             # Unified feature dimension (can use ${hidden_dim} ref)
+    feat_strides: [8, 16, 32]   # Stride of C3, C4, C5 feature maps
+    num_encoder_layers: 1       # Number of encoder layers per level
+    expansion: 1.0              # Expansion ratio for feed-forward network
+
+  # Transformer Configuration (RT-DETR decoder)
+  transformer:
+    type: RTDETRTransformerv3   # Registered in TRANSFORMER_REGISTRY
+    # input_shape: auto-injected from neck.out_shape via from_config()
+    num_queries: 300            # Number of object queries (can use ${num_queries} ref)
+    num_decoder_layers: 6       # Number of decoder layers
+    num_levels: 3               # Number of feature levels (C3, C4, C5)
+    num_decoder_points: 4       # Number of sampling points per query
+    hidden_dim: 256             # Feature dimension (can use ${hidden_dim} ref)
+    nhead: 8                    # Number of attention heads
+    dim_feedforward: 1024       # FFN dimension
+    dropout: 0.0                # Dropout rate
+    activation: relu            # Activation function
+
+  # Detection Head Configuration (DINO-style)
+  detr_head:
+    type: DINOv3Head            # Registered in HEAD_REGISTRY
+    # hidden_dim: auto-injected from transformer.hidden_dim via from_config()
+    num_classes: 80             # Can use ${num_classes} ref
+    eval_idx: -1                # Which decoder layer to use for eval (-1 = last)
+    o2m: 4                      # One-to-many matching multiplier
+    o2m_branch: false           # Whether to use separate O2M branch
+
+  # Auxiliary Head Configuration (Optional)
+  # Uncomment to enable auxiliary YOLOE-style head
+  # aux_head:
+  #   type: PPYOLOEHead         # Registered in HEAD_REGISTRY
+  #   num_classes: 80
+  #   fpn_strides: [8, 16, 32]
+  #   loss_weight: 0.25
+
+#------------------------------------------------------------------------------
+# CONFIGURATION CONVENTIONS
+#------------------------------------------------------------------------------
+
+# 1. REQUIRED KEYS
+#    - 'type': Must be present in all component configs
+#    - Value must match registered component name exactly (case-sensitive)
+
+# 2. PARAMETER NAMING
+#    - snake_case for all parameter names (e.g., num_classes, hidden_dim)
+#    - NOT camelCase or PascalCase
+
+# 3. DEPENDENCY INJECTION
+#    - Components with __inject__ = ['backbone', 'neck'] will have those
+#      fields automatically instantiated from nested configs
+#    - Intermediate values (e.g., backbone.out_shape) can be passed via
+#      from_config() class method
+
+# 4. SHARED CONFIGURATION
+#    - Components with __shared__ = ['num_classes'] will read those values
+#      from the top-level global config
+#    - Explicit values in component config override shared values
+
+# 5. NESTING STRUCTURE
+#    - Top level: architecture + global shared params + model config
+#    - Model config: keyed by model name (e.g., RTDETRv3)
+#    - Component configs: nested under model config
+
+# 6. COMMENTS
+#    - Use # for inline comments
+#    - Document parameter units, ranges, and default values
+
+# 7. TYPE INDICATORS
+#    - 'type' key always lowercase (not 'Type' or 'TYPE')
+#    - Boolean values: true/false (lowercase, YAML standard)
+#    - Null values: null or ~ (YAML standard)
+
+#------------------------------------------------------------------------------
+# PARAMETER RESOLUTION PRIORITY
+#------------------------------------------------------------------------------
+# When a parameter appears in multiple places, the order of precedence is:
+#
+# 1. Explicit kwargs in create() call (highest)
+# 2. Component-level config (RTDETRv3.detr_head.num_classes)
+# 3. Global shared config (top-level num_classes)
+# 4. Constructor default value (in __init__ signature) (lowest)
+#
+# Example:
+#   global: num_classes: 80
+#   component: detr_head.num_classes: 90
+#   explicit: create(..., num_classes=100)
+#   → Final value: 100 (explicit wins)
+
+#------------------------------------------------------------------------------
+# VALIDATION SCHEMA (Pseudo-Schema)
+#------------------------------------------------------------------------------
+
+# ROOT:
+#   architecture: str (required, must be in ARCHITECTURE_REGISTRY)
+#   <global_params>: Any (optional, for __shared__ resolution)
+#   <model_name>: Dict (required, key matches 'architecture' value)
+#     <component_name>: Dict (e.g., 'backbone', 'neck')
+#       type: str (required, must be in corresponding REGISTRY)
+#       <params>: Any (constructor parameters)
+
+#------------------------------------------------------------------------------
+# MINIMAL VALID CONFIG
+#------------------------------------------------------------------------------
+
+# Simplest possible config (relies on all defaults)
+# architecture: RTDETRv3
+# RTDETRv3: {}
+
+# This would fail if RTDETRv3 requires components without defaults.
+# In practice, at least backbone/neck/transformer/head configs needed.
+
+#------------------------------------------------------------------------------
+# FULL EXAMPLE (All Features)
+#------------------------------------------------------------------------------
+
+# See above for complete example with all components configured.
+
+#------------------------------------------------------------------------------
+# MIGRATION FROM PADDLEPADDLE CONFIGS
+#------------------------------------------------------------------------------
+
+# PaddlePaddle vs PyTorch config differences:
+#
+# 1. IDENTICAL:
+#    - Structure (nested dicts with 'type' keys)
+#    - Parameter names (snake_case)
+#    - Shared config mechanism
+#
+# 2. DIFFERENT:
+#    - Import paths: ppdet.modeling → rtdetrv3_pytorch.models
+#    - Some parameter names may differ (check API docs)
+#
+# 3. CONVERSION TIPS:
+#    - Replace PaddlePaddle type names with PyTorch equivalents
+#      (usually same class name, different module path)
+#    - Check for renamed parameters (e.g., 'num_classes' vs 'num_class')
+#    - Verify default values match (may differ between frameworks)
+
+#------------------------------------------------------------------------------
+# ERROR HANDLING
+#------------------------------------------------------------------------------
+
+# Common config errors and how to fix:
+
+# ERROR: "Config must contain 'type' key"
+# FIX: Add 'type: <ClassName>' to component config
+
+# ERROR: "backbone 'ResNet' not found in registry"
+# FIX: Ensure component is registered and imported
+#      (check rtdetrv3_pytorch/models/backbones/__init__.py)
+
+# ERROR: "Dependency 'UnknownComponent' not found"
+# FIX: Check nested component 'type' values match registered names
+
+# ERROR: "TypeError: __init__() got unexpected keyword argument 'foo'"
+# FIX: Remove 'foo' from config or add parameter to __init__
+
+#------------------------------------------------------------------------------
+# ADVANCED FEATURES (Future)
+#------------------------------------------------------------------------------
+
+# Config inheritance (not yet implemented):
+# _BASE_: configs/base/rtdetrv3_base.yml
+# <override_params>...
+
+# Variable substitution (not yet implemented):
+# hidden_dim: &hidden_dim 256
+# transformer:
+#   hidden_dim: *hidden_dim  # Reference
+
+# Environment variable interpolation (not yet implemented):
+# num_gpus: ${NUM_GPUS:8}  # Use env var or default to 8

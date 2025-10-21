@@ -46,12 +46,12 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader, DistributedSampler
 
-from models import build_model
-from data import build_dataset, build_transform
-from engine import Trainer, build_optimizer, build_lr_scheduler, build_coco_evaluator
-from models.losses import DINOv3Loss
-from utils.config import load_config
-from utils.logger import setup_logger
+from ppdet_pytorch.modeling import build_model
+from ppdet_pytorch.data import build_dataset, build_transform
+from ppdet_pytorch.engine import Trainer, build_optimizer, build_lr_scheduler, build_coco_evaluator
+from ppdet_pytorch.modeling.losses import DINOv3Loss
+from ppdet_pytorch.utils.config import load_config
+from ppdet_pytorch.utils.logger import setup_logger
 
 
 def parse_args():

@@ -1,0 +1,119 @@
+# Test configuration for training strategies
+# Purpose: Verify all training strategies can be enabled/disabled via config
+
+# EMA Configuration
+use_ema: True
+ema_decay: 0.9999
+ema_decay_type: "exponential"  # threshold, exponential, normal
+ema_filter_no_grad: True
+
+# Normalization
+norm_type: sync_bn  # bn, sync_bn
+
+# AMP (Automatic Mixed Precision)
+amp: True
+amp_level: "O1"  # O1, O2 (Paddle style, mapped to PyTorch amp)
+
+# Gradient Clipping
+clip_grad_by_norm: 0.1  # clip gradient norm
+
+# Distributed Training
+find_unused_parameters: True  # For DDP
+
+# Optimizer
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    weight_decay: 0.0001
+
+# Learning Rate
+LearningRate:
+  base_lr: 0.0001
+  schedulers:
+  - name: LinearWarmup
+    start_factor: 0.001
+    steps: 100
+  - name: CosineAnnealingLR
+    T_max: 1000
+    eta_min: 0.0
+
+# Dataset
+TrainDataset:
+  name: COCODataSet
+  image_dir: train2017
+  anno_path: annotations/instances_train2017.json
+  dataset_dir: dataset/coco
+  data_fields: ['image', 'gt_bbox', 'gt_class']
+
+# Data Augmentation
+TrainReader:
+  sample_transforms:
+  - Decode: {}
+  - RandomCrop: {}
+  - RandomFlip: {prob: 0.5}
+  - Resize: {target_size: [640, 640]}
+  batch_transforms:
+  - BatchRandomResize: {target_size: [[480, 480], [640, 640]], random_size: True, random_interp: True}
+  - NormalizeImage: {mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225]}
+  - Permute: {}
+  batch_size: 2
+  shuffle: true
+  drop_last: true
+  worker_num: 0
+
+# Model Architecture
+architecture: RTDETRV3
+RTDETRV3:
+  backbone: ResNet
+  neck: HybridEncoder
+  transformer: RTDETRTransformerv3
+  detr_head: DINOv3Head
+
+ResNet:
+  depth: 18
+  variant: d
+  norm_type: bn
+  freeze_at: 0
+  return_idx: [1, 2, 3]
+  num_stages: 4
+  freeze_stem_only: True
+
+HybridEncoder:
+  hidden_dim: 256
+  use_encoder_idx: [2]
+  num_encoder_layers: 1
+  encoder_layer:
+    name: TransformerLayer
+    d_model: 256
+    nhead: 8
+    dim_feedforward: 1024
+    dropout: 0.
+    activation: 'gelu'
+  expansion: 1.0
+
+RTDETRTransformerv3:
+  num_queries: 300
+  position_embed_type: sine
+  feat_strides: [8, 16, 32]
+  num_levels: 3
+  nhead: 8
+  num_decoder_layers: 3
+  dim_feedforward: 1024
+  dropout: 0.0
+  activation: relu
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  learnt_init_query: False
+
+DINOv3Head:
+  loss:
+    name: DINOv3Loss
+    loss_coeff: {class: 1, bbox: 5, giou: 2}
+    aux_loss: True
+    use_vfl: True
+    matcher:
+      name: HungarianMatcher
+      matcher_coeff: {class: 2, bbox: 5, giou: 2}
