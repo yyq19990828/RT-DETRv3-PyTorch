@@ -18,9 +18,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# Add project root to path
+# Add project root and rtdetrv3_pytorch to path
 project_root = Path(__file__).parent.parent.parent
+rtdetrv3_pytorch_root = project_root / "rtdetrv3_pytorch"
 sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(rtdetrv3_pytorch_root))
 
 from tools.weight_conversion.validation import ModelOutputValidator
 
@@ -121,50 +123,27 @@ def build_pytorch_model(config_path: str):
 
     # Import PyTorch model builder and config loader
     try:
-        from rtdetrv3_pytorch.models.rtdetrv3 import build_rtdetrv3
-        from rtdetrv3_pytorch.utils.config import load_config
+        from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
+        from ppdet_pytorch.core.workspace import load_config, create
     except ImportError as e:
         logger.error(f"Failed to import PyTorch components: {e}")
-        logger.error("Make sure rtdetrv3_pytorch is in Python path")
+        logger.error("Make sure ppdet_pytorch is in Python path")
         return None
 
     # Load config
     logger.info(f"Loading config from: {config_path}")
     cfg = load_config(str(config_path))
 
-    # Extract model parameters from config
-    resnet_cfg = cfg.get('ResNet', {})
-    hybrid_encoder_cfg = cfg.get('HybridEncoder', {})
-    transformer_cfg = cfg.get('RTDETRTransformerv3', {})
+    # Create model using ppdet_pytorch's create() function
+    # This uses the unified registration system (PaddlePaddle-compatible)
+    logger.info("Creating RT-DETRv3 model...")
+    model = create(cfg.architecture)
 
-    # Determine backbone from ResNet depth
-    depth = resnet_cfg.get('depth', 50)
-    backbone_map = {18: 'resnet18', 34: 'resnet34', 50: 'resnet50', 101: 'resnet101'}
-    backbone = backbone_map.get(depth, 'resnet50')
-
-    # IMPORTANT: hidden_dim is a global config parameter (not HybridEncoder.hidden_dim)
-    # It controls transformer decoder dimensions
-    # HybridEncoder.hidden_dim controls neck (FPN) dimensions (may differ due to expansion)
-    global_hidden_dim = cfg.get('hidden_dim', 256)
-
-    # Build model with config parameters
-    # NOTE: Disable o2m_branch for consistency check to match Paddle's 300 queries
-    model = build_rtdetrv3(
-        num_classes=cfg.get('num_classes', 80),
-        backbone=backbone,
-        variant=resnet_cfg.get('variant', 'd'),
-        frozen_stages=resnet_cfg.get('freeze_at', -1),
-        hidden_dim=global_hidden_dim,  # Use global hidden_dim for transformer
-        num_queries=transformer_cfg.get('num_queries', 300),
-        num_decoder_layers=transformer_cfg.get('num_decoder_layers', 6),
-        num_levels=transformer_cfg.get('num_levels', 3),
-        num_points=4,  # Fixed parameter
-        eval_idx=transformer_cfg.get('eval_idx', -1),
-        o2m=cfg.get('DINOv3Head', {}).get('o2m', 4) if 'DINOv3Head' in cfg else 4,
-        o2m_branch=False,  # Disable for consistency check
-        num_queries_o2m=cfg.get('num_queries_o2m', 450),
-        use_aux_head=False  # No auxiliary head for inference
-    )
+    # Disable post-processing for raw output comparison
+    # Post-processing includes NMS which changes output format
+    if hasattr(model, 'exclude_post_process'):
+        logger.info("Disabling post-processing for raw output comparison")
+        model.exclude_post_process = True
 
     # Load checkpoint if specified in config
     if 'checkpoint' in cfg and cfg['checkpoint']:
