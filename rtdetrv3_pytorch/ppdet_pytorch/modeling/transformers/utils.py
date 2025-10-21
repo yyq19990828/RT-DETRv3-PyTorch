@@ -2,19 +2,32 @@
 Transformer Utility Components for RT-DETRv3
 
 This module provides common building blocks for transformer models:
-- Position embeddings (sinusoidal and learnable)
 - MLP (Multi-Layer Perceptron)
-- Helper functions
+- Helper functions for position embeddings, bbox conversion, denoising, etc.
 
 Reference:
 - PaddlePaddle RT-DETR: ppdet/modeling/transformers/
 """
 
+import copy
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, Tuple
+
+
+def _get_clones(module, N):
+    """Clone a module N times
+
+    Args:
+        module (nn.Module): Module to clone
+        N (int): Number of clones
+
+    Returns:
+        nn.ModuleList: List of N cloned modules
+    """
+    return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 
 def get_sine_pos_embed(
@@ -59,122 +72,6 @@ def get_sine_pos_embed(
 
     pos_embed = torch.cat([x_embed, y_embed], dim=-1)
     return pos_embed
-
-
-class PositionEmbeddingSine(nn.Module):
-    """
-    Sinusoidal Position Embedding for 2D feature maps
-
-    This is commonly used in DETR-style models for spatial position encoding.
-
-    Example:
-        >>> pos_embed = PositionEmbeddingSine(num_pos_feats=128)
-        >>> x = torch.randn(2, 256, 20, 20)  # (B, C, H, W)
-        >>> mask = torch.zeros(2, 20, 20, dtype=torch.bool)  # (B, H, W)
-        >>> pos = pos_embed(x, mask)
-        >>> print(pos.shape)  # (2, 256, 20, 20)
-    """
-
-    def __init__(
-        self,
-        num_pos_feats: int = 128,
-        temperature: int = 10000,
-        normalize: bool = True,
-        scale: Optional[float] = None
-    ):
-        """
-        Args:
-            num_pos_feats: Half of the embedding dimension (default: 128)
-                          Final embedding dim is 2 * num_pos_feats
-            temperature: Temperature for sinusoidal encoding (default: 10000)
-            normalize: Whether to normalize coordinates to [0, 1] (default: True)
-            scale: Scale factor for normalized coordinates (default: 2*pi if None)
-        """
-        super().__init__()
-        self.num_pos_feats = num_pos_feats
-        self.temperature = temperature
-        self.normalize = normalize
-        if scale is not None and normalize is False:
-            raise ValueError("normalize should be True if scale is passed")
-        if scale is None:
-            scale = 2 * math.pi
-        self.scale = scale
-
-    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Generate position embeddings for feature map
-
-        Args:
-            x: Feature tensor of shape (B, C, H, W)
-            mask: Optional mask tensor of shape (B, H, W) where True means invalid
-
-        Returns:
-            Position embeddings of shape (B, C, H, W) where C = 2 * num_pos_feats
-        """
-        if mask is None:
-            mask = torch.zeros(x.shape[0], x.shape[2], x.shape[3], dtype=torch.bool, device=x.device)
-
-        not_mask = ~mask
-        y_embed = not_mask.cumsum(1, dtype=torch.float32)
-        x_embed = not_mask.cumsum(2, dtype=torch.float32)
-
-        if self.normalize:
-            eps = 1e-6
-            y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
-            x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
-
-        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=x.device)
-        dim_t = self.temperature ** (2 * torch.div(dim_t, 2, rounding_mode='floor') / self.num_pos_feats)
-
-        pos_x = x_embed[:, :, :, None] / dim_t
-        pos_y = y_embed[:, :, :, None] / dim_t
-
-        pos_x = torch.stack([pos_x[:, :, :, 0::2].sin(), pos_x[:, :, :, 1::2].cos()], dim=4).flatten(3)
-        pos_y = torch.stack([pos_y[:, :, :, 0::2].sin(), pos_y[:, :, :, 1::2].cos()], dim=4).flatten(3)
-
-        pos = torch.cat([pos_y, pos_x], dim=3).permute(0, 3, 1, 2)
-        return pos
-
-
-class PositionEmbeddingLearned(nn.Module):
-    """
-    Learnable Position Embedding
-
-    Uses learned embeddings for x and y coordinates.
-    """
-
-    def __init__(self, num_pos_feats: int = 256):
-        """
-        Args:
-            num_pos_feats: Half of the embedding dimension
-        """
-        super().__init__()
-        self.row_embed = nn.Embedding(50, num_pos_feats)
-        self.col_embed = nn.Embedding(50, num_pos_feats)
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.uniform_(self.row_embed.weight)
-        nn.init.uniform_(self.col_embed.weight)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            x: Feature tensor of shape (B, C, H, W)
-
-        Returns:
-            Position embeddings of shape (B, C*2, H, W)
-        """
-        h, w = x.shape[-2:]
-        i = torch.arange(w, device=x.device)
-        j = torch.arange(h, device=x.device)
-        x_emb = self.col_embed(i)
-        y_emb = self.row_embed(j)
-        pos = torch.cat([
-            x_emb.unsqueeze(0).repeat(h, 1, 1),
-            y_emb.unsqueeze(1).repeat(1, w, 1),
-        ], dim=-1).permute(2, 0, 1).unsqueeze(0).repeat(x.shape[0], 1, 1, 1)
-        return pos
 
 
 class MLP(nn.Module):
@@ -263,34 +160,190 @@ def inverse_sigmoid(x: torch.Tensor, eps: float = 1e-5) -> torch.Tensor:
     return torch.log(x1 / x2)
 
 
-def build_position_encoding(
-    hidden_dim: int,
-    position_embedding: str = 'sine',
-    **kwargs
-) -> nn.Module:
+def bbox_cxcywh_to_xyxy(x: torch.Tensor) -> torch.Tensor:
     """
-    Build position encoding module from config
+    Convert bounding boxes from (center_x, center_y, width, height) to (x1, y1, x2, y2) format
 
     Args:
-        hidden_dim: Hidden dimension for position embeddings
-        position_embedding: Type of position embedding ('sine' or 'learned')
-        **kwargs: Additional arguments for position embedding
+        x: Bounding boxes in cxcywh format, shape (..., 4)
 
     Returns:
-        Position embedding module
+        Bounding boxes in xyxy format, shape (..., 4)
     """
-    num_pos_feats = hidden_dim // 2
+    cxcy, wh = x.split(2, dim=-1)
+    return torch.cat([cxcy - 0.5 * wh, cxcy + 0.5 * wh], dim=-1)
 
-    if position_embedding == 'sine':
-        return PositionEmbeddingSine(
-            num_pos_feats=num_pos_feats,
-            temperature=kwargs.get('temperature', 10000),
-            normalize=kwargs.get('normalize', True)
+
+def bbox_xyxy_to_cxcywh(x: torch.Tensor) -> torch.Tensor:
+    """
+    Convert bounding boxes from (x1, y1, x2, y2) to (center_x, center_y, width, height) format
+
+    Args:
+        x: Bounding boxes in xyxy format, shape (..., 4)
+
+    Returns:
+        Bounding boxes in cxcywh format, shape (..., 4)
+    """
+    x1, y1, x2, y2 = x.split(1, dim=-1)
+    return torch.cat([(x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1], dim=-1)
+
+
+def get_contrastive_denoising_training_group(
+    targets: dict,
+    num_classes: int,
+    num_queries: int,
+    class_embed: torch.Tensor,
+    num_denoising: int = 100,
+    label_noise_ratio: float = 0.5,
+    box_noise_scale: float = 1.0
+) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor], Optional[dict]]:
+    """
+    Generate contrastive denoising training groups for RT-DETR
+
+    This function creates positive and negative query groups for contrastive denoising training.
+    Each group contains both positive (matched) and negative (mismatched) queries.
+
+    Args:
+        targets: Dictionary containing:
+            - 'gt_class': List of ground truth class tensors per batch
+            - 'gt_bbox': List of ground truth bbox tensors per batch (in cxcywh format, normalized)
+        num_classes: Number of object classes
+        num_queries: Number of object queries
+        class_embed: Class embedding tensor of shape (num_classes, embed_dim)
+        num_denoising: Total number of denoising queries (default: 100)
+        label_noise_ratio: Ratio of label noise to add (default: 0.5)
+        box_noise_scale: Scale of box noise to add (default: 1.0)
+
+    Returns:
+        Tuple of (input_query_class, input_query_bbox, attn_mask, dn_meta):
+            - input_query_class: Denoising query class embeddings (bs, num_denoising, embed_dim)
+            - input_query_bbox: Denoising query bboxes (bs, num_denoising, 4)
+            - attn_mask: Attention mask (tgt_size, tgt_size) where tgt_size = num_denoising + num_queries
+            - dn_meta: Metadata dict with keys 'dn_positive_idx', 'dn_num_group', 'dn_num_split'
+        Returns (None, None, None, None) if no denoising is needed
+    """
+    if num_denoising <= 0:
+        return None, None, None, None
+
+    # Get number of ground truths per batch
+    num_gts = [len(t) for t in targets["gt_class"]]
+    max_gt_num = max(num_gts)
+    if max_gt_num == 0:
+        return None, None, None, None
+
+    num_group = num_denoising // max_gt_num
+    num_group = 1 if num_group == 0 else num_group
+
+    # Pad gt to max_num of a batch
+    bs = len(targets["gt_class"])
+    device = class_embed.device
+
+    input_query_class = torch.full(
+        (bs, max_gt_num), num_classes, dtype=torch.int64, device=device
+    )
+    input_query_bbox = torch.zeros((bs, max_gt_num, 4), device=device)
+    pad_gt_mask = torch.zeros((bs, max_gt_num), device=device)
+
+    for i in range(bs):
+        num_gt = num_gts[i]
+        if num_gt > 0:
+            input_query_class[i, :num_gt] = targets["gt_class"][i].squeeze(-1)
+            input_query_bbox[i, :num_gt] = targets["gt_bbox"][i]
+            pad_gt_mask[i, :num_gt] = 1
+
+    # Each group has positive and negative queries
+    input_query_class = input_query_class.repeat(1, 2 * num_group)
+    input_query_bbox = input_query_bbox.repeat(1, 2 * num_group, 1)
+    pad_gt_mask = pad_gt_mask.repeat(1, 2 * num_group)
+
+    # Positive and negative mask
+    negative_gt_mask = torch.zeros((bs, max_gt_num * 2, 1), device=device)
+    negative_gt_mask[:, max_gt_num:] = 1
+    negative_gt_mask = negative_gt_mask.repeat(1, num_group, 1)
+    positive_gt_mask = 1 - negative_gt_mask
+
+    # Contrastive denoising training positive index
+    positive_gt_mask = positive_gt_mask.squeeze(-1) * pad_gt_mask
+    dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
+    dn_positive_idx = torch.split(dn_positive_idx, [n * num_group for n in num_gts])
+
+    # Total denoising queries
+    num_denoising = int(max_gt_num * 2 * num_group)
+
+    # Add label noise
+    if label_noise_ratio > 0:
+        input_query_class = input_query_class.flatten()
+        pad_gt_mask_flat = pad_gt_mask.flatten()
+
+        # Half of bbox prob
+        mask = torch.rand(input_query_class.shape, device=device) < (label_noise_ratio * 0.5)
+        chosen_idx = torch.nonzero(mask.float() * pad_gt_mask_flat).squeeze(-1)
+
+        # Randomly put a new one here
+        new_label = torch.randint(
+            0, num_classes, chosen_idx.shape, dtype=input_query_class.dtype, device=device
         )
-    elif position_embedding == 'learned':
-        return PositionEmbeddingLearned(num_pos_feats=num_pos_feats)
-    else:
-        raise ValueError(f"Unknown position embedding: {position_embedding}")
+        input_query_class.scatter_(0, chosen_idx, new_label)
+        input_query_class = input_query_class.reshape(bs, num_denoising)
+        pad_gt_mask = pad_gt_mask_flat.reshape(bs, num_denoising)
+
+    # Add box noise
+    if box_noise_scale > 0:
+        known_bbox = bbox_cxcywh_to_xyxy(input_query_bbox)
+
+        diff = input_query_bbox[..., 2:].repeat(1, 1, 2) * 0.5 * box_noise_scale
+
+        rand_sign = torch.randint(0, 2, input_query_bbox.shape, device=device).float() * 2.0 - 1.0
+        rand_part = torch.rand(input_query_bbox.shape, device=device)
+        rand_part = (rand_part + 1.0) * negative_gt_mask + rand_part * (1 - negative_gt_mask)
+        rand_part *= rand_sign
+        known_bbox += rand_part * diff
+        known_bbox = known_bbox.clamp(min=0.0, max=1.0)
+        input_query_bbox = bbox_xyxy_to_cxcywh(known_bbox)
+        input_query_bbox = inverse_sigmoid(input_query_bbox)
+
+    # Get class embeddings
+    class_embed = torch.cat([class_embed, torch.zeros(1, class_embed.shape[-1], device=device)])
+    input_query_class = torch.gather(
+        class_embed, 0, input_query_class.flatten().unsqueeze(-1).expand(-1, class_embed.shape[-1])
+    ).reshape(bs, num_denoising, -1)
+
+    # Create attention mask
+    tgt_size = num_denoising + num_queries
+    attn_mask = torch.ones((tgt_size, tgt_size), dtype=torch.bool, device=device)
+
+    # Match query cannot see the reconstruction
+    attn_mask[num_denoising:, :num_denoising] = False
+
+    # Reconstruct cannot see each other
+    for i in range(num_group):
+        if i == 0:
+            attn_mask[
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
+                max_gt_num * 2 * (i + 1) : num_denoising
+            ] = False
+        if i == num_group - 1:
+            attn_mask[
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
+                : max_gt_num * 2 * i
+            ] = False
+        else:
+            attn_mask[
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
+                max_gt_num * 2 * (i + 1) : num_denoising
+            ] = False
+            attn_mask[
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
+                : max_gt_num * 2 * i
+            ] = False
+
+    dn_meta = {
+        "dn_positive_idx": dn_positive_idx,
+        "dn_num_group": num_group,
+        "dn_num_split": [num_denoising, num_queries]
+    }
+
+    return input_query_class, input_query_bbox, attn_mask, dn_meta
 
 
 def get_encoder_memory_and_spatial_shapes(features):

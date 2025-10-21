@@ -28,7 +28,14 @@ from typing import List, Dict, Optional, Tuple
 from ...core.workspace import register
 from ..bbox_utils import batch_distance2bbox
 from ..initializer import bias_init_with_prob, constant_, normal_
+from ..assigners.utils import generate_anchors_for_grid_cell
 from ..backbones.cspresnet import ConvBNLayer, RepVggBlock
+from ..ops import get_static_shape, get_act_fn
+from ..layers import MultiClassNMS
+
+# TODO: Import these when needed for full loss implementation
+# from ..losses import GIoULoss
+# from ..assigners import ATSSAssigner, TaskAlignedAssigner
 
 __all__ = ['PPYOLOEHead']
 
