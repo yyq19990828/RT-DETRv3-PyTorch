@@ -1,4 +1,5 @@
 pretrained_models/
+logs
 
 # Python
 __pycache__/

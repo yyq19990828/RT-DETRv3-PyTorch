@@ -64,8 +64,27 @@ class ModelOutputValidator:
         torch_model.eval()
 
         # Convert input to appropriate format
-        paddle_input = paddle.to_tensor(sample_input, dtype='float32')
-        torch_input = torch.from_numpy(sample_input).float()
+        # Both Paddle and PyTorch models expect dict input with 'image' key (Paddle mode)
+        # Paddle also needs 'im_shape' and 'scale_factor' for post-processing
+        batch_size = sample_input.shape[0]
+        img_h, img_w = sample_input.shape[2], sample_input.shape[3]
+
+        paddle_tensor = paddle.to_tensor(sample_input, dtype='float32')
+        # im_shape: original image shape [H, W]
+        # scale_factor: scale factor used to resize image [scale_y, scale_x]
+        # For consistency test, we assume no scaling (scale_factor = [1.0, 1.0])
+        paddle_input = {
+            'image': paddle_tensor,
+            'im_shape': paddle.to_tensor([[img_h, img_w]] * batch_size, dtype='float32'),
+            'scale_factor': paddle.to_tensor([[1.0, 1.0]] * batch_size, dtype='float32')
+        }
+
+        torch_tensor = torch.from_numpy(sample_input).float()
+        torch_input = {
+            'image': torch_tensor,
+            'im_shape': torch.tensor([[img_h, img_w]] * batch_size, dtype=torch.float32),
+            'scale_factor': torch.tensor([[1.0, 1.0]] * batch_size, dtype=torch.float32)
+        }
 
         # Run forward pass
         with paddle.no_grad():
