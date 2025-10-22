@@ -38,44 +38,72 @@ __all__ = ['MultiClassNMS', 'MultiHeadAttention']
 @register
 class MultiHeadAttention(nn.Module):
     """
-    Multi-Head Attention module
+    Multi-Head Attention module - Aligned with PaddlePaddle implementation
+
+    Uses fused in_proj_weight and in_proj_bias for Q, K, V projections to match
+    PaddlePaddle's parameter naming convention for weight conversion.
 
     Args:
         embed_dim (int): Embedding dimension. Default: 256
         num_heads (int): Number of attention heads. Default: 8
         dropout (float): Dropout rate. Default: 0.0
+        kdim (int, optional): Key dimension. If None, use embed_dim. Default: None
+        vdim (int, optional): Value dimension. If None, use embed_dim. Default: None
+        need_weights (bool): Whether to return attention weights. Default: False
     """
 
     def __init__(
         self,
         embed_dim: int = 256,
         num_heads: int = 8,
-        dropout: float = 0.0
+        dropout: float = 0.0,
+        kdim: Optional[int] = None,
+        vdim: Optional[int] = None,
+        need_weights: bool = False
     ):
         super().__init__()
-        assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
-
         self.embed_dim = embed_dim
+        self.kdim = kdim if kdim is not None else embed_dim
+        self.vdim = vdim if vdim is not None else embed_dim
+        self._qkv_same_embed_dim = self.kdim == embed_dim and self.vdim == embed_dim
+
         self.num_heads = num_heads
+        self.dropout_prob = dropout
+        self.need_weights = need_weights
+
         self.head_dim = embed_dim // num_heads
+        assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
 
-        self.q_proj = nn.Linear(embed_dim, embed_dim)
-        self.k_proj = nn.Linear(embed_dim, embed_dim)
-        self.v_proj = nn.Linear(embed_dim, embed_dim)
+        # Use fused in_proj_weight and in_proj_bias to match Paddle's parameter naming
+        if self._qkv_same_embed_dim:
+            # Fused QKV projection: shape [embed_dim, 3 * embed_dim]
+            # This matches Paddle's in_proj_weight parameter naming
+            self.in_proj_weight = nn.Parameter(torch.empty(embed_dim, 3 * embed_dim))
+            self.in_proj_bias = nn.Parameter(torch.empty(3 * embed_dim))
+        else:
+            # Separate Q, K, V projections (fallback, not commonly used in RT-DETRv3)
+            self.q_proj = nn.Linear(embed_dim, embed_dim)
+            self.k_proj = nn.Linear(self.kdim, embed_dim)
+            self.v_proj = nn.Linear(self.vdim, embed_dim)
+
         self.out_proj = nn.Linear(embed_dim, embed_dim)
-
         self.dropout = nn.Dropout(dropout)
 
         self._reset_parameters()
 
     def _reset_parameters(self):
-        nn.init.xavier_uniform_(self.q_proj.weight)
-        nn.init.xavier_uniform_(self.k_proj.weight)
-        nn.init.xavier_uniform_(self.v_proj.weight)
+        if self._qkv_same_embed_dim:
+            nn.init.xavier_uniform_(self.in_proj_weight)
+            nn.init.constant_(self.in_proj_bias, 0.)
+        else:
+            nn.init.xavier_uniform_(self.q_proj.weight)
+            nn.init.xavier_uniform_(self.k_proj.weight)
+            nn.init.xavier_uniform_(self.v_proj.weight)
+            nn.init.constant_(self.q_proj.bias, 0.)
+            nn.init.constant_(self.k_proj.bias, 0.)
+            nn.init.constant_(self.v_proj.bias, 0.)
+
         nn.init.xavier_uniform_(self.out_proj.weight)
-        nn.init.constant_(self.q_proj.bias, 0.)
-        nn.init.constant_(self.k_proj.bias, 0.)
-        nn.init.constant_(self.v_proj.bias, 0.)
         nn.init.constant_(self.out_proj.bias, 0.)
 
     def forward(
@@ -98,10 +126,27 @@ class MultiHeadAttention(nn.Module):
         B, N, C = query.shape
         M = key.shape[1]
 
-        # Project and reshape to (B, num_heads, N/M, head_dim)
-        q = self.q_proj(query).reshape(B, N, self.num_heads, self.head_dim).transpose(1, 2)
-        k = self.k_proj(key).reshape(B, M, self.num_heads, self.head_dim).transpose(1, 2)
-        v = self.v_proj(value).reshape(B, M, self.num_heads, self.head_dim).transpose(1, 2)
+        if self._qkv_same_embed_dim:
+            # Use fused in_proj for Q, K, V
+            # in_proj_weight: [embed_dim, 3 * embed_dim]
+            # Split into Q, K, V weights: each [embed_dim, embed_dim]
+            q_weight, k_weight, v_weight = self.in_proj_weight.chunk(3, dim=1)
+            q_bias, k_bias, v_bias = self.in_proj_bias.chunk(3, dim=0)
+
+            # Project Q, K, V
+            q = F.linear(query, q_weight.t(), q_bias)
+            k = F.linear(key, k_weight.t(), k_bias)
+            v = F.linear(value, v_weight.t(), v_bias)
+        else:
+            # Use separate projections
+            q = self.q_proj(query)
+            k = self.k_proj(key)
+            v = self.v_proj(value)
+
+        # Reshape to (B, num_heads, N/M, head_dim)
+        q = q.reshape(B, N, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.reshape(B, M, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.reshape(B, M, self.num_heads, self.head_dim).transpose(1, 2)
 
         # Scaled dot-product attention
         attn_weights = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)

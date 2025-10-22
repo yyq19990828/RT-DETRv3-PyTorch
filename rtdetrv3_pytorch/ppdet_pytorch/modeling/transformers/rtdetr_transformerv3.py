@@ -26,6 +26,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Optional, List, Tuple
+from collections import OrderedDict
 
 from ppdet_pytorch.core.workspace import register
 from ..layers import MultiHeadAttention
@@ -413,16 +414,18 @@ class RTDETRTransformerv3(nn.Module):
         self.input_proj = nn.ModuleList()
         for in_channels in backbone_feat_channels:
             self.input_proj.append(
-                nn.Sequential(
-                    nn.Conv2d(in_channels, self.hidden_dim, kernel_size=1, bias=False),
-                    nn.BatchNorm2d(self.hidden_dim)))
-        
+                nn.Sequential(OrderedDict([
+                    ('conv', nn.Conv2d(in_channels, self.hidden_dim, kernel_size=1, bias=False)),
+                    ('norm', nn.BatchNorm2d(self.hidden_dim))
+                ])))
+
         in_channels = backbone_feat_channels[-1]
         for _ in range(self.num_levels - len(backbone_feat_channels)):
             self.input_proj.append(
-                nn.Sequential(
-                    nn.Conv2d(in_channels, self.hidden_dim, kernel_size=3, stride=2, padding=1, bias=False),
-                    nn.BatchNorm2d(self.hidden_dim)))
+                nn.Sequential(OrderedDict([
+                    ('conv', nn.Conv2d(in_channels, self.hidden_dim, kernel_size=3, stride=2, padding=1, bias=False)),
+                    ('norm', nn.BatchNorm2d(self.hidden_dim))
+                ])))
             in_channels = self.hidden_dim
 
     def _get_encoder_input(self, feats: List[torch.Tensor]) -> Tuple[torch.Tensor, List[List[int]], List[int]]:

@@ -13,36 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-RT-DETRv3 Architecture - PyTorch Migration from PaddlePaddle
-
-Reference: ppdet/modeling/architectures/rtdetrv3.py
-"""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import torch
-import torch.nn as nn
+from .meta_arch import BaseArch
 from ppdet_pytorch.core.workspace import register, create
 
 __all__ = ['RTDETRV3']
+# Deformable DETR, DINO use the same architecture as DETR
 
 
 @register
-class RTDETRV3(nn.Module):
-    """RT-DETRv3 Main Architecture
-
-    Components:
-        - backbone: Feature extraction network
-        - neck: Feature pyramid network (optional)
-        - transformer: Transformer encoder-decoder
-        - detr_head: Main detection head
-        - aux_o2m_head: Auxiliary one-to-many head (optional, for training)
-        - post_process: Post-processing module (for inference)
-    """
-
+class RTDETRV3(BaseArch):
     __category__ = 'architecture'
     __inject__ = ['post_process', 'post_process_semi']
     __shared__ = ['with_mask', 'exclude_post_process']
@@ -70,17 +54,8 @@ class RTDETRV3(nn.Module):
 
     @classmethod
     def from_config(cls, cfg, *args, **kwargs):
-        """Create RTDETRV3 from config following PaddlePaddle's pattern
-
-        Args:
-            cfg: Configuration dict with component configs
-
-        Returns:
-            Dict of component instances for __init__
-        """
         # backbone
         backbone = create(cfg['backbone'])
-
         # neck
         kwargs = {'input_shape': backbone.out_shape}
         neck = create(cfg['neck'], **kwargs) if cfg['neck'] else None
@@ -89,7 +64,6 @@ class RTDETRV3(nn.Module):
         if neck is not None:
             kwargs = {'input_shape': neck.out_shape}
         transformer = create(cfg['transformer'], **kwargs)
-
         # head
         kwargs = {
             'hidden_dim': transformer.hidden_dim,
@@ -109,42 +83,28 @@ class RTDETRV3(nn.Module):
             "aux_o2m_head": aux_o2m_head
         }
 
-    def _forward(self, inputs):
-        """Forward pass for both training and inference
-
-        Args:
-            inputs: Dict containing:
-                - image: Input images [B, C, H, W]
-                - pad_mask: Padding mask (optional)
-                - im_shape: Original image shapes (for inference)
-                - scale_factor: Scale factors (for inference)
-                - gt_* : Ground truth labels (for training)
-
-        Returns:
-            Training: Dict of losses
-            Inference: Dict with 'bbox', 'bbox_num', optionally 'mask'
-        """
+    def _forward(self):
         # Backbone
-        body_feats = self.backbone(inputs['image'])
+        body_feats = self.backbone(self.inputs)
 
         # Neck
         if self.neck is not None:
             body_feats = self.neck(body_feats)
 
         # Transformer
-        pad_mask = inputs.get('pad_mask', None)
-        out_transformer = self.transformer(body_feats, pad_mask, inputs)
+        pad_mask = self.inputs.get('pad_mask', None)
+        out_transformer = self.transformer(body_feats, pad_mask, self.inputs)
 
         # DETR Head
         if self.training:
-            detr_losses = self.detr_head(out_transformer, body_feats, inputs)
+            detr_losses = self.detr_head(out_transformer, body_feats,
+                                         self.inputs)
             detr_losses.update({
-                'loss': torch.stack(
-                    [v for k, v in detr_losses.items() if 'log' not in k]
-                ).sum()
+                'loss': sum(
+                    [v for k, v in detr_losses.items() if 'log' not in k])
             })
             if self.aux_o2m_head is not None:
-                aux_o2m_losses = self.aux_o2m_head(body_feats, inputs)
+                aux_o2m_losses = self.aux_o2m_head(body_feats, self.inputs)
                 for k, v in aux_o2m_losses.items():
                     if k == 'loss':
                         detr_losses[k] += v
@@ -157,47 +117,20 @@ class RTDETRV3(nn.Module):
                 bbox, bbox_num, mask = preds
             else:
                 bbox, bbox_num, mask = self.post_process(
-                    preds, inputs['im_shape'], inputs['scale_factor'],
-                    inputs['image'].shape[2:])
+                    preds, self.inputs['im_shape'], self.inputs['scale_factor'],
+                    self.inputs['image'][2:].shape)
+
+                # aux_o2m_outs = self.aux_o2m_head(body_feats)
+                # bbox, bbox_num, nms_keep_idx = self.aux_o2m_head.post_process(
+                #         aux_o2m_outs, self.inputs['scale_factor'])
 
             output = {'bbox': bbox, 'bbox_num': bbox_num}
             if self.with_mask:
                 output['mask'] = mask
             return output
 
-    def forward(self, inputs):
-        """Forward pass wrapper
+    def get_loss(self):
+        return self._forward()
 
-        Args:
-            inputs: Dict or Tensor
-                - If dict: Must contain 'image' key
-                - If Tensor: Converted to {'image': inputs}
-
-        Returns:
-            Same as _forward()
-        """
-        if isinstance(inputs, torch.Tensor):
-            inputs = {'image': inputs}
-        return self._forward(inputs)
-
-    def get_loss(self, inputs):
-        """Get training losses
-
-        Args:
-            inputs: Training batch dict
-
-        Returns:
-            Dict of losses
-        """
-        return self.forward(inputs)
-
-    def get_pred(self, inputs):
-        """Get predictions for inference
-
-        Args:
-            inputs: Inference batch dict
-
-        Returns:
-            Dict with detections
-        """
-        return self.forward(inputs)
+    def get_pred(self):
+        return self._forward()

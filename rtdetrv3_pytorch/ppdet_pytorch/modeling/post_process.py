@@ -28,6 +28,90 @@ __all__ = [
 ]
 
 
+def paste_mask(masks, boxes, im_h, im_w, assign_on_cpu=False):
+    """
+    Paste the mask prediction to the original image.
+    """
+    x0_int, y0_int = 0, 0
+    x1_int, y1_int = im_w, im_h
+    x0, y0, x1, y1 = torch.split(boxes, 1, dim=1)
+    N = masks.shape[0]
+    img_y = torch.arange(y0_int, y1_int, device=boxes.device, dtype=boxes.dtype) + 0.5
+    img_x = torch.arange(x0_int, x1_int, device=boxes.device, dtype=boxes.dtype) + 0.5
+
+    img_y = (img_y - y0) / (y1 - y0) * 2 - 1
+    img_x = (img_x - x0) / (x1 - x0) * 2 - 1
+    # img_x, img_y have shapes (N, w), (N, h)
+
+    if assign_on_cpu:
+        img_x = img_x.cpu()
+        img_y = img_y.cpu()
+    gx = img_x[:, None, :].expand(
+        N, img_y.shape[1], img_x.shape[1])
+    gy = img_y[:, :, None].expand(
+        N, img_y.shape[1], img_x.shape[1])
+    grid = torch.stack([gx, gy], dim=3)
+    img_masks = F.grid_sample(masks, grid, align_corners=False)
+    return img_masks[:, 0]
+
+
+def multiclass_nms(bboxs, num_classes, match_threshold=0.6, match_metric='iou'):
+    final_boxes = []
+    for c in range(num_classes):
+        idxs = bboxs[:, 0] == c
+        if np.count_nonzero(idxs) == 0: continue
+        r = nms(bboxs[idxs, 1:], match_threshold, match_metric)
+        final_boxes.append(np.concatenate([np.full((r.shape[0], 1), c), r], 1))
+    return final_boxes
+
+
+def nms(dets, match_threshold=0.6, match_metric='iou'):
+    """ Apply NMS to avoid detecting too many overlapping bounding boxes.
+        Args:
+            dets: shape [N, 5], [score, x1, y1, x2, y2]
+            match_metric: 'iou' or 'ios'
+            match_threshold: overlap thresh for match metric.
+    """
+    if dets.shape[0] == 0:
+        return dets[[], :]
+    scores = dets[:, 0]
+    x1 = dets[:, 1]
+    y1 = dets[:, 2]
+    x2 = dets[:, 3]
+    y2 = dets[:, 4]
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    order = scores.argsort()[::-1]
+
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
+
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+
+        w = np.maximum(0.0, xx2 - xx1 + 1)
+        h = np.maximum(0.0, yy2 - yy1 + 1)
+        inter = w * h
+
+        if match_metric == 'iou':
+            union = areas[i] + areas[order[1:]] - inter
+            match_value = inter / union
+        elif match_metric == 'ios':
+            smaller = np.minimum(areas[i], areas[order[1:]])
+            match_value = inter / smaller
+        else:
+            raise ValueError()
+
+        inds = np.where(match_value < match_threshold)[0]
+        order = order[inds + 1]
+
+    dets = dets[keep, :]
+    return dets
+
+
 @register
 class DETRPostProcess(object):
     __shared__ = ['num_classes', 'use_focal_loss', 'with_mask']
