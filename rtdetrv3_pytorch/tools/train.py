@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# Copyright (c) 2025 RT-DETRv3 PyTorch Authors. All Rights Reserved.
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,320 +11,209 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Modified from PaddlePaddle RT-DETRv3
-# Copyright (c) 2024 PaddlePaddle Authors. All Rights Reserved.
 
-"""
-Training script for RT-DETRv3 PyTorch.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-Usage:
-    # Single GPU training
-    python tools/train.py --config configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml
-
-    # Multi-GPU training with torchrun
-    torchrun --nproc_per_node=8 tools/train.py --config configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml
-
-    # Resume training
-    python tools/train.py --config configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --resume output/epoch_10.pth
-"""
-
-import argparse
 import os
 import sys
+
+# add python path of PyTorch Detection to sys.path
+parent_path = os.path.abspath(os.path.join(__file__, *(['..'] * 2)))
+sys.path.insert(0, parent_path)
+
+# ignore warning log
 import warnings
-
-# Add project root to path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
 warnings.filterwarnings('ignore')
 
-import torch
-import torch.distributed as dist
-from torch.utils.data import DataLoader, DistributedSampler
+import cv2
+cv2.setNumThreads(0)
+cv2.ocl.setUseOpenCL(False)
 
-from ppdet_pytorch.modeling import build_model
-from ppdet_pytorch.data import build_dataset, build_transform
-from ppdet_pytorch.engine import Trainer, build_optimizer, build_lr_scheduler, build_coco_evaluator
-from ppdet_pytorch.modeling.losses import DINOv3Loss
-from ppdet_pytorch.utils.config import load_config
+import torch
+from ppdet_pytorch.core.workspace import load_config, merge_config
+
+from ppdet_pytorch.engine import Trainer, TrainerCot, init_parallel_env, set_random_seed, init_fleet_env
+# from ppdet_pytorch.engine.trainer_ssod import Trainer_DenseTeacher, Trainer_ARSL, Trainer_Semi_RTDETR
+
+# from ppdet_pytorch.slim import build_slim_model
+
+from ppdet_pytorch.utils.cli import ArgsParser, merge_args
+import ppdet_pytorch.utils.check as check
 from ppdet_pytorch.utils.logger import setup_logger
+logger = setup_logger('train')
 
 
 def parse_args():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Train RT-DETRv3')
-
-    # Config
+    parser = ArgsParser()
     parser.add_argument(
-        '--config',
-        '-c',
-        type=str,
-        required=True,
-        help='Path to config file'
-    )
-
-    # Training
-    parser.add_argument(
-        '--resume',
-        '-r',
-        type=str,
-        default=None,
-        help='Path to checkpoint for resuming training'
-    )
-    parser.add_argument(
-        '--eval',
+        "--eval",
         action='store_true',
-        help='Whether to perform evaluation during training'
-    )
+        default=False,
+        help="Whether to perform evaluation in train")
     parser.add_argument(
-        '--amp',
+        "-r", "--resume", default=None, help="weights path for resume")
+    parser.add_argument(
+        "--slim_config",
+        default=None,
+        type=str,
+        help="Configuration file of slim method.")
+    parser.add_argument(
+        "--enable_ce",
+        type=bool,
+        default=False,
+        help="If set True, enable continuous evaluation job."
+        "This flag is only used for internal test.")
+    parser.add_argument(
+        "--amp",
         action='store_true',
-        help='Enable automatic mixed precision training'
-    )
-
-    # Override config options
+        default=False,
+        help="Enable auto mixed precision training.")
     parser.add_argument(
-        '--epochs',
-        type=int,
-        default=None,
-        help='Number of training epochs (overrides config)'
-    )
+        "--ddp",
+        action='store_true',
+        default=False,
+        help="Use DistributedDataParallel for multi-GPU training")
     parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=None,
-        help='Batch size per GPU (overrides config)'
-    )
+        "--use_tensorboard",
+        type=bool,
+        default=False,
+        help="whether to record the data to TensorBoard.")
     parser.add_argument(
-        '--lr',
-        type=float,
-        default=None,
-        help='Learning rate (overrides config)'
-    )
+        '--tensorboard_log_dir',
+        type=str,
+        default="runs",
+        help='TensorBoard logging directory.')
     parser.add_argument(
-        '--output-dir',
+        "--use_wandb",
+        type=bool,
+        default=False,
+        help="whether to record the data to wandb.")
+    parser.add_argument(
+        '--save_prediction_only',
+        action='store_true',
+        default=False,
+        help='Whether to save the evaluation results only')
+    parser.add_argument(
+        '--profiler_options',
         type=str,
         default=None,
-        help='Output directory (overrides config)'
-    )
-
-    # Distributed
+        help="The option of profiler, which should be in "
+        "format \"key1=value1;key2=value2;key3=value3\"."
+        "please see ppdet_pytorch/utils/profiler.py for detail.")
+    parser.add_argument(
+        '--save_proposals',
+        action='store_true',
+        default=False,
+        help='Whether to save the train proposals')
+    parser.add_argument(
+        '--proposals_path',
+        type=str,
+        default="sniper/proposals.json",
+        help='Train proposals directory')
     parser.add_argument(
         '--local_rank',
         type=int,
         default=-1,
-        help='Local rank for distributed training (set by torchrun)'
-    )
+        help='Local rank for distributed training')
 
     args = parser.parse_args()
     return args
 
 
-def setup_distributed():
-    """Setup distributed training environment."""
-    if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
-        rank = int(os.environ['RANK'])
-        world_size = int(os.environ['WORLD_SIZE'])
-        local_rank = int(os.environ['LOCAL_RANK'])
-    elif 'SLURM_PROCID' in os.environ:
-        # SLURM environment
-        rank = int(os.environ['SLURM_PROCID'])
-        world_size = int(os.environ['SLURM_NTASKS'])
-        local_rank = rank % torch.cuda.device_count()
+def run(FLAGS, cfg):
+    # init distributed environment if ddp is enabled
+    if cfg.get('ddp', False) or FLAGS.ddp:
+        init_fleet_env(cfg.get('find_unused_parameters', False))
     else:
-        rank = 0
-        world_size = 1
-        local_rank = 0
+        # init parallel environment if nranks > 1
+        init_parallel_env()
 
-    if world_size > 1:
-        torch.cuda.set_device(local_rank)
-        dist.init_process_group(
-            backend='nccl',
-            init_method='env://',
-            world_size=world_size,
-            rank=rank
-        )
-        dist.barrier()
+    if FLAGS.enable_ce:
+        set_random_seed(0)
 
-    return rank, world_size, local_rank
+    # build trainer
+    # ssod_method = cfg.get('ssod_method', None)
+    # if ssod_method is not None:
+    #     if ssod_method == 'DenseTeacher':
+    #         trainer = Trainer_DenseTeacher(cfg, mode='train')
+    #     elif ssod_method == 'ARSL':
+    #         trainer = Trainer_ARSL(cfg, mode='train')
+    #     elif ssod_method == 'Semi_RTDETR':
+    #         trainer = Trainer_Semi_RTDETR(cfg, mode='train')
+    #     else:
+    #         raise ValueError(
+    #             "Semi-Supervised Object Detection only no support this method.")
+    # elif cfg.get('use_cot', False):
+    #     trainer = TrainerCot(cfg, mode='train')
+    # else:
+    #     trainer = Trainer(cfg, mode='train')
+    trainer = Trainer(cfg, mode='train')
+
+    # load weights
+    if FLAGS.resume is not None:
+        trainer.resume_weights(FLAGS.resume)
+    elif 'pretrain_student_weights' in cfg and 'pretrain_teacher_weights' in cfg \
+            and cfg.pretrain_teacher_weights and cfg.pretrain_student_weights:
+        trainer.load_semi_weights(cfg.pretrain_teacher_weights,
+                                  cfg.pretrain_student_weights)
+    elif 'pretrain_weights' in cfg and cfg.pretrain_weights:
+        trainer.load_weights(cfg.pretrain_weights)
+
+    # training
+    trainer.train(FLAGS.eval)
 
 
 def main():
-    """Main training function."""
-    args = parse_args()
+    FLAGS = parse_args()
+    cfg = load_config(FLAGS.config)
+    merge_args(cfg, FLAGS)
+    merge_config(FLAGS.opt)
 
-    # Setup distributed training
-    rank, world_size, local_rank = setup_distributed()
-    is_distributed = world_size > 1
-    is_main_process = rank == 0
+    # Set device configuration
+    # Disable special devices by default (NPU, XPU, MLU not supported in PyTorch by default)
+    if 'use_npu' not in cfg:
+        cfg.use_npu = False
+    if 'use_xpu' not in cfg:
+        cfg.use_xpu = False
+    if 'use_mlu' not in cfg:
+        cfg.use_mlu = False
 
-    # Setup logger
-    logger = setup_logger('rtdetrv3.train', log_ranks='0')
+    # Set GPU/CPU device
+    if 'use_gpu' not in cfg:
+        cfg.use_gpu = torch.cuda.is_available()  # Auto-detect CUDA availability
 
-    if is_main_process:
-        logger.info(f"Training RT-DETRv3 on {world_size} GPU(s)")
-        logger.info(f"Config: {args.config}")
-
-    # Load config
-    cfg = load_config(args.config)
-
-    # Override config with command line arguments
-    if args.epochs is not None:
-        cfg['epochs'] = args.epochs
-    if args.batch_size is not None:
-        cfg['batch_size'] = args.batch_size
-    if args.lr is not None:
-        cfg['optimizer']['lr'] = args.lr
-    if args.output_dir is not None:
-        cfg['save_dir'] = args.output_dir
-    if args.amp:
-        cfg['use_amp'] = True
-
-    # Create output directory
-    save_dir = cfg.get('save_dir', './output')
-    if is_main_process:
-        os.makedirs(save_dir, exist_ok=True)
-
-    # Build model
-    if is_main_process:
-        logger.info("Building model...")
-    model = build_model(cfg['model'])
-    model = model.cuda()
-
-    # Build dataset and dataloader
-    if is_main_process:
-        logger.info("Building dataset...")
-
-    train_transform = build_transform(cfg.get('train_transform', None), is_train=True)
-    train_dataset = build_dataset(
-        cfg['train_dataset'],
-        transform=train_transform
-    )
-
-    # Use DistributedSampler for DDP
-    if is_distributed:
-        train_sampler = DistributedSampler(
-            train_dataset,
-            num_replicas=world_size,
-            rank=rank,
-            shuffle=True
-        )
+    # Set PyTorch device
+    if cfg.use_gpu:
+        device = torch.device('cuda')
+        logger.info(f'Using GPU: {torch.cuda.get_device_name(0)}')
     else:
-        train_sampler = None
+        device = torch.device('cpu')
+        logger.info('Using CPU')
 
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=cfg.get('batch_size', 2),
-        sampler=train_sampler,
-        shuffle=(train_sampler is None),
-        num_workers=cfg.get('num_workers', 4),
-        pin_memory=True,
-        drop_last=True,
-        collate_fn=getattr(train_dataset, 'collate_fn', None)
-    )
+    # Store device in config for later use
+    cfg.device = device
 
-    # Build validation dataset if needed
-    val_loader = None
-    evaluator = None
-    if args.eval and 'val_dataset' in cfg:
-        val_transform = build_transform(cfg.get('val_transform', None), is_train=False)
-        val_dataset = build_dataset(
-            cfg['val_dataset'],
-            transform=val_transform
+    # Check for special devices (warn if enabled)
+    if cfg.use_npu or cfg.use_xpu or cfg.use_mlu:
+        logger.warning(
+            "NPU/XPU/MLU devices are not supported in PyTorch by default. "
+            "These settings will be ignored. Using GPU/CPU instead."
         )
 
-        # Use DistributedSampler for validation too
-        if is_distributed:
-            val_sampler = DistributedSampler(
-                val_dataset,
-                num_replicas=world_size,
-                rank=rank,
-                shuffle=False
-            )
-        else:
-            val_sampler = None
+    # NOTE: slim is not supported temporarily
+    # if FLAGS.slim_config:
+    #     cfg = build_slim_model(cfg, FLAGS.slim_config)
 
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=cfg.get('batch_size', 2),
-            sampler=val_sampler,
-            shuffle=False,
-            num_workers=cfg.get('num_workers', 4),
-            pin_memory=True,
-            collate_fn=getattr(val_dataset, 'collate_fn', None)
-        )
+    # FIXME: Temporarily solve the priority problem of FLAGS.opt
+    merge_config(FLAGS.opt)
+    check.check_config(cfg)
+    check.check_gpu(cfg.use_gpu)
+    check.check_version()
 
-        # Build evaluator
-        evaluator = build_coco_evaluator(
-            cfg.get('evaluator', {}),
-            dataset=val_dataset
-        )
-
-    # Build loss function
-    loss_fn = DINOv3Loss(
-        num_classes=cfg.get('num_classes', 80),
-        loss_coeff=cfg.get('loss_coeff', None),
-        use_focal_loss=cfg.get('use_focal_loss', True),
-        use_vfl=cfg.get('use_vfl', True)
-    )
-
-    # Build optimizer
-    if is_main_process:
-        logger.info("Building optimizer...")
-    optimizer = build_optimizer(model, cfg.get('optimizer', None))
-
-    # Build learning rate scheduler
-    steps_per_epoch = len(train_loader)
-    scheduler = build_lr_scheduler(
-        optimizer,
-        cfg.get('lr_scheduler', None),
-        steps_per_epoch=steps_per_epoch
-    )
-
-    # Build trainer
-    trainer_cfg = {
-        'epochs': cfg.get('epochs', 72),
-        'save_dir': save_dir,
-        'save_interval': cfg.get('save_interval', 1),
-        'log_interval': cfg.get('log_interval', 50),
-        'val_interval': cfg.get('val_interval', 1),
-        'grad_clip': cfg.get('grad_clip', 0.1),
-        'use_amp': cfg.get('use_amp', False),
-        'find_unused_parameters': cfg.get('find_unused_parameters', False)
-    }
-
-    trainer = Trainer(
-        model=model,
-        train_loader=train_loader,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        loss_fn=loss_fn,
-        cfg=trainer_cfg,
-        val_loader=val_loader,
-        evaluator=evaluator
-    )
-
-    # Resume from checkpoint if specified
-    if args.resume:
-        if is_main_process:
-            logger.info(f"Resuming from checkpoint: {args.resume}")
-        trainer.load_checkpoint(args.resume, resume_training=True)
-
-    # Start training
-    if is_main_process:
-        logger.info("Starting training...")
-    trainer.train()
-
-    # Cleanup distributed training
-    if is_distributed:
-        dist.destroy_process_group()
-
-    if is_main_process:
-        logger.info("Training completed!")
+    run(FLAGS, cfg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
