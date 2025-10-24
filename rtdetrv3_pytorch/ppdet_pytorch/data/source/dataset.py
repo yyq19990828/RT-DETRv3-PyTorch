@@ -16,8 +16,10 @@ except Exception:
 
 import torch
 from torch.utils.data import Dataset
+from pycocotools.coco import COCO
 
 from ppdet_pytorch.core.workspace import register, serializable
+from ppdet_pytorch.data import source
 
 import logging
 logger = logging.getLogger(__name__)
@@ -158,7 +160,8 @@ class DetDataset(Dataset):
             return self.transform(roidb)
         else:
             return roidb
-
+    
+    # TODO: implement download online dataset method of pytorch if needed
     def check_or_download_dataset(self):
         """
         Check dataset existence or download if needed.
@@ -232,3 +235,188 @@ def _make_dataset(dir: str) -> List[str]:
                 images.append(path)
 
     return images
+
+@register
+@serializable
+class ImageFolder(DetDataset):
+    def __init__(self,
+                 dataset_dir=None,
+                 image_dir=None,
+                 anno_path=None,
+                 sample_num=-1,
+                 use_default_label=None,
+                 **kwargs):
+        super(ImageFolder, self).__init__(
+            dataset_dir,
+            image_dir,
+            anno_path,
+            sample_num=sample_num,
+            use_default_label=use_default_label)
+        self._imid2path = {}
+        self.roidbs = None
+        self.sample_num = sample_num
+
+    def check_or_download_dataset(self):
+        return
+
+    def get_anno(self):
+        if self.anno_path is None:
+            return
+        if self.dataset_dir:
+            return os.path.join(self.dataset_dir, self.anno_path)
+        else:
+            return self.anno_path
+
+    def parse_dataset(self, ):
+        if not self.roidbs:
+            self.roidbs = self._load_images()
+
+    def _parse(self):
+        image_dir = self.image_dir
+        if not isinstance(image_dir, Sequence):
+            image_dir = [image_dir]
+        images = []
+        for im_dir in image_dir:
+            if os.path.isdir(im_dir):
+                im_dir = os.path.join(self.dataset_dir, im_dir)
+                images.extend(_make_dataset(im_dir))
+            elif os.path.isfile(im_dir) and _is_valid_file(im_dir):
+                images.append(im_dir)
+        return images
+    
+    def get_images(self):
+        images_path = []
+        coco = COCO(os.path.join(self.dataset_dir, self.anno_path))
+        imgIds = coco.getImgIds(catIds=[])
+        for imgId in imgIds:
+            filename = coco.loadImgs(imgId)[0]["file_name"]
+            images_path.append(os.path.join(self.dataset_dir, self.image_dir, filename))
+        return images_path
+
+    def _load_images(self, do_eval=False):
+        images = self._parse()
+        ct = 0
+        records = []
+        anno_file = self.get_anno()
+        coco = COCO(anno_file)
+        for image in images:
+            assert image != '' and os.path.isfile(image), \
+                    "Image {} not found".format(image)
+            if self.sample_num > 0 and ct >= self.sample_num:
+                break
+            if do_eval:
+                image_id = self.get_image_id(image, coco)
+                ct = image_id
+            rec = {'im_id': np.array([ct]), 'im_file': image}
+            self._imid2path[ct] = image
+            ct += 1
+            records.append(rec)
+        assert len(records) > 0, "No image file found"
+        return records
+    
+    def get_image_id(self, image, coco):
+        image_ids = coco.getImgIds()
+        for image_id in image_ids:
+            img_info = coco.loadImgs(image_id)[0]
+            if img_info['file_name'] in image:
+                return image_id
+            else:
+                continue
+
+    def get_imid2path(self):
+        return self._imid2path
+
+    def set_images(self, images, do_eval=False):
+        self.image_dir = images
+        self.roidbs = self._load_images(do_eval=do_eval)
+
+    def set_slice_images(self,
+                         images,
+                         slice_size=[640, 640],
+                         overlap_ratio=[0.25, 0.25]):
+        self.image_dir = images
+        ori_records = self._load_images()
+        try:
+            import sahi
+            from sahi.slicing import slice_image
+        except Exception as e:
+            logger.error(
+                'sahi not found, plaese install sahi. '
+                'for example: `pip install sahi`, see https://github.com/obss/sahi.'
+            )
+            raise e
+
+        sub_img_ids = 0
+        ct = 0
+        ct_sub = 0
+        records = []
+        for i, ori_rec in enumerate(ori_records):
+            im_path = ori_rec['im_file']
+            slice_image_result = sahi.slicing.slice_image(
+                image=im_path,
+                slice_height=slice_size[0],
+                slice_width=slice_size[1],
+                overlap_height_ratio=overlap_ratio[0],
+                overlap_width_ratio=overlap_ratio[1])
+
+            sub_img_num = len(slice_image_result)
+            for _ind in range(sub_img_num):
+                im = slice_image_result.images[_ind]
+                rec = {
+                    'image': im,
+                    'im_id': np.array([sub_img_ids + _ind]),
+                    'h': im.shape[0],
+                    'w': im.shape[1],
+                    'ori_im_id': np.array([ori_rec['im_id'][0]]),
+                    'st_pix': np.array(
+                        slice_image_result.starting_pixels[_ind],
+                        dtype=np.float32),
+                    'is_last': 1 if _ind == sub_img_num - 1 else 0,
+                } if 'image' in self.data_fields else {}
+                records.append(rec)
+            ct_sub += sub_img_num
+            ct += 1
+        logger.info('{} samples and slice to {} sub_samples.'.format(ct,
+                                                                     ct_sub))
+        self.roidbs = records
+
+    def get_label_list(self):
+        # Only VOC dataset needs label list in ImageFold 
+        return self.anno_path
+
+
+@register
+class CommonDataset(object):
+    def __init__(self, **dataset_args):
+        super(CommonDataset, self).__init__()
+        dataset_args = copy.deepcopy(dataset_args)
+        type = dataset_args.pop("name")
+        self.dataset = getattr(source, type)(**dataset_args)
+
+    def __call__(self):
+        return self.dataset
+
+
+@register
+class TrainDataset(CommonDataset):
+    pass
+
+
+@register
+class EvalMOTDataset(CommonDataset):
+    pass
+
+
+@register
+class TestMOTDataset(CommonDataset):
+    pass
+
+
+@register
+class EvalDataset(CommonDataset):
+    pass
+
+
+@register
+class TestDataset(CommonDataset):
+    pass
