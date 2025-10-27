@@ -297,7 +297,7 @@ class Trainer:
             logger.info('Model Params : {} M.'.format((params / 1e6).numpy()[
                 0]))
 
-    def _build_optimizer(self):
+    def _build_optimizer(self, cfg):
         """Build optimizer and LR scheduler using create() factory (Paddle pattern)"""
         if self.mode != 'train':
             return
@@ -308,14 +308,25 @@ class Trainer:
                 "Samples in dataset are less than batch_size, "
                 "please set smaller batch_size in TrainReader."
             )
+        
+        # paddle version
+        # # Create LR scheduler
+        # self.lr = create('LearningRate')(steps_per_epoch)
+        # logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
 
-        # Create LR scheduler
-        self.lr = create('LearningRate')(steps_per_epoch)
-        logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
+        # # Create optimizer
+        # self.optimizer = create('OptimizerBuilder')(self.lr, self.model)
+        # logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
 
+        self.lr = cfg.get('base_lr', 0.001)
         # Create optimizer
         self.optimizer = create('OptimizerBuilder')(self.lr, self.model)
         logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
+
+        # Create LR scheduler
+        self.lr = create('LearningRate')(steps_per_epoch, self.optimizer)
+        logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
+
 
     def _init_callbacks(self):
         """Initialize callbacks (Paddle compatible)"""
