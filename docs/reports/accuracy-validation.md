@@ -152,11 +152,13 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
 
 | 模型 | seed | schedule | checkpoint SHA-256 | AP | AP50 | AP75 | 状态 |
 |---|---:|---|---|---:|---:|---:|---|
-| R18 | 0 | PyTorch 72 epoch | — | — | — | — | 计划 |
+| R18 | 0 | PyTorch 72 epoch | — | — | — | — | 执行中（2026-07-18 22:52 CST 启动） |
 | R18 | 1 | PyTorch 72 epoch | — | — | — | — | 计划 |
 | R18 | 2 | PyTorch 72 epoch | — | — | — | — | 计划 |
 
 均值和标准差只能在三次训练均完成并核对配置后填写。M3 的单次 1 epoch 结果不能进入该统计。显式 seed 与 checkpoint 恢复已由 19 个定向测试覆盖 Python/NumPy/PyTorch RNG、单/多卡 sampler、epoch 和 DataLoader workers；另一个真实 2-GPU、32 图 smoke 记录 `seed=17`、8 次更新、`sampler_epoch=1` 和 90 项有效配置。在修复 DDP 只保存 rank 0 RNG 的缺口后，又用真实双卡烟测确认 checkpoint 收集了 2 份不同的 rank RNG state，且新单测会在恢复时选择当前 rank。这些只证明协议传播和恢复边界，不是多 seed 稳定性结果。
+
+**观察到（2026-07-18 23:04 CST 快照）**：seed 0 正式训练使用 world size 2、每 rank batch 8、AMP、EMA、官方 ImageNet backbone 初始化和 `snapshot_epoch=3`，有效 `config.yaml` 已落盘。epoch 0 已到 step 1100，7 次 AMP 跳步把 scale 从 `65536` 降至 `512`，warmup 在成功 update 边界后达到 base LR `1e-4`；loss 有限，未出现 OOM、NCCL 错误或热降频。这是运行中快照，不能填写本表的 checkpoint/AP 字段。
 
 ## 当前结论与局限
 

@@ -73,7 +73,7 @@ M3 已证明 R18 能在真实 COCO 上完成完整 epoch、val2017、恢复、AM
 
 ### 阶段 3：R18 标准 schedule 与稳定性
 
-- [ ] 完成 seed 0 的 72 epoch 训练与 val2017，记录 checkpoint checksum 和全部 COCO 指标。
+- [ ] 完成 seed 0 的 72 epoch 训练与 val2017，记录 checkpoint checksum 和全部 COCO 指标（执行中；2026-07-18 22:52 CST 启动）。
 - [ ] 对 seed 1、2 重复相同协议，报告均值、标准差和单 seed 离群情况。
 - [ ] 仅在 3 seed 证据完成后判断 R18 是否满足精度与稳定性门槛。
 
@@ -115,4 +115,4 @@ M3 已证明 R18 能在真实 COCO 上完成完整 epoch、val2017、恢复、AM
 
 ## 完成记录
 
-M4 已完成 R18 官方同权重 CPU/FP32 完整 val2017 gate，精确 AP 差 `1.65599e-7`，prediction 高置信度匹配也通过；显式 seed、官方 backbone 初始化、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已验证。默认全量回归为 `181 passed, 8 skipped`，CUDA 定向回归为 `8 passed`。下一步启动 seed 0 的 R18 72 epoch 长训；当前不对 R34/R50 或多 seed 作完成声明。
+M4 已完成 R18 官方同权重 CPU/FP32 完整 val2017 gate，精确 AP 差 `1.65599e-7`，prediction 高置信度匹配也通过；显式 seed、官方 backbone 初始化、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已验证。默认全量回归为 `181 passed, 8 skipped`，CUDA 定向回归为 `8 passed`。seed 0 的 R18 72 epoch 长训已于 2026-07-18 22:52 CST 启动；23:04 快照已观察到 epoch 0 step 1100，warmup 达到 base LR `1e-4`，loss 有限，无 OOM/NCCL/热降频。该快照只证明启动和初期稳定，不是 72 epoch 或多 seed 完成证据。

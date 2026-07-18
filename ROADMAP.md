@@ -62,7 +62,7 @@
 
 **执行计划**：[`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)。先完成同一官方 R18 checkpoint 的 Paddle/PyTorch 完整 val2017 gate，再启动 72 epoch 与多 seed 长训。
 
-**当前进度**：R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过：Paddle/PyTorch 精确 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 全部匹配。显式 seed、官方 ImageNet R18-vd backbone 初始化、2-GPU AMP+EMA 协议、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已通过定向测试与真实双卡烟测；下一步为 seed 0 的 72 epoch 训练，当前不声称多 seed 或 R34/R50 已完成。
+**当前进度**：R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过：Paddle/PyTorch 精确 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 全部匹配。显式 seed、官方 ImageNet R18-vd backbone 初始化、2-GPU AMP+EMA 协议、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已通过定向测试与真实双卡烟测。seed 0 的 72 epoch 正式训练已于 2026-07-18 22:52 CST 启动；23:04 快照已越过 warmup 并保持 loss 有限，当前不声称单 seed、多 seed 或 R34/R50 已完成。
 
 - [ ] 对 R18 完成标准训练 schedule，保存环境、命令、配置、日志和 checkpoint。
 - [x] 与对应 Paddle 基线比较 AP/AP50/AP75/APs/APm/APl；R18 同设备主 AP 绝对差 `1.65599e-7`，通过 `0.5 AP` 目标。
