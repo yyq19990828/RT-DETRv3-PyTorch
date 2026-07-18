@@ -1,444 +1,449 @@
-"""
-RT-DETRv3 Inference Script
-
-Perform object detection inference on images using trained RT-DETRv3 model.
-
-Usage:
-    # Single image inference
-    uv run rtdetrv3-infer -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth --infer_img demo.jpg
-
-    # Directory inference
-    uv run rtdetrv3-infer -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth --infer_dir images/
-
-    # Custom output directory and threshold
-    uv run rtdetrv3-infer -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth \
-        --infer_dir images/ --output_dir results/ --threshold 0.5
-"""
+"""Run RT-DETRv3 inference with the repository's current data API."""
 
 import argparse
-import glob
-import os
-from typing import Dict, List, Tuple
+import json
+from collections.abc import Mapping
+from copy import deepcopy
+from pathlib import Path
 
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
-from PIL import Image
 
-from ppdet_pytorch.core.workspace import create
-from ppdet_pytorch.utils.config import load_config, apply_overrides
-from ppdet_pytorch.utils.checkpoint import load_checkpoint
+from ppdet_pytorch import modeling as _modeling  # noqa: F401
+from ppdet_pytorch.cli.eval import load_evaluation_weights
+from ppdet_pytorch.core.workspace import create, load_config
+from ppdet_pytorch.data.reader import BatchCompose, Compose
+from ppdet_pytorch.data.source.category import get_categories
+from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
 
-logger = setup_logger('infer')
+
+logger = setup_logger("infer")
+
+_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
+_COLORS = (
+    np.array(
+        [
+            [0.000, 0.447, 0.741],
+            [0.850, 0.325, 0.098],
+            [0.929, 0.694, 0.125],
+            [0.494, 0.184, 0.556],
+            [0.466, 0.674, 0.188],
+            [0.301, 0.745, 0.933],
+            [0.635, 0.078, 0.184],
+            [1.000, 0.000, 0.000],
+            [1.000, 0.500, 0.000],
+            [0.000, 1.000, 0.000],
+            [0.000, 0.000, 1.000],
+            [0.667, 0.000, 1.000],
+        ],
+        dtype=np.float32,
+    )
+    * 255
+)
 
 
-# COCO class names (80 classes)
-COCO_CLASSES = [
-    'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
-    'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird', 'cat',
-    'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
-    'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-    'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-    'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
-    'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-    'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
-    'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
-]
+def create_argument_parser():
+    parser = argparse.ArgumentParser(description="RT-DETRv3 inference")
+    parser.add_argument("-c", "--config", required=True)
+    parser.add_argument("--checkpoint", required=True)
+
+    image_group = parser.add_mutually_exclusive_group(required=True)
+    image_group.add_argument(
+        "--infer-img",
+        "--infer_img",
+        dest="infer_img",
+        help="Path to one image.",
+    )
+    image_group.add_argument(
+        "--infer-dir",
+        "--infer_dir",
+        dest="infer_dir",
+        help="Directory containing images (non-recursive).",
+    )
+
+    parser.add_argument(
+        "--output-dir",
+        "--output_dir",
+        dest="output_dir",
+        default="output/infer",
+    )
+    parser.add_argument(
+        "--save-results",
+        "--save_results",
+        dest="save_results",
+        action="store_true",
+        help="Save thresholded detections to detections.json.",
+    )
+    parser.add_argument(
+        "--threshold",
+        "--draw-threshold",
+        dest="threshold",
+        type=float,
+        default=0.3,
+        help="Minimum score used for visualization and saved results.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        "--batch_size",
+        dest="batch_size",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "--imgsz",
+        type=int,
+        help="Override the square Resize target in TestReader.",
+    )
+    parser.add_argument(
+        "--anno-file",
+        help="Optional annotation JSON/TXT used for category names.",
+    )
+    parser.add_argument(
+        "--use-ema",
+        action="store_true",
+        help="Use EMA weights from a training checkpoint.",
+    )
+    parser.add_argument(
+        "--device",
+        default="cuda" if torch.cuda.is_available() else "cpu",
+    )
+    parser.add_argument("-o", "--override", nargs="*", default=[])
+    return parser
 
 
-# Color palette for visualization (COCO colors)
-COLORS = np.array([
-    [0.000, 0.447, 0.741], [0.850, 0.325, 0.098], [0.929, 0.694, 0.125],
-    [0.494, 0.184, 0.556], [0.466, 0.674, 0.188], [0.301, 0.745, 0.933],
-    [0.635, 0.078, 0.184], [0.300, 0.300, 0.300], [0.600, 0.600, 0.600],
-    [1.000, 0.000, 0.000], [1.000, 0.500, 0.000], [0.749, 0.749, 0.000],
-    [0.000, 1.000, 0.000], [0.000, 0.000, 1.000], [0.667, 0.000, 1.000],
-    [0.333, 0.333, 0.000], [0.333, 0.667, 0.000], [0.333, 1.000, 0.000],
-    [0.667, 0.333, 0.000], [0.667, 0.667, 0.000], [0.667, 1.000, 0.000],
-    [1.000, 0.333, 0.000], [1.000, 0.667, 0.000], [1.000, 1.000, 0.000],
-    [0.000, 0.333, 0.500], [0.000, 0.667, 0.500], [0.000, 1.000, 0.500],
-    [0.333, 0.000, 0.500], [0.333, 0.333, 0.500], [0.333, 0.667, 0.500],
-    [0.333, 1.000, 0.500], [0.667, 0.000, 0.500], [0.667, 0.333, 0.500],
-    [0.667, 0.667, 0.500], [0.667, 1.000, 0.500], [1.000, 0.000, 0.500],
-    [1.000, 0.333, 0.500], [1.000, 0.667, 0.500], [1.000, 1.000, 0.500],
-    [0.000, 0.333, 1.000], [0.000, 0.667, 1.000], [0.000, 1.000, 1.000],
-    [0.333, 0.000, 1.000], [0.333, 0.333, 1.000], [0.333, 0.667, 1.000],
-    [0.333, 1.000, 1.000], [0.667, 0.000, 1.000], [0.667, 0.333, 1.000],
-    [0.667, 0.667, 1.000], [0.667, 1.000, 1.000], [1.000, 0.000, 1.000],
-    [1.000, 0.333, 1.000], [1.000, 0.667, 1.000], [0.333, 0.000, 0.000],
-    [0.500, 0.000, 0.000], [0.667, 0.000, 0.000], [0.833, 0.000, 0.000],
-    [1.000, 0.000, 0.000], [0.000, 0.167, 0.000], [0.000, 0.333, 0.000],
-    [0.000, 0.500, 0.000], [0.000, 0.667, 0.000], [0.000, 0.833, 0.000],
-    [0.000, 1.000, 0.000], [0.000, 0.000, 0.167], [0.000, 0.000, 0.333],
-    [0.000, 0.000, 0.500], [0.000, 0.000, 0.667], [0.000, 0.000, 0.833],
-    [0.000, 0.000, 1.000], [0.000, 0.000, 0.000], [0.143, 0.143, 0.143],
-    [0.857, 0.857, 0.857], [1.000, 1.000, 1.000]
-]) * 255
-
-
-def parse_args():
-    """Parse command-line arguments"""
-    parser = argparse.ArgumentParser(description='RT-DETRv3 Inference')
-
-    # Config and checkpoint
-    parser.add_argument('-c', '--config', type=str, required=True,
-                       help='Path to config file')
-    parser.add_argument('--checkpoint', type=str, required=True,
-                       help='Path to checkpoint file')
-
-    # Input images
-    parser.add_argument('--infer_img', type=str, default=None,
-                       help='Single image path (has higher priority than --infer_dir)')
-    parser.add_argument('--infer_dir', type=str, default=None,
-                       help='Directory containing images for inference')
-
-    # Output settings
-    parser.add_argument('--output_dir', type=str, default='output/infer',
-                       help='Directory to save output images')
-    parser.add_argument('--save_results', action='store_true',
-                       help='Save detection results to JSON file')
-
-    # Inference settings
-    parser.add_argument('--threshold', type=float, default=0.3,
-                       help='Confidence threshold for visualization')
-    parser.add_argument('--nms_threshold', type=float, default=0.7,
-                       help='NMS IoU threshold')
-    parser.add_argument('--batch_size', type=int, default=1,
-                       help='Batch size for inference')
-    parser.add_argument('--imgsz', type=int, default=640,
-                       help='Input image size')
-
-    # Device
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
-                       help='Device to run inference on (cuda or cpu)')
-
-    # Config overrides
-    parser.add_argument('-o', '--override', nargs='*', default=[],
-                       help='Config overrides (e.g., num_classes=80)')
-
-    args = parser.parse_args()
-
-    # Validate input arguments
-    assert args.infer_img or args.infer_dir, \
-        "--infer_img or --infer_dir must be specified"
-
+def parse_args(argv=None):
+    parser = create_argument_parser()
+    args = parser.parse_args(argv)
+    if not 0.0 <= args.threshold <= 1.0:
+        parser.error("--threshold must be between 0 and 1")
+    if args.batch_size < 1:
+        parser.error("--batch-size must be at least 1")
+    if args.imgsz is not None and args.imgsz < 1:
+        parser.error("--imgsz must be at least 1")
     return args
 
 
-def get_image_list(infer_dir: str, infer_img: str) -> List[str]:
-    """
-    Get list of image paths for inference
+def get_image_list(infer_dir=None, infer_img=None):
+    """Return a deterministic image list for a single image or directory."""
+    if infer_img is not None:
+        image_path = Path(infer_img)
+        if not image_path.is_file():
+            raise FileNotFoundError("Inference image not found: {}".format(image_path))
+        if image_path.suffix.lower() not in _IMAGE_SUFFIXES:
+            raise ValueError("Unsupported image suffix: {}".format(image_path.suffix))
+        return [image_path]
 
-    Args:
-        infer_dir: Directory containing images
-        infer_img: Single image path (has higher priority)
-
-    Returns:
-        List of image file paths
-    """
-    # Single image has higher priority
-    if infer_img and os.path.isfile(infer_img):
-        return [infer_img]
-
-    # Directory
-    assert os.path.isdir(infer_dir), f"{infer_dir} is not a valid directory"
-
-    image_exts = ['jpg', 'jpeg', 'png', 'bmp', 'JPG', 'JPEG', 'PNG', 'BMP']
-    images = []
-    for ext in image_exts:
-        images.extend(glob.glob(os.path.join(infer_dir, f'*.{ext}')))
-
-    images = sorted(images)
-    assert len(images) > 0, f"No images found in {infer_dir}"
-
-    logger.info(f"Found {len(images)} images for inference")
-    return images
+    image_directory = Path(infer_dir)
+    if not image_directory.is_dir():
+        raise NotADirectoryError(
+            "Inference directory not found: {}".format(image_directory)
+        )
+    image_paths = sorted(
+        path
+        for path in image_directory.iterdir()
+        if path.is_file() and path.suffix.lower() in _IMAGE_SUFFIXES
+    )
+    if not image_paths:
+        raise ValueError("No supported images found in {}".format(image_directory))
+    return image_paths
 
 
-def preprocess_image(
-    image: np.ndarray,
-    input_size: int,
-    mean: List[float] = [0.485, 0.456, 0.406],
-    std: List[float] = [0.229, 0.224, 0.225]
-) -> Tuple[torch.Tensor, Dict]:
-    """
-    Preprocess image for model inference
+def _test_transforms(cfg, image_size=None):
+    if "TestReader" not in cfg or "sample_transforms" not in cfg.TestReader:
+        raise ValueError("Config must define TestReader.sample_transforms")
+    transforms = deepcopy(cfg.TestReader["sample_transforms"])
+    if image_size is not None:
+        for transform in transforms:
+            if "Resize" in transform:
+                transform["Resize"]["target_size"] = [image_size, image_size]
+                break
+        else:
+            raise ValueError("--imgsz requires a Resize transform in TestReader")
+    return transforms
 
-    Args:
-        image: Input image (H, W, 3) in BGR format
-        input_size: Target input size (square)
-        mean: Normalization mean
-        std: Normalization std
 
-    Returns:
-        Preprocessed image tensor (1, 3, H, W) and meta info
-    """
-    # Convert BGR to RGB
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    orig_h, orig_w = image.shape[:2]
+def create_preprocessors(cfg, image_size=None):
+    transforms = _test_transforms(cfg, image_size=image_size)
+    num_classes = int(cfg.get("num_classes", 80))
+    sample_transform = Compose(transforms, num_classes=num_classes)
+    batch_transform = BatchCompose(
+        cfg.TestReader.get("batch_transforms", []),
+        num_classes=num_classes,
+        collate_batch=True,
+    )
+    return sample_transform, batch_transform
 
-    # Resize while maintaining aspect ratio
-    scale = input_size / max(orig_h, orig_w)
-    new_h, new_w = int(orig_h * scale), int(orig_w * scale)
 
-    # Resize image
-    image_resized = cv2.resize(image_rgb, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+def _move_to_device(value, device):
+    if isinstance(value, torch.Tensor):
+        return value.to(device)
+    if isinstance(value, (np.ndarray, np.generic)):
+        return torch.as_tensor(value, device=device)
+    if isinstance(value, Mapping):
+        return {key: _move_to_device(item, device) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return tuple(_move_to_device(item, device) for item in value)
+    if isinstance(value, list):
+        return [_move_to_device(item, device) for item in value]
+    return value
 
-    # Pad to square
-    padded_image = np.ones((input_size, input_size, 3), dtype=np.uint8) * 114
-    padded_image[:new_h, :new_w] = image_resized
 
-    # Convert to tensor and normalize
-    image_tensor = torch.from_numpy(padded_image).permute(2, 0, 1).float() / 255.0
+def prepare_image_batch(
+    image_paths,
+    image_ids,
+    sample_transform,
+    batch_transform,
+    device,
+):
+    samples = []
+    for image_path, image_id in zip(image_paths, image_ids):
+        sample = {
+            "im_file": str(image_path),
+            "im_id": np.asarray([image_id], dtype=np.int64),
+        }
+        samples.append(sample_transform(sample))
+    return _move_to_device(batch_transform(samples), device)
 
-    # Normalize: (x - mean) / std
-    mean_tensor = torch.tensor(mean).view(3, 1, 1)
-    std_tensor = torch.tensor(std).view(3, 1, 1)
-    image_tensor = (image_tensor - mean_tensor) / std_tensor
 
-    # Add batch dimension
-    image_tensor = image_tensor.unsqueeze(0)
+def split_detections(outputs, threshold=0.0):
+    """Split the model's concatenated ``bbox`` output by ``bbox_num``."""
+    if not isinstance(outputs, Mapping) or not {"bbox", "bbox_num"} <= set(outputs):
+        raise RuntimeError("Model must return bbox and bbox_num")
 
-    # Meta info for post-processing
-    meta = {
-        'orig_size': (orig_h, orig_w),
-        'resized_size': (new_h, new_w),
-        'scale': scale,
-        'input_size': input_size
+    bboxes = torch.as_tensor(outputs["bbox"]).detach().cpu()
+    bbox_num = torch.as_tensor(outputs["bbox_num"]).detach().cpu().tolist()
+    if bboxes.ndim != 2 or bboxes.shape[1] != 6:
+        raise RuntimeError("bbox must have shape [N, 6]")
+    if sum(int(count) for count in bbox_num) != len(bboxes):
+        raise RuntimeError("bbox_num does not match the number of bbox rows")
+
+    detections = []
+    start = 0
+    for count in bbox_num:
+        rows = bboxes[start : start + int(count)]
+        start += int(count)
+        keep = (rows[:, 0] >= 0) & (rows[:, 1] >= threshold)
+        rows = rows[keep]
+        detections.append(
+            {
+                "labels": rows[:, 0].to(torch.int64),
+                "scores": rows[:, 1],
+                "boxes": rows[:, 2:6],
+            }
+        )
+    return detections
+
+
+@torch.inference_mode()
+def predict_images(
+    model,
+    image_paths,
+    sample_transform,
+    batch_transform,
+    device,
+    batch_size=1,
+    threshold=0.3,
+):
+    model.eval()
+    all_detections = []
+    for start in range(0, len(image_paths), batch_size):
+        paths = image_paths[start : start + batch_size]
+        image_ids = range(start, start + len(paths))
+        batch = prepare_image_batch(
+            paths,
+            image_ids,
+            sample_transform,
+            batch_transform,
+            device,
+        )
+        all_detections.extend(split_detections(model(batch), threshold))
+    return all_detections
+
+
+def _resolve_annotation_file(cfg, annotation_file=None):
+    if annotation_file is not None:
+        annotation_path = Path(annotation_file)
+        if not annotation_path.is_file():
+            raise FileNotFoundError(
+                "Annotation file not found: {}".format(annotation_path)
+            )
+        return str(annotation_path)
+
+    dataset = cfg.get("TestDataset", {})
+    configured_path = dataset.get("anno_path")
+    if not configured_path:
+        return None
+    annotation_path = Path(configured_path)
+    if not annotation_path.is_absolute():
+        annotation_path = Path(dataset.get("dataset_dir", "")) / annotation_path
+    return str(annotation_path) if annotation_path.is_file() else None
+
+
+def get_category_metadata(cfg, annotation_file=None):
+    annotation_file = _resolve_annotation_file(cfg, annotation_file)
+    clsid2catid, catid2name = get_categories(
+        cfg.get("metric", "COCO"),
+        anno_file=annotation_file,
+    )
+    class_names = {
+        int(class_id): catid2name.get(category_id, str(category_id))
+        for class_id, category_id in clsid2catid.items()
     }
-
-    return image_tensor, meta
-
-
-def postprocess(
-    pred_logits: torch.Tensor,
-    pred_boxes: torch.Tensor,
-    meta: Dict,
-    conf_threshold: float = 0.3,
-    nms_threshold: float = 0.7
-) -> List[Dict]:
-    """
-    Post-process model predictions
-
-    Args:
-        pred_logits: (B, num_queries, num_classes) class logits
-        pred_boxes: (B, num_queries, 4) box predictions in [cx, cy, w, h] format, normalized to [0, 1]
-        meta: Meta info from preprocessing
-        conf_threshold: Confidence threshold
-        nms_threshold: NMS IoU threshold
-
-    Returns:
-        List of detection results, each containing:
-            - 'boxes': (N, 4) in [x1, y1, x2, y2] format (original image coordinates)
-            - 'scores': (N,) confidence scores
-            - 'labels': (N,) class labels
-    """
-    batch_size = pred_logits.shape[0]
-    results = []
-
-    for i in range(batch_size):
-        # Get predictions for single image
-        logits = pred_logits[i]  # (num_queries, num_classes)
-        boxes = pred_boxes[i]    # (num_queries, 4)
-
-        # Get confidence scores and class labels
-        scores = logits.sigmoid().max(dim=-1)[0]  # (num_queries,)
-        labels = logits.sigmoid().argmax(dim=-1)  # (num_queries,)
-
-        # Filter by confidence threshold
-        keep = scores > conf_threshold
-        scores = scores[keep]
-        labels = labels[keep]
-        boxes = boxes[keep]
-
-        if len(scores) == 0:
-            results.append({'boxes': torch.zeros((0, 4)), 'scores': torch.zeros(0), 'labels': torch.zeros(0, dtype=torch.long)})
-            continue
-
-        # Convert boxes from [cx, cy, w, h] (normalized) to [x1, y1, x2, y2] (pixel coordinates)
-        orig_h, orig_w = meta['orig_size']
-        resized_h, resized_w = meta['resized_size']
-
-        # Scale boxes from normalized [0, 1] to resized image coordinates
-        boxes_xyxy = torch.zeros_like(boxes)
-        boxes_xyxy[:, 0] = (boxes[:, 0] - boxes[:, 2] / 2) * resized_w  # x1
-        boxes_xyxy[:, 1] = (boxes[:, 1] - boxes[:, 3] / 2) * resized_h  # y1
-        boxes_xyxy[:, 2] = (boxes[:, 0] + boxes[:, 2] / 2) * resized_w  # x2
-        boxes_xyxy[:, 3] = (boxes[:, 1] + boxes[:, 3] / 2) * resized_h  # y2
-
-        # Clip to resized image boundaries
-        boxes_xyxy[:, [0, 2]] = boxes_xyxy[:, [0, 2]].clamp(0, resized_w)
-        boxes_xyxy[:, [1, 3]] = boxes_xyxy[:, [1, 3]].clamp(0, resized_h)
-
-        # Apply NMS per class
-        keep_nms = []
-        for class_id in labels.unique():
-            class_mask = labels == class_id
-            class_boxes = boxes_xyxy[class_mask]
-            class_scores = scores[class_mask]
-            class_indices = torch.where(class_mask)[0]
-
-            # Apply NMS
-            nms_keep = torch.ops.torchvision.nms(class_boxes, class_scores, nms_threshold)
-            keep_nms.extend(class_indices[nms_keep].tolist())
-
-        keep_nms = torch.tensor(keep_nms, dtype=torch.long, device=boxes.device)
-        boxes_xyxy = boxes_xyxy[keep_nms]
-        scores = scores[keep_nms]
-        labels = labels[keep_nms]
-
-        results.append({
-            'boxes': boxes_xyxy.cpu(),
-            'scores': scores.cpu(),
-            'labels': labels.cpu()
-        })
-
-    return results
+    return clsid2catid, class_names
 
 
-def visualize_results(
-    image: np.ndarray,
-    boxes: torch.Tensor,
-    scores: torch.Tensor,
-    labels: torch.Tensor,
-    class_names: List[str],
-    threshold: float = 0.3
-) -> np.ndarray:
-    """
-    Visualize detection results on image
-
-    Args:
-        image: Input image (H, W, 3) in BGR format
-        boxes: (N, 4) boxes in [x1, y1, x2, y2] format
-        scores: (N,) confidence scores
-        labels: (N,) class labels
-        class_names: List of class names
-        threshold: Confidence threshold for display
-
-    Returns:
-        Annotated image
-    """
-    vis_image = image.copy()
-
-    for box, score, label in zip(boxes, scores, labels):
-        if score < threshold:
-            continue
-
-        x1, y1, x2, y2 = box.int().tolist()
-        label_id = label.item()
-
-        # Get color
-        color = COLORS[label_id % len(COLORS)].astype(int).tolist()
-
-        # Draw box
-        cv2.rectangle(vis_image, (x1, y1), (x2, y2), color, 2)
-
-        # Draw label
-        label_text = f"{class_names[label_id]}: {score:.2f}"
-        label_size, _ = cv2.getTextSize(label_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        label_y = max(y1 - 5, label_size[1])
-
+def visualize_detections(image, detections, class_names):
+    visualized = image.copy()
+    for box, score, label in zip(
+        detections["boxes"],
+        detections["scores"],
+        detections["labels"],
+    ):
+        x1, y1, x2, y2 = [int(round(value)) for value in box.tolist()]
+        label_id = int(label)
+        color = _COLORS[label_id % len(_COLORS)].astype(int).tolist()
+        cv2.rectangle(visualized, (x1, y1), (x2, y2), color, 2)
+        text = "{}: {:.2f}".format(
+            class_names.get(label_id, str(label_id)),
+            float(score),
+        )
+        text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        text_y = max(y1 - 5, text_size[1] + 5)
         cv2.rectangle(
-            vis_image,
-            (x1, label_y - label_size[1] - 5),
-            (x1 + label_size[0], label_y + 5),
+            visualized,
+            (x1, text_y - text_size[1] - 5),
+            (x1 + text_size[0], text_y + 2),
             color,
-            -1
+            -1,
         )
         cv2.putText(
-            vis_image,
-            label_text,
-            (x1, label_y),
+            visualized,
+            text,
+            (x1, text_y - 2),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.5,
             (255, 255, 255),
-            1
+            1,
         )
+    return visualized
 
-    return vis_image
+
+def detections_to_records(image_paths, detections, clsid2catid, class_names):
+    records = []
+    for image_id, (image_path, image_detections) in enumerate(
+        zip(image_paths, detections)
+    ):
+        for box, score, label in zip(
+            image_detections["boxes"],
+            image_detections["scores"],
+            image_detections["labels"],
+        ):
+            label_id = int(label)
+            x1, y1, x2, y2 = [float(value) for value in box.tolist()]
+            records.append(
+                {
+                    "image_id": image_id,
+                    "image": str(image_path),
+                    "category_id": int(clsid2catid[label_id]),
+                    "category_name": class_names[label_id],
+                    "bbox": [x1, y1, x2 - x1, y2 - y1],
+                    "score": float(score),
+                }
+            )
+    return records
 
 
-def main():
-    """Main inference function"""
-    args = parse_args()
-
-    # Setup output directory
-    os.makedirs(args.output_dir, exist_ok=True)
-
-    # Load config
-    cfg = load_config(args.config)
-    if args.override:
-        cfg = apply_overrides(cfg, args.override)
-
-    # Build model
-    logger.info("Building model...")
-    model = create('RTDETRv3', global_config=cfg, num_classes=cfg.get('num_classes', 80))
-
-    # Load checkpoint
-    logger.info(f"Loading checkpoint from {args.checkpoint}...")
-    load_checkpoint(args.checkpoint, model, strict=True)
-
-    # Move to device and set to eval mode
-    device = torch.device(args.device)
-    model = model.to(device)
+def build_model(cfg, checkpoint_path, device, use_ema=False):
+    architecture = cfg.get("architecture")
+    if not architecture or architecture not in cfg:
+        raise ValueError("Config must define an architecture block")
+    model_config = dict(cfg[architecture])
+    model_config["name"] = architecture
+    model = create(model_config)
+    model.load_meanstd(cfg.TestReader["sample_transforms"])
+    load_evaluation_weights(model, checkpoint_path, use_ema=use_ema)
+    model.to(device)
     model.eval()
-    logger.info(f"Model loaded on {device}")
+    return model
 
-    # Get image list
-    image_list = get_image_list(args.infer_dir, args.infer_img)
 
-    # Run inference
-    logger.info(f"Running inference on {len(image_list)} images...")
-    for img_path in image_list:
-        # Load image
-        image = cv2.imread(img_path)
+def main(argv=None):
+    args = parse_args(argv)
+    image_paths = get_image_list(args.infer_dir, args.infer_img)
+
+    cfg = load_config(args.config)
+    apply_overrides(cfg, args.override)
+    device = torch.device(args.device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA inference requested but CUDA is unavailable")
+
+    sample_transform, batch_transform = create_preprocessors(cfg, image_size=args.imgsz)
+    model = build_model(
+        cfg,
+        args.checkpoint,
+        device,
+        use_ema=args.use_ema,
+    )
+    clsid2catid, class_names = get_category_metadata(cfg, args.anno_file)
+
+    logger.info(
+        "Running inference on %d image(s), batch_size=%d, device=%s",
+        len(image_paths),
+        args.batch_size,
+        device,
+    )
+    detections = predict_images(
+        model,
+        image_paths,
+        sample_transform,
+        batch_transform,
+        device,
+        batch_size=args.batch_size,
+        threshold=args.threshold,
+    )
+
+    output_directory = Path(args.output_dir)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    for image_path, image_detections in zip(image_paths, detections):
+        image = cv2.imread(str(image_path))
         if image is None:
-            logger.warning(f"Failed to load image: {img_path}")
-            continue
-
-        # Preprocess
-        image_tensor, meta = preprocess_image(image, args.imgsz)
-        image_tensor = image_tensor.to(device)
-
-        # Inference
-        with torch.no_grad():
-            outputs = model(image_tensor)
-            pred_logits = outputs['pred_logits']  # (1, num_queries, num_classes)
-            pred_boxes = outputs['pred_boxes']    # (1, num_queries, 4)
-
-        # Post-process
-        results = postprocess(
-            pred_logits,
-            pred_boxes,
-            meta,
-            conf_threshold=args.threshold,
-            nms_threshold=args.nms_threshold
+            raise RuntimeError(
+                "Failed to decode image for output: {}".format(image_path)
+            )
+        output_path = output_directory / image_path.name
+        if not cv2.imwrite(
+            str(output_path),
+            visualize_detections(image, image_detections, class_names),
+        ):
+            raise RuntimeError(
+                "Failed to write inference image: {}".format(output_path)
+            )
+        logger.info(
+            "Processed %s: %d detection(s) -> %s",
+            image_path,
+            len(image_detections["boxes"]),
+            output_path,
         )
 
-        # Visualize
-        result = results[0]
-        vis_image = visualize_results(
-            image,
-            result['boxes'],
-            result['scores'],
-            result['labels'],
-            COCO_CLASSES,
-            threshold=args.threshold
+    if args.save_results:
+        records = detections_to_records(
+            image_paths,
+            detections,
+            clsid2catid,
+            class_names,
         )
+        results_path = output_directory / "detections.json"
+        results_path.write_text(
+            json.dumps(records, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        logger.info("Saved %d detection record(s) to %s", len(records), results_path)
 
-        # Save result
-        output_path = os.path.join(args.output_dir, os.path.basename(img_path))
-        cv2.imwrite(output_path, vis_image)
-
-        # Log detections
-        num_detections = len(result['boxes'])
-        logger.info(f"Processed {img_path}: {num_detections} detections -> {output_path}")
-
-    logger.info(f"Inference complete. Results saved to {args.output_dir}")
+    logger.info("Inference complete. Results saved to %s", output_directory)
+    return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

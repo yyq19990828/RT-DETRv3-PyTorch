@@ -135,3 +135,5 @@ R50 官方权重回归中，decoder box 仅 1/1200 个值在 `rtol=1e-4` 下超�
 `aux_o2m_head.anchor_points` 和 `aux_o2m_head.stride_tensor` 由 `eval_size` 与 stride 在构建时派生，官方 Paddle 权重转换结果可以不包含它们。Eval CLI 可以放行这两个已知 missing key，但必须对任何其他 missing/unexpected key 失败。不要为了跳过派生 buffer 而把整个评估权重加载改成无审计的宽松模式。
 
 评估入口还应使用当前 EvalReader 的 batch dict 和模型已后处理的 `bbox/bbox_num` 输出。如果入口仍假定 Dataset 返回 `(image, target)` 或模型返回 `pred_logits/pred_boxes`，说明它还停留在旧 API，即使单独的 postprocess 函数存在也不代表 CLI 可用。
+
+Infer 同样必须复用 TestReader 和 `bbox/bbox_num`。旧入口曾同时使用手写 letterbox、ImageNet mean/std、`pred_logits/pred_boxes` 和外置 NMS；只补上 modeling 注册导入会越过第一处报错，但不会修复后续数据与输出合同。当前排查顺序应是：确认配置注册成功，再打印 batch 的 `image/im_shape/scale_factor`，最后检查模型输出是否已经完成后处理；不要在 CLI 叠加第二套解码。

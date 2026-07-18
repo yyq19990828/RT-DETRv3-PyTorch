@@ -6,7 +6,7 @@
 
 - 当前默认测试覆盖权重转换、数据操作、注意力、解码器和部分训练策略；通过并不等于已完成完整 COCO 训练、评估或 mAP 对齐。
 - 迁移早期针对旧构建器、Registry 和模型参数的测试保留在 `tests/legacy/`，默认不收集。这些场景需要按当前 API 重写，不应通过强行恢复旧兼容层来绕过。
-- CLI 导入、`--help`、配置加载和 wheel 构建已有烟雾验证，但它们不替代带真实数据和权重的端到端运行。
+- Train/Eval/Convert 的 CLI 导入、参数和部分端到端路径已有测试；Infer 已用官方 R18 checkpoint 完成 CPU/FP32 真实 COCO 单图和 batch 4 验证。它仍不证明 Paddle Infer 全参数、ONNX/TorchScript 或所有动态输入边界已支持。
 
 ## 数值等价
 
