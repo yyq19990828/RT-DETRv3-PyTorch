@@ -142,6 +142,13 @@ class LogPrinter(Callback):
     def __init__(self, trainer):
         super(LogPrinter, self).__init__(trainer)
         self.log_iter = getattr(trainer, 'log_interval', 50)
+        self._batch_time_total = 0.0
+        self._batch_time_count = 0
+
+    def on_train_begin(self, status: Dict):
+        """Reset ETA timing when a new training run starts."""
+        self._batch_time_total = 0.0
+        self._batch_time_count = 0
 
     def on_step_end(self, status: Dict):
         """Print training logs at specified intervals"""
@@ -154,13 +161,19 @@ class LogPrinter(Callback):
             epoch_id = status.get('epoch_id', 0)
             step_id = status.get('step_id', 0)
             steps_per_epoch = status.get('steps_per_epoch', 1)
+            batch_time = float(status.get('batch_time', 0))
+            if batch_time > 0:
+                self._batch_time_total += batch_time
+                self._batch_time_count += 1
 
             if step_id % self.log_iter == 0:
                 # Calculate ETA
-                batch_time = status.get('batch_time', 0)
                 total_epochs = getattr(self.trainer, 'end_epoch', 72)
                 eta_steps = (total_epochs - epoch_id) * steps_per_epoch - step_id
-                eta_sec = eta_steps * batch_time
+                average_batch_time = (
+                    self._batch_time_total / self._batch_time_count
+                    if self._batch_time_count else 0.0)
+                eta_sec = eta_steps * average_batch_time
                 eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
 
                 # Get metrics

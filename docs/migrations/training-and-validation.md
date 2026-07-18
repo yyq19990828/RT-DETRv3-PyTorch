@@ -36,6 +36,10 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 
 应导出整条 LR 曲线并逐 step 对比，不只检查起点与终点。
 
+### 训练日志与 ETA
+
+**已修复（2026-07-19）**：修复前的 PyTorch `LogPrinter` 每 `log_iter` 个 step 更新一次 ETA，却用最新单个 batch 的耗时外推全部剩余 step；DataLoader 切换 epoch 或单批增强变慢时，ETA 会在数天范围内明显跳动。当前实现与 Paddle 参考行为一致，使用本次训练进程的累计平均 `batch_time` 估算 ETA，并在新训练开始时重置计时状态。ETA 仍不包含后续验证和 checkpoint 开销；判断训练是否停滞仍应同时检查日志时间戳、进程和 GPU 利用率，不能只看 ETA。
+
 ## 数据增强与 DataLoader
 
 - 优先保留 Paddle 的 bbox/标签处理逻辑，只替换底层图像或 tensor 操作。

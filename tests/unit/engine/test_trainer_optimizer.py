@@ -83,6 +83,34 @@ def test_log_printer_uses_configured_interval():
     assert LogPrinter(trainer).log_iter == 20
 
 
+def test_log_printer_uses_global_average_batch_time_for_eta(monkeypatch):
+    trainer = type(
+        "TrainerStub",
+        (),
+        {"log_interval": 1, "end_epoch": 1},
+    )()
+    messages = []
+    monkeypatch.setattr(
+        "ppdet_pytorch.engine.callbacks.logger.info",
+        messages.append,
+    )
+    log_printer = LogPrinter(trainer)
+    status = {
+        "mode": "train",
+        "epoch_id": 0,
+        "steps_per_epoch": 10,
+        "loss": 1.0,
+        "learning_rate": 0.1,
+        "data_time": 0.0,
+        "batch_size": 1,
+    }
+
+    log_printer.on_step_end({**status, "step_id": 0, "batch_time": 1.0})
+    log_printer.on_step_end({**status, "step_id": 1, "batch_time": 3.0})
+
+    assert "eta: 0:00:18" in messages[-1]
+
+
 def test_trainer_callbacks_use_configured_snapshot_interval(tmp_path):
     trainer = Trainer.__new__(Trainer)
     trainer.mode = "train"
