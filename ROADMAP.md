@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M3——训练、评估与恢复验收计划`](docs/plans/2026-07-18-m3-training-evaluation-recovery.md)
-**Current execution plan**: [`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)
+**Latest completed execution plan**: [`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)
+**Current execution plan**: 尚未建立；下一候选为 M6 性能、质量与发布
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -74,18 +74,20 @@
 
 ## Milestone 5 — 配置、CLI 与导出边界（P1）
 
-**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线已复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图与 batch 4 验证。workspace 冲突优先级、连续配置隔离、RT-DETRv3 Paddle YAML 支持矩阵和四个公开 CLI contract 也已有活跃测试与指南。上述证据不代表 ONNX/TorchScript、全部 Paddle Infer 参数或非 RT-DETRv3 配置已经支持。
+**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 输入验证。workspace 冲突优先级、连续配置隔离、RT-DETRv3 Paddle YAML 支持矩阵和五个公开 CLI contract 均已有活跃测试与指南。ONNX opset 17/ONNX Runtime CPU 和 traced TorchScript 已验证固定高宽、动态 batch 1/4/8；这不代表单产物动态高宽、全部 Paddle 参数、其他模型或其他 provider 已支持。
 
 - [x] 为 `workspace` 补充 shared/inject/from_config/显式参数冲突和全局状态隔离测试。
 - [x] 明确哪些 Paddle YAML 字段直接兼容、哪些映射、哪些不支持，补充配置迁移指南。
 - [x] 为 Train/Eval/Infer/Convert 编写 CLI contract 测试，对 Paddle 参数的兼容差异做显式文档化。
   - [x] Infer 已覆盖参数校验、当前/历史参数拼写、TestReader 预处理、batch dict、`bbox/bbox_num`、阈值、JSON 和官方 R18 真实推理。
   - [x] Train/Eval/Convert 已覆盖 help、主参数、main wiring 和错误路径；既有 M2–M4 真实运行作为端到端证据。
-- [ ] 完成 ONNX 导出与 ONNXRuntime 回归，记录不支持的动态控制流/算子。
-- [ ] 完成 TorchScript 导出与重新加载回归。
-- [ ] 验证动态输入尺寸、batch 1/4/8 和空预测等边界。
+- [x] 完成 ONNX 导出与 ONNXRuntime 回归，记录不支持的动态控制流/算子。
+- [x] 完成 TorchScript 导出与重新加载回归。
+- [x] 验证输入尺寸、动态 batch 1/4/8 和空阈值结果边界；单产物空间 shape 明确不动态。
 
 **Exit criteria**: 所有面向用户的入口都有功能测试，支持边界和框架差异有文档。
+
+**验收记录**：2026-07-19 本机 CPU/FP32 验证通过；最终默认测试 `237 passed, 8 skipped`，wheel 包含五个 console entry point。详细版本、容差和导出限制见 M5 计划与 CLI/导出迁移文档。
 
 ## Milestone 6 — 性能、质量与发布（P2）
 

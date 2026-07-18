@@ -130,6 +130,14 @@ def test_create_preprocessors_uses_test_reader_and_does_not_mutate_config(
     ]
 
 
+def test_configure_input_size_keeps_model_cache_aligned():
+    cfg = AttrDict(eval_size=[640, 640])
+
+    infer_cli.configure_input_size(cfg, 608)
+
+    assert cfg.eval_size == [608, 608]
+
+
 def test_split_detections_uses_bbox_num_and_threshold():
     outputs = {
         "bbox": torch.tensor(
@@ -149,6 +157,19 @@ def test_split_detections_uses_bbox_num_and_threshold():
     assert detections[0]["scores"].tolist() == pytest.approx([0.8])
     assert detections[0]["boxes"].tolist() == [[1.0, 2.0, 5.0, 8.0]]
     assert detections[1]["labels"].tolist() == [7]
+
+
+def test_split_detections_allows_empty_threshold_results():
+    outputs = {
+        "bbox": torch.tensor([[2.0, 0.8, 1.0, 2.0, 5.0, 8.0]]),
+        "bbox_num": torch.tensor([1], dtype=torch.int32),
+    }
+
+    detections = infer_cli.split_detections(outputs, threshold=1.0)
+
+    assert detections[0]["labels"].numel() == 0
+    assert detections[0]["scores"].numel() == 0
+    assert detections[0]["boxes"].shape == (0, 4)
 
 
 def test_split_detections_rejects_inconsistent_output():

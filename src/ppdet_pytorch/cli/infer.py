@@ -164,6 +164,12 @@ def _test_transforms(cfg, image_size=None):
     return transforms
 
 
+def configure_input_size(cfg, image_size=None):
+    """Keep model caches aligned with a TestReader Resize override."""
+    if image_size is not None:
+        cfg.eval_size = [image_size, image_size]
+
+
 def create_preprocessors(cfg, image_size=None):
     transforms = _test_transforms(cfg, image_size=image_size)
     num_classes = int(cfg.get("num_classes", 80))
@@ -375,6 +381,7 @@ def main(argv=None):
 
     cfg = load_config(args.config)
     apply_overrides(cfg, args.override)
+    configure_input_size(cfg, args.imgsz)
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA inference requested but CUDA is unavailable")

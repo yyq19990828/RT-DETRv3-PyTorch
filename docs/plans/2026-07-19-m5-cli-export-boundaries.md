@@ -1,6 +1,6 @@
 # M5——配置、CLI 与导出边界计划
 
-- 状态：`in-progress`
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -37,10 +37,10 @@ M1–M3 已建立当前 PyTorch API 的训练、评估、恢复与权重转换�
 - [x] 补齐 workspace 冲突矩阵、重复配置加载和进程内全局状态隔离测试，并修正文档中的过时描述。
 - [x] 完成 RT-DETRv3 配置迁移指南，区分 Paddle YAML 的直接支持、必要改写与尚未支持字段。
 - [x] 补齐 Train/Eval/Infer/Convert 的统一 `--help`、错误路径和当前端到端 CLI contract；记录 Paddle-only 参数及替代方式。
-- [ ] 建立导出适配层，完成 ONNX/ONNXRuntime 输出回归并记录算子和动态轴限制。
-- [ ] 完成 TorchScript 保存/加载回归；验证 batch 1/4/8、支持的输入尺寸和空阈值结果。
+- [x] 建立导出适配层，完成 ONNX/ONNXRuntime 输出回归并记录算子和动态轴限制。
+- [x] 完成 TorchScript 保存/加载回归；验证 batch 1/4/8、支持的输入尺寸和空阈值结果。
 - [x] 在 Infer 第一阶段后运行隐藏 GPU 的默认全量测试，并更新路线图和迁移文档证据。
-- [ ] 在 M5 完成前构建 wheel，并运行最终默认全量测试。
+- [x] 在 M5 完成前构建 wheel，并运行最终默认全量测试。
 
 ## 风险与回退
 
@@ -56,11 +56,11 @@ M1–M3 已建立当前 PyTorch API 的训练、评估、恢复与权重转换�
 - [x] 同一环境 batch 4 目录命令一次前向处理 4 张图片并生成 4 个结果文件。
 - [x] 四个 CLI 的活跃 contract 测试全部通过。
 - [x] 四个安装后 console script 的 `--help` 均返回 0；Train/Eval 参数错误 smoke 均返回 argparse code 2。
-- [ ] ONNXRuntime 与 eager 输出在记录的 dtype、输入和容差内通过。
-- [ ] TorchScript 重新加载输出在记录的 dtype、输入和容差内通过。
+- [x] ONNXRuntime 与 eager 输出在记录的 dtype、输入和容差内通过。
+- [x] TorchScript 重新加载输出在记录的 dtype、输入和容差内通过。
 - [x] Infer 第一阶段后的默认全量测试为 `200 passed, 8 skipped`，测试中间产物已清理。
 - [x] Infer 第一阶段的 sdist/wheel 构建成功，wheel 包含当前 `ppdet_pytorch/cli/infer.py`；构建目录已清理。
-- [ ] M5 最终默认全量测试和 wheel 构建通过。
+- [x] M5 最终默认全量测试和 wheel 构建通过。
 
 ## 决策记录
 
@@ -73,11 +73,16 @@ M1–M3 已建立当前 PyTorch API 的训练、评估、恢复与权重转换�
 | 2026-07-19 | 每次 `load_config()` 替换上一份 YAML 运行时值，但保留注册 schema | 长生命周期进程和批量转换不能让前一模型字段泄漏；需要增量修改时已有显式 `merge_config()` |
 | 2026-07-19 | 显式 inject 参数先递归创建，且不再被原始 dict/string 覆盖 | 保持“显式值优先”同时满足构造函数需要实例的类型合同 |
 | 2026-07-19 | 未实现的 Paddle Train 参数在解析阶段失败 | 静默接受 `--eval`、slim、日志或 profiler 参数会制造功能已启用的错误预期；现有替代入口应直接写入错误信息 |
+| 2026-07-19 | 导出层只接受/返回 tensor，预处理留在 eager CLI | 隔离 Python dict、图片 I/O 和可视化，使部署图合同最小且可回归 |
+| 2026-07-19 | ONNX/TorchScript 只声明动态 batch，空间尺寸按目标重新导出 | deformable attention 的 Python shape 控制流会固化高宽，伪造动态轴会产生不可验证合同 |
+| 2026-07-19 | score/坐标门槛分别为 `2e-5`/`0.01 px`，标签、顺序和数量严格相等 | 实际 ONNX 全零样例坐标误差达到 `0.00550 px`；门槛覆盖观测误差且仍远小于一个像素 |
 
 ## 完成记录
 
-进行中。第一阶段基于提交 `9d76bb6a17e1` 后的工作树完成：Python `3.12.11`、PyTorch `2.5.1+cu121`、OpenCV `4.5.5`、CPU/FP32；R18 checkpoint SHA-256 为 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`，验证图片 `000000000139.jpg` SHA-256 为 `ffe0f0cec3b2e27aab1967229cdf0a0d7751dcdd5800322f0b8ac0dffb3b8a8d`。单图最高结果为 `chair / 0.9240278006`；隐藏 GPU 的默认全量回归为 `200 passed, 8 skipped, 6 warnings in 9.31s`，sdist/wheel 构建成功且产物随后清理。这些结果只证明当前 Infer CLI 与官方 checkpoint 可运行且未破坏活跃回归，不单独构成新的 Paddle/PyTorch 数值对齐结论。
+第一阶段基于提交 `9d76bb6a17e1` 后的工作树完成：Python `3.12.11`、PyTorch `2.5.1+cu121`、OpenCV `4.5.5`、CPU/FP32；R18 checkpoint SHA-256 为 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`，验证图片 `000000000139.jpg` SHA-256 为 `ffe0f0cec3b2e27aab1967229cdf0a0d7751dcdd5800322f0b8ac0dffb3b8a8d`。单图最高结果为 `chair / 0.9240278006`；隐藏 GPU 的默认全量回归为 `200 passed, 8 skipped, 6 warnings in 9.31s`，sdist/wheel 构建成功且产物随后清理。这些结果只证明当前 Infer CLI 与官方 checkpoint 可运行且未破坏活跃回归，不单独构成新的 Paddle/PyTorch 数值对齐结论。
 
 第二阶段完成 workspace 冲突矩阵、显式 inject 修复和连续配置隔离，并新增 RT-DETRv3 配置支持矩阵。R18 → R50 → R18 同进程实建恢复正确 depth 和参数量；23 项 workspace/训练链/转换定向测试通过，随后隐藏 GPU 的默认全量回归为 `206 passed, 8 skipped, 6 warnings in 9.51s`。这证明当前三变体的配置切换边界，不把结论外推到尚未迁移的 PaddleDetection 架构。
 
 第三阶段完成四个公开 CLI 的 help/参数/main wiring 合同。46 项 CLI 定向测试通过，安装后 console script smoke 通过；Train 未实现的 Paddle 参数和 Eval 非法 loader 参数均以前置 code 2 失败。随后隐藏 GPU 的默认全量回归为 `225 passed, 8 skipped, 6 warnings in 9.35s`，sdist/wheel 构建成功并包含四个 console entry point，临时输出已清理。
+
+第四阶段完成 tensor-only 导出适配层和第五个 console entry point。官方 R18 在 CPU/FP32 下完成 ONNX opset 17 checker/ONNX Runtime 与 TorchScript 保存/重载回归；640 产物验证动态 batch 1/4/8，608 和 640 均通过按尺寸重新导出，Infer `threshold=1.0` 的空结果合同已有测试。ONNX/TorchScript 高宽仍固定，相关 tracer/advanced-indexing 警告和 raw top-k 边界诊断已写入迁移文档。最终隐藏 GPU 的默认测试为 `237 passed, 8 skipped, 6 warnings in 9.60s`；wheel 包含 `cli/export.py`、`deploy/export.py` 和五个 console entry point。测试缓存、临时导出文件和 wheel 随后清理，`.venv` 保留。
