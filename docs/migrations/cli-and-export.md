@@ -2,6 +2,19 @@
 
 本文记录 M5 中面向用户入口与部署边界的当前合同。状态结论以活跃测试和实际命令为准，不能由 CLI 能导入或 `--help` 能显示推断端到端可用。
 
+## 四个公开入口的共同边界
+
+**已验证（2026-07-19）**：Train/Eval/Infer/Convert 的 parser 都有活跃 `--help` contract，安装后的四个 console script 均以 code 0 显示帮助；参数解析错误使用 argparse code 2。Train/Eval/Convert 的核心参数和 main wiring 另有定向测试，既有 M2–M4 真实转换、训练和评估证据继续作为端到端依据。
+
+| 入口 | 当前必需输入 | 已声明支持 | 显式边界 |
+|---|---|---|---|
+| Train | `-c/--config` | `-o`、resume、seed、AMP、DDP；`--enable_ce` 只保留历史确定性兼容 | `--eval`、slim、TensorBoard、W&B、profiler、proposal/save-prediction 选项会在解析阶段失败，不再静默忽略；训练后评估需单独运行 Eval |
+| Eval | config + checkpoint | annotation/image override、batch/worker、持久输出、EMA、device、轻量 override | batch 必须 `>=1`、worker 必须 `>=0`；只声明 COCO 当前数据 API |
+| Infer | config + checkpoint + 单图/目录之一 | batch、阈值、可视化、JSON、EMA、device、TestReader Resize override | 不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
+| Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |
+
+Train/Eval/Infer 推荐连字符参数；为既有仓库命令保留的下划线别名只覆盖文档列出的参数，不等于完整复刻 Paddle ArgsParser。四个入口的 override 语法仍不同，复杂结构应放进派生 YAML。
+
 ## Infer 的当前数据流
 
 ```text

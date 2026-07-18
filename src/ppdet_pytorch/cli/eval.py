@@ -38,20 +38,31 @@ _COCO_METRIC_NAMES = (
 )
 
 
-def parse_args():
+def create_argument_parser():
     parser = argparse.ArgumentParser(description='RT-DETRv3 COCO evaluation')
     parser.add_argument('-c', '--config', required=True)
     parser.add_argument('--checkpoint', required=True)
-    parser.add_argument('--anno_file')
-    parser.add_argument('--image_dir')
-    parser.add_argument('--batch_size', type=int, default=4)
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--anno-file', '--anno_file', dest='anno_file')
+    parser.add_argument('--image-dir', '--image_dir', dest='image_dir')
+    parser.add_argument(
+        '--batch-size', '--batch_size', dest='batch_size', type=int, default=4)
+    parser.add_argument(
+        '--num-workers',
+        '--num_workers',
+        dest='num_workers',
+        type=int,
+        default=4,
+    )
     parser.add_argument(
         '--output-dir',
+        '--output_dir',
+        dest='output_dir',
         help='Keep COCO prediction files in this directory.',
     )
     parser.add_argument(
         '--use-ema',
+        '--use_ema',
+        dest='use_ema',
         action='store_true',
         help='Evaluate the EMA state stored in a training checkpoint.',
     )
@@ -60,7 +71,17 @@ def parse_args():
         default='cuda' if torch.cuda.is_available() else 'cpu',
     )
     parser.add_argument('-o', '--override', nargs='*', default=[])
-    return parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    parser = create_argument_parser()
+    args = parser.parse_args(argv)
+    if args.batch_size < 1:
+        parser.error('--batch-size must be at least 1')
+    if args.num_workers < 0:
+        parser.error('--num-workers cannot be negative')
+    return args
 
 
 def _get_ema_state_dict(checkpoint):
@@ -166,8 +187,8 @@ def _format_results(raw_results):
     return formatted
 
 
-def main():
-    args = parse_args()
+def main(argv=None):
+    args = parse_args(argv)
     cfg = load_config(args.config)
     apply_overrides(cfg, args.override)
     _configure_dataset(cfg, args.anno_file, args.image_dir)

@@ -291,11 +291,11 @@ def build_target_state_dict(config_path: str):
     return target_shapes, architecture, transpose_target_keys
 
 
-def main():
+def main(argv=None):
     """Main entry point for CLI"""
     # Parse arguments
     parser = create_argument_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Configure logging
     log_level = "ERROR" if args.quiet else args.log_level

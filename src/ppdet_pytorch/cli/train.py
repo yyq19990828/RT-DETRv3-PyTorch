@@ -38,7 +38,7 @@ from ppdet_pytorch.utils.logger import setup_logger
 logger = setup_logger('train')
 
 
-def parse_args():
+def create_argument_parser():
     parser = ArgsParser()
     parser.add_argument(
         "--eval",
@@ -116,7 +116,24 @@ def parse_args():
         default=-1,
         help='Local rank for distributed training')
 
-    args = parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    parser = create_argument_parser()
+    args = parser.parse_args(argv)
+    unsupported = {
+        'eval': '--eval is not implemented; run rtdetrv3-eval separately',
+        'slim_config': '--slim_config is not supported by the PyTorch trainer',
+        'use_tensorboard': '--use_tensorboard is not implemented',
+        'use_wandb': '--use_wandb is not implemented',
+        'save_prediction_only': '--save_prediction_only is not a training option',
+        'profiler_options': '--profiler_options is not implemented',
+        'save_proposals': '--save_proposals is not implemented',
+    }
+    for field, message in unsupported.items():
+        if getattr(args, field):
+            parser.error(message)
     return args
 
 
@@ -172,16 +189,11 @@ def run(FLAGS, cfg):
         trainer.load_weights(cfg.pretrain_weights)
 
     # training
-    if FLAGS.eval:
-        logger.warning(
-            "Post-training evaluation is not implemented in the current "
-            "Trainer; run rtdetrv3-eval with the saved checkpoint instead."
-        )
     trainer.train()
 
 
-def main():
-    FLAGS = parse_args()
+def main(argv=None):
+    FLAGS = parse_args(argv)
     cfg = load_config(FLAGS.config)
     merge_args(cfg, FLAGS)
     merge_config(FLAGS.opt)
@@ -198,6 +210,10 @@ def main():
     # Set GPU/CPU device
     if 'use_gpu' not in cfg:
         cfg.use_gpu = torch.cuda.is_available()  # Auto-detect CUDA availability
+
+    check.check_config(cfg)
+    check.check_gpu(cfg.use_gpu)
+    check.check_version()
 
     # Set PyTorch device
     if cfg.use_gpu:
@@ -217,21 +233,12 @@ def main():
             "These settings will be ignored. Using GPU/CPU instead."
         )
 
-    # NOTE: slim is not supported temporarily
-    # if FLAGS.slim_config:
-    #     cfg = build_slim_model(cfg, FLAGS.slim_config)
-
-    # FIXME: Temporarily solve the priority problem of FLAGS.opt
-    merge_config(FLAGS.opt)
-    check.check_config(cfg)
-    check.check_gpu(cfg.use_gpu)
-    check.check_version()
-
     try:
         run(FLAGS, cfg)
     finally:
         if torch.distributed.is_initialized():
             torch.distributed.destroy_process_group()
+    return 0
 
 
 if __name__ == "__main__":

@@ -157,11 +157,9 @@ def test_format_results_names_standard_coco_statistics():
     assert results["bbox"]["ARl"] == pytest.approx(11.0)
 
 
-def test_parse_args_accepts_persistent_output_directory(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        "sys.argv",
+def test_parse_args_accepts_persistent_output_directory(tmp_path):
+    args = eval_cli.parse_args(
         [
-            "rtdetrv3-eval",
             "--config",
             "model.yml",
             "--checkpoint",
@@ -171,6 +169,133 @@ def test_parse_args_accepts_persistent_output_directory(monkeypatch, tmp_path):
         ],
     )
 
-    args = eval_cli.parse_args()
-
     assert args.output_dir == str(tmp_path)
+
+
+def test_parse_args_accepts_hyphen_and_underscore_aliases():
+    args = eval_cli.parse_args(
+        [
+            '--config',
+            'model.yml',
+            '--checkpoint',
+            'model.pth',
+            '--anno_file',
+            'instances.json',
+            '--image-dir',
+            'images',
+            '--batch_size',
+            '8',
+            '--num-workers',
+            '0',
+            '--use_ema',
+        ]
+    )
+
+    assert args.anno_file == 'instances.json'
+    assert args.image_dir == 'images'
+    assert args.batch_size == 8
+    assert args.num_workers == 0
+    assert args.use_ema is True
+
+
+@pytest.mark.parametrize(
+    ('extra_args', 'message'),
+    [
+        (['--batch-size', '0'], '--batch-size'),
+        (['--num-workers', '-1'], '--num-workers'),
+    ],
+)
+def test_parse_args_rejects_invalid_loader_values(extra_args, message, capsys):
+    with pytest.raises(SystemExit) as error:
+        eval_cli.parse_args(
+            [
+                '--config',
+                'model.yml',
+                '--checkpoint',
+                'model.pth',
+                *extra_args,
+            ]
+        )
+
+    assert error.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_main_accepts_argv_and_wires_current_eval_contract(
+    isolated_workspace,
+    monkeypatch,
+    tmp_path,
+):
+    config_path = tmp_path / 'eval.yml'
+    config_path.write_text(
+        'architecture: ContractModel\n'
+        'metric: COCO\n'
+        'num_classes: 80\n'
+        'EvalReader:\n  batch_size: 4\n'
+        'EvalDataset:\n'
+        '  dataset_dir: .\n'
+        '  anno_path: instances.json\n'
+        '  image_dir: images\n',
+        encoding='utf-8',
+    )
+    output_directory = tmp_path / 'results'
+    observed = []
+
+    class FakeDataset:
+        dataset_dir = '.'
+        anno_path = 'instances.json'
+
+    class FakeTrainer:
+        def __init__(self, cfg, mode):
+            observed.append(('trainer', cfg.copy(), mode))
+            self.model = object()
+            self.dataset = FakeDataset()
+            self.loader = []
+            self._prepare_batch = lambda value: value
+
+    monkeypatch.setattr(eval_cli, 'Trainer', FakeTrainer)
+    monkeypatch.setattr(
+        eval_cli,
+        'load_evaluation_weights',
+        lambda model, checkpoint, use_ema: observed.append(
+            ('weights', model, checkpoint, use_ema)
+        ),
+    )
+    monkeypatch.setattr(
+        eval_cli,
+        'COCOMetric',
+        lambda annotation, output_eval: ('metric', annotation, output_eval),
+    )
+    monkeypatch.setattr(
+        eval_cli,
+        'evaluate',
+        lambda model, loader, metric, prepare, device: {
+            'bbox': torch.arange(12).numpy()
+        },
+    )
+
+    exit_code = eval_cli.main(
+        [
+            '--config',
+            str(config_path),
+            '--checkpoint',
+            'model.pth',
+            '--batch-size',
+            '2',
+            '--num-workers',
+            '0',
+            '--output-dir',
+            str(output_directory),
+            '--use-ema',
+            '--device',
+            'cpu',
+        ]
+    )
+
+    assert exit_code == 0
+    assert observed[0][0] == 'trainer'
+    assert observed[0][1]['EvalReader']['batch_size'] == 2
+    assert observed[0][1]['worker_num'] == 0
+    assert observed[0][1]['device'] == torch.device('cpu')
+    assert observed[1][0] == 'weights'
+    assert observed[1][2:] == ('model.pth', True)

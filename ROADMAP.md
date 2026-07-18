@@ -74,13 +74,13 @@
 
 ## Milestone 5 — 配置、CLI 与导出边界（P1）
 
-**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线已复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图与 batch 4 验证。workspace 冲突优先级、连续配置隔离和 RT-DETRv3 Paddle YAML 支持矩阵也已有活跃测试与指南。上述证据不代表 ONNX/TorchScript、全部 Paddle Infer 参数或非 RT-DETRv3 配置已经支持。
+**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线已复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图与 batch 4 验证。workspace 冲突优先级、连续配置隔离、RT-DETRv3 Paddle YAML 支持矩阵和四个公开 CLI contract 也已有活跃测试与指南。上述证据不代表 ONNX/TorchScript、全部 Paddle Infer 参数或非 RT-DETRv3 配置已经支持。
 
 - [x] 为 `workspace` 补充 shared/inject/from_config/显式参数冲突和全局状态隔离测试。
 - [x] 明确哪些 Paddle YAML 字段直接兼容、哪些映射、哪些不支持，补充配置迁移指南。
-- [ ] 为 Train/Eval/Infer/Convert 编写 CLI contract 测试，对 Paddle 参数的兼容差异做显式文档化。
+- [x] 为 Train/Eval/Infer/Convert 编写 CLI contract 测试，对 Paddle 参数的兼容差异做显式文档化。
   - [x] Infer 已覆盖参数校验、当前/历史参数拼写、TestReader 预处理、batch dict、`bbox/bbox_num`、阈值、JSON 和官方 R18 真实推理。
-  - [ ] Train/Eval/Convert 的统一错误路径、Paddle 参数差异和端到端合同仍待补齐。
+  - [x] Train/Eval/Convert 已覆盖 help、主参数、main wiring 和错误路径；既有 M2–M4 真实运行作为端到端证据。
 - [ ] 完成 ONNX 导出与 ONNXRuntime 回归，记录不支持的动态控制流/算子。
 - [ ] 完成 TorchScript 导出与重新加载回归。
 - [ ] 验证动态输入尺寸、batch 1/4/8 和空预测等边界。

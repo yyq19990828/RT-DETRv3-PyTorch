@@ -1,7 +1,5 @@
 import json
 from pathlib import Path
-import sys
-
 import pytest
 
 from ppdet_pytorch.cli.convert import (
@@ -136,24 +134,19 @@ def test_batch_cli_writes_summary(monkeypatch, tmp_path):
         "ppdet_pytorch.cli.convert.WeightConverter.convert_batch",
         lambda *args, **kwargs: summary,
     )
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "rtdetrv3-convert",
-            "--batch",
-            "--input",
-            str(input_path),
-            "--output",
-            str(output_directory),
-            "--summary",
-            str(summary_path),
-            "--no-validate",
-        ],
-    )
+    argv = [
+        "--batch",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_directory),
+        "--summary",
+        str(summary_path),
+        "--no-validate",
+    ]
 
     with pytest.raises(SystemExit) as error:
-        main()
+        main(argv)
 
     assert error.value.code == 0
     summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))

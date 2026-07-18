@@ -62,6 +62,8 @@ uv run --extra dev rtdetrv3-convert \
 
 推理入口复用配置中的 `TestReader` 和模型内置 RT-DETR 后处理，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；训练 checkpoint 可加 `--use-ema`。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
 
+Train/Eval/Infer/Convert 只声明文档中列出的当前合同；未迁移的 Paddle Train 参数会直接报错，不会静默忽略。完整参数边界同样见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
+
 `tools/train.py`、`tools/eval.py`、`tools/infer.py` 和 `tools/convert_weights.py` 保留为兼容入口。Paddle 对齐和诊断脚本位于 `tools/dev/`。
 
 ## 测试

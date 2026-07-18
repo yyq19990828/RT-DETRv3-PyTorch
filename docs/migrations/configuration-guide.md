@@ -72,7 +72,7 @@ LearningRate:
 - Train 沿用 `-o key=value` 并用 YAML 解析值，支持点分嵌套字段。
 - Eval/Infer 当前使用 `-o/--override key=value` 的轻量解析器；它支持布尔、null、数值和逗号列表，但不是 Paddle ArgsParser 的完整语法。
 - Convert 的配置参数用于构建目标 state dict，不继承 Train 的所有 override。
-- 对列表、字符串转义或复杂嵌套结构，优先写一份派生 YAML，而不是假设四个 CLI 的命令行解析完全相同。统一 CLI contract 是 M5 的后续计划项。
+- 对列表、字符串转义或复杂嵌套结构，优先写一份派生 YAML，而不是假设四个 CLI 的命令行解析完全相同。各入口的已验证参数和显式失败边界见[CLI 与导出迁移](cli-and-export.md)。
 
 ## 尚未声明支持
 

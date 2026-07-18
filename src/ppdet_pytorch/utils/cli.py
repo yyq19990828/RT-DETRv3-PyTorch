@@ -47,14 +47,14 @@ class ArgsParser(ArgumentParser):
     def __init__(self):
         super(ArgsParser, self).__init__(
             formatter_class=RawDescriptionHelpFormatter)
-        self.add_argument("-c", "--config", help="configuration file to use")
+        self.add_argument(
+            "-c", "--config", required=True,
+            help="configuration file to use")
         self.add_argument(
             "-o", "--opt", nargs='*', help="set configuration options")
 
     def parse_args(self, argv=None):
         args = super(ArgsParser, self).parse_args(argv)
-        assert args.config is not None, \
-            "Please specify --config=configure_file_path."
         args.opt = self._parse_opt(args.opt)
         return args
 
