@@ -1,3 +1,4 @@
+import torch
 import torch.distributed as dist
 from torch.utils.data import BatchSampler, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
@@ -22,18 +23,25 @@ class DistributedBatchSampler(BatchSampler):
         rank=None,
         seed=0,
     ):
-        distributed = dist.is_initialized() or num_replicas is not None or rank is not None
+        self.seed = int(seed)
+        self._generator = None
+        distributed = (
+            dist.is_initialized() or
+            num_replicas is not None or
+            rank is not None)
         if distributed:
             sampler = DistributedSampler(
                 dataset,
                 num_replicas=num_replicas,
                 rank=rank,
                 shuffle=shuffle,
-                seed=seed,
+                seed=self.seed,
                 drop_last=drop_last,
             )
         elif shuffle:
-            sampler = RandomSampler(dataset)
+            self._generator = torch.Generator()
+            self._generator.manual_seed(self.seed)
+            sampler = RandomSampler(dataset, generator=self._generator)
         else:
             sampler = SequentialSampler(dataset)
 
@@ -42,3 +50,5 @@ class DistributedBatchSampler(BatchSampler):
     def set_epoch(self, epoch):
         if hasattr(self.sampler, "set_epoch"):
             self.sampler.set_epoch(epoch)
+        elif self._generator is not None:
+            self._generator.manual_seed(self.seed + int(epoch))

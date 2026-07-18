@@ -5,6 +5,8 @@ __version__ = "0.1.0"
 
 from .converter import WeightConverter
 from .models import (
+    BatchConversionResult,
+    BatchConversionSummary,
     CheckpointFile,
     Parameter,
     ParameterMapping,
@@ -17,6 +19,8 @@ from .models import (
 
 __all__ = [
     "WeightConverter",
+    "BatchConversionResult",
+    "BatchConversionSummary",
     "CheckpointFile",
     "Parameter",
     "ParameterMapping",

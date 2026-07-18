@@ -1,278 +1,227 @@
-"""
-RT-DETRv3 COCO Evaluation Script
-
-Evaluate trained RT-DETRv3 model on COCO val2017 dataset.
-
-Usage:
-    # Evaluate with config and checkpoint
-    uv run rtdetrv3-eval -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth
-
-    # Evaluate with custom batch size
-    uv run rtdetrv3-eval -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth --batch_size 8
-
-    # Evaluate with custom dataset
-    uv run rtdetrv3-eval -c configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml --checkpoint weights/rtdetrv3_r50vd.pth \
-        --anno_file data/coco/annotations/instances_val2017.json \
-        --image_dir data/coco/val2017
-"""
+"""Evaluate RT-DETRv3 checkpoints with the repository's current data API."""
 
 import argparse
-from typing import Dict, List
+import os
+import tempfile
+from contextlib import nullcontext
+from pathlib import Path
 
 import torch
-import torch.utils.data as data
 from tqdm import tqdm
 
-from ppdet_pytorch.data.source.coco import COCODataSet
-from ppdet_pytorch.engine.evaluator import build_coco_evaluator
-from ppdet_pytorch.core.workspace import create
-from .infer import postprocess
-from ppdet_pytorch.utils.checkpoint import load_checkpoint
-from ppdet_pytorch.utils.config import load_config, apply_overrides
+from ppdet_pytorch.core.workspace import load_config
+from ppdet_pytorch.engine import Trainer
+from ppdet_pytorch.metrics import COCOMetric
+from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
+
 
 logger = setup_logger('eval')
 
-
-def build_coco_dataset(anno_file, image_dir, input_size=640, is_train=False):
-    """Build and parse the COCO dataset used by the standalone evaluator."""
-    del input_size  # Image transforms are configured independently by the caller.
-    dataset = COCODataSet(
-        dataset_dir='',
-        image_dir=image_dir,
-        anno_path=anno_file,
-        load_crowd=is_train,
-    )
-    dataset.parse_dataset()
-    return dataset
+_DERIVED_BUFFER_KEYS = {
+    'aux_o2m_head.anchor_points',
+    'aux_o2m_head.stride_tensor',
+}
+_COCO_METRIC_NAMES = (
+    'AP',
+    'AP50',
+    'AP75',
+    'APs',
+    'APm',
+    'APl',
+    'AR1',
+    'AR10',
+    'AR100',
+    'ARs',
+    'ARm',
+    'ARl',
+)
 
 
 def parse_args():
-    """Parse command-line arguments"""
-    parser = argparse.ArgumentParser(description='RT-DETRv3 COCO Evaluation')
-
-    # Config and checkpoint
-    parser.add_argument('-c', '--config', type=str, required=True,
-                       help='Path to config file')
-    parser.add_argument('--checkpoint', type=str, required=True,
-                       help='Path to checkpoint file')
-
-    # Dataset
-    parser.add_argument('--anno_file', type=str, default=None,
-                       help='Path to COCO annotation JSON file (defaults to config)')
-    parser.add_argument('--image_dir', type=str, default=None,
-                       help='Path to COCO images directory (defaults to config)')
-
-    # Evaluation settings
-    parser.add_argument('--batch_size', type=int, default=4,
-                       help='Batch size for evaluation')
-    parser.add_argument('--num_workers', type=int, default=4,
-                       help='Number of data loading workers')
-    parser.add_argument('--conf_threshold', type=float, default=0.01,
-                       help='Confidence threshold (lower for better recall)')
-    parser.add_argument('--nms_threshold', type=float, default=0.7,
-                       help='NMS IoU threshold')
-
-    # Device
-    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu',
-                       help='Device to run evaluation on (cuda or cpu)')
-
-    # Config overrides
-    parser.add_argument('-o', '--override', nargs='*', default=[],
-                       help='Config overrides (e.g., num_classes=80)')
-
-    args = parser.parse_args()
-    return args
+    parser = argparse.ArgumentParser(description='RT-DETRv3 COCO evaluation')
+    parser.add_argument('-c', '--config', required=True)
+    parser.add_argument('--checkpoint', required=True)
+    parser.add_argument('--anno_file')
+    parser.add_argument('--image_dir')
+    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument(
+        '--output-dir',
+        help='Keep COCO prediction files in this directory.',
+    )
+    parser.add_argument(
+        '--use-ema',
+        action='store_true',
+        help='Evaluate the EMA state stored in a training checkpoint.',
+    )
+    parser.add_argument(
+        '--device',
+        default='cuda' if torch.cuda.is_available() else 'cpu',
+    )
+    parser.add_argument('-o', '--override', nargs='*', default=[])
+    return parser.parse_args()
 
 
-def collate_fn(batch):
-    """
-    Custom collate function for evaluation
+def _get_ema_state_dict(checkpoint):
+    if 'ema' not in checkpoint:
+        raise RuntimeError('Checkpoint does not contain EMA weights')
 
-    Args:
-        batch: List of (image, target) tuples
+    ema = checkpoint['ema']
+    if not isinstance(ema, dict) or 'ema_state_dict' not in ema:
+        return ema
 
-    Returns:
-        Batched images and list of targets
-    """
-    images = []
-    targets = []
+    state_dict = ema['ema_state_dict']
+    step = int(ema.get('step', 0))
+    decay_type = ema.get('ema_decay_type', 'exponential')
+    if step == 0 or decay_type == 'exponential':
+        return state_dict
 
-    for image, target in batch:
-        images.append(image)
-        targets.append(target)
+    if 'ema_black_list' not in ema:
+        raise RuntimeError(
+            'Cannot apply bias correction to this legacy EMA checkpoint: '
+            'ema_black_list is missing')
+    correction = 1 - float(ema['current_decay']) ** step
+    black_list = set(ema['ema_black_list'])
+    return {
+        key: value if key in black_list else value / correction
+        for key, value in state_dict.items()
+    }
 
-    # Stack images into batch
-    images = torch.stack(images, dim=0)
 
-    return images, targets
+def load_evaluation_weights(model, checkpoint_path, use_ema=False):
+    """Load a model checkpoint and reject unknown state-dict differences."""
+    checkpoint = torch.load(
+        checkpoint_path,
+        map_location='cpu',
+        weights_only=False,
+    )
+    if use_ema:
+        state_dict = _get_ema_state_dict(checkpoint)
+    elif 'model' in checkpoint:
+        state_dict = checkpoint['model']
+    elif 'model_state_dict' in checkpoint:
+        state_dict = checkpoint['model_state_dict']
+    elif 'state_dict' in checkpoint:
+        state_dict = checkpoint['state_dict']
+    else:
+        state_dict = checkpoint
+
+    incompatible = model.load_state_dict(state_dict, strict=False)
+    unknown_missing = set(incompatible.missing_keys) - _DERIVED_BUFFER_KEYS
+    unknown_unexpected = set(incompatible.unexpected_keys)
+    if unknown_missing or unknown_unexpected:
+        raise RuntimeError(
+            'Checkpoint is incompatible with the evaluation model: '
+            'missing={}, unexpected={}'.format(
+                sorted(unknown_missing), sorted(unknown_unexpected)))
+    if incompatible.missing_keys:
+        logger.info(
+            'Regenerated derived buffers not stored in checkpoint: %s',
+            sorted(incompatible.missing_keys),
+        )
+    logger.info('Loaded %s weights from %s',
+                'EMA' if use_ema else 'model', checkpoint_path)
 
 
 @torch.no_grad()
-def evaluate(
-    model: torch.nn.Module,
-    data_loader: data.DataLoader,
-    evaluator,
-    device: torch.device,
-    conf_threshold: float = 0.01,
-    nms_threshold: float = 0.7
-):
-    """
-    Run evaluation on dataset
-
-    Args:
-        model: RT-DETRv3 model
-        data_loader: COCO data loader
-        evaluator: COCO evaluator
-        device: Device to run on
-        conf_threshold: Confidence threshold
-        nms_threshold: NMS threshold
-    """
+def evaluate(model, data_loader, metric, prepare_batch, device):
     model.eval()
+    logger.info(
+        'Starting evaluation on %d batches with %s',
+        len(data_loader),
+        device,
+    )
+    for batch in tqdm(data_loader, total=len(data_loader), desc='Evaluating'):
+        batch = prepare_batch(batch)
+        outputs = model(batch)
+        metric.update(batch, outputs)
 
-    logger.info(f"Starting evaluation on {len(data_loader)} batches...")
+    metric.accumulate()
+    return metric.get_results()
 
-    for images, targets in tqdm(data_loader, desc="Evaluating"):
-        # Move to device
-        images = images.to(device)
 
-        # Forward pass
-        outputs = model(images)
-        pred_logits = outputs['pred_logits']  # (B, num_queries, num_classes)
-        pred_boxes = outputs['pred_boxes']    # (B, num_queries, 4)
+def _configure_dataset(cfg, anno_file=None, image_dir=None):
+    if anno_file is None and image_dir is None:
+        return
 
-        # Get original image sizes for post-processing
-        batch_size = images.shape[0]
-        orig_sizes = [target['orig_size'] for target in targets]
-        image_ids = [target['image_id'] for target in targets]
+    dataset_dir = Path(cfg.EvalDataset.get('dataset_dir', ''))
+    if anno_file is None:
+        anno_file = dataset_dir / cfg.EvalDataset['anno_path']
+    if image_dir is None:
+        image_dir = dataset_dir / cfg.EvalDataset['image_dir']
 
-        # Post-process predictions
-        # Note: We need to create meta info for each image
-        predictions = []
-        for i in range(batch_size):
-            # Create meta info
-            orig_h, orig_w = orig_sizes[i]
-            meta = {
-                'orig_size': (orig_h, orig_w),
-                'resized_size': (images.shape[2], images.shape[3]),  # Model input size
-                'scale': 1.0,  # Assuming images are already resized
-                'input_size': images.shape[2]
-            }
+    cfg.EvalDataset['dataset_dir'] = '.'
+    cfg.EvalDataset['anno_path'] = str(Path(anno_file).resolve())
+    cfg.EvalDataset['image_dir'] = str(Path(image_dir).resolve())
 
-            # Post-process single image
-            result = postprocess(
-                pred_logits[i:i+1],
-                pred_boxes[i:i+1],
-                meta,
-                conf_threshold=conf_threshold,
-                nms_threshold=nms_threshold
-            )[0]
 
-            predictions.append(result)
-
-        # Update evaluator
-        evaluator.update(predictions, image_ids)
-
-    # Compute metrics
-    logger.info("Computing COCO metrics...")
-    results = evaluator.accumulate()
-
-    return results
+def _format_results(raw_results):
+    formatted = {}
+    for metric_type, stats in raw_results.items():
+        formatted[metric_type] = {
+            name: float(value)
+            for name, value in zip(_COCO_METRIC_NAMES, stats)
+        }
+    return formatted
 
 
 def main():
-    """Main evaluation function"""
     args = parse_args()
-
-    # Load config
     cfg = load_config(args.config)
-    if args.override:
-        cfg = apply_overrides(cfg, args.override)
+    apply_overrides(cfg, args.override)
+    _configure_dataset(cfg, args.anno_file, args.image_dir)
 
-    # Override dataset paths if specified
-    if args.anno_file:
-        cfg['anno_file'] = args.anno_file
-    if args.image_dir:
-        cfg['image_dir'] = args.image_dir
-
-    # Build model
-    logger.info("Building model...")
-    model = create('RTDETRv3', global_config=cfg, num_classes=cfg.get('num_classes', 80))
-
-    # Load checkpoint
-    logger.info(f"Loading checkpoint from {args.checkpoint}...")
-    load_checkpoint(model, args.checkpoint, strict=True)
-
-    # Move to device and set to eval mode
     device = torch.device(args.device)
-    model = model.to(device)
-    model.eval()
-    logger.info(f"Model loaded on {device}")
+    if device.type == 'cuda' and not torch.cuda.is_available():
+        raise RuntimeError('CUDA evaluation requested but CUDA is unavailable')
+    cfg.EvalReader['batch_size'] = args.batch_size
+    cfg.worker_num = args.num_workers
+    cfg.device = device
+    cfg.use_gpu = device.type == 'cuda'
+    cfg.use_ema = False
 
-    # Build dataset
-    logger.info("Building COCO validation dataset...")
-    val_dataset = build_coco_dataset(
-        anno_file=cfg.get('anno_file', 'data/coco/annotations/instances_val2017.json'),
-        image_dir=cfg.get('image_dir', 'data/coco/val2017'),
-        input_size=cfg.get('input_size', 640),
-        is_train=False
-    )
-    logger.info(f"Validation dataset: {len(val_dataset)} images")
+    if args.output_dir:
+        output_directory = Path(args.output_dir)
+        output_directory.mkdir(parents=True, exist_ok=True)
+        output_context = nullcontext(str(output_directory))
+    else:
+        output_context = tempfile.TemporaryDirectory(prefix='rtdetrv3-eval-')
 
-    # Build data loader
-    val_loader = data.DataLoader(
-        val_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        collate_fn=collate_fn,
-        pin_memory=True,
-        drop_last=False
-    )
+    with output_context as evaluation_directory:
+        cfg.save_dir = evaluation_directory
+        trainer = Trainer(cfg, mode='eval')
+        load_evaluation_weights(
+            trainer.model,
+            args.checkpoint,
+            use_ema=args.use_ema,
+        )
 
-    # Build evaluator
-    logger.info("Building COCO evaluator...")
-    evaluator = build_coco_evaluator(
-        anno_file=cfg.get('anno_file', 'data/coco/annotations/instances_val2017.json'),
-        iou_types=['bbox']
-    )
+        annotation_path = os.path.join(
+            trainer.dataset.dataset_dir,
+            trainer.dataset.anno_path,
+        )
+        metric = COCOMetric(
+            annotation_path,
+            output_eval=evaluation_directory,
+        )
+        raw_results = evaluate(
+            trainer.model,
+            trainer.loader,
+            metric,
+            trainer._prepare_batch,
+            device,
+        )
+        if args.output_dir:
+            logger.info(
+                'Kept evaluation outputs in %s', evaluation_directory)
 
-    # Run evaluation
-    results = evaluate(
-        model,
-        val_loader,
-        evaluator,
-        device,
-        conf_threshold=args.conf_threshold,
-        nms_threshold=args.nms_threshold
-    )
-
-    # Print final results
-    logger.info("\n" + "="*50)
-    logger.info("COCO Evaluation Results")
-    logger.info("="*50)
-    for iou_type, metrics in results.items():
-        logger.info(f"\n{iou_type.upper()} Metrics:")
-        for metric_name, value in metrics.items():
-            logger.info(f"  {metric_name:10s}: {value:.3f}")
-
-    # Compare with PaddlePaddle baseline if available
-    if 'bbox' in results:
-        ap = results['bbox']['AP']
-        ap50 = results['bbox']['AP50']
-        logger.info("\n" + "="*50)
-        logger.info(f"Final mAP: {ap:.1%} (AP@[.5:.95])")
-        logger.info(f"Final AP50: {ap50:.1%} (AP@.5)")
-        logger.info("="*50)
-
-        # PaddlePaddle baseline (R50-vd): 53.4% mAP
-        if cfg.get('backbone', 'resnet50') == 'resnet50':
-            baseline_map = 0.534
-            diff = (ap - baseline_map) * 100
-            logger.info(f"\nComparison with PaddlePaddle baseline:")
-            logger.info(f"  PyTorch: {ap:.1%}")
-            logger.info(f"  Paddle : {baseline_map:.1%}")
-            logger.info(f"  Diff   : {diff:+.2f} points")
+    results = _format_results(raw_results)
+    for metric_type, values in results.items():
+        logger.info('%s metrics:', metric_type.upper())
+        for name, value in values.items():
+            logger.info('  %-5s: %.6f', name, value)
+    return 0
 
 
 if __name__ == '__main__':

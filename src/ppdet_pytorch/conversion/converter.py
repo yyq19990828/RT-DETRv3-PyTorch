@@ -4,12 +4,17 @@ This module provides the main WeightConverter class for converting model weights
 between PaddlePaddle and PyTorch formats.
 """
 
+from dataclasses import replace
+import gc
 import hashlib
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+import tempfile
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from .models import (
+    BatchConversionResult,
+    BatchConversionSummary,
     CheckpointFile,
     CheckpointFormat,
     ConversionConfig,
@@ -119,6 +124,7 @@ class WeightConverter:
         """
         output_path_obj = Path(output_path)
         output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = None
 
         try:
             import torch
@@ -132,9 +138,18 @@ class WeightConverter:
             if metadata:
                 checkpoint_data["metadata"] = metadata
 
-            # Save checkpoint
+            # Save to the destination directory, then publish atomically.
             logger.info(f"Saving converted checkpoint to {output_path}")
-            torch.save(checkpoint_data, output_path)
+            with tempfile.NamedTemporaryFile(
+                dir=output_path_obj.parent,
+                prefix=f".{output_path_obj.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary_file:
+                temporary_path = Path(temporary_file.name)
+            torch.save(checkpoint_data, temporary_path)
+            temporary_path.replace(output_path_obj)
+            temporary_path = None
 
             # Create CheckpointFile metadata
             file_size = output_path_obj.stat().st_size
@@ -153,13 +168,16 @@ class WeightConverter:
             return checkpoint_file
 
         except Exception as e:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
             raise ValueError(f"Failed to save PyTorch checkpoint: {e}")
 
     def convert_tensor(
         self,
         paddle_tensor: Any,
         param_name: str,
-        expected_shape: Optional[Tuple[int, ...]] = None
+        expected_shape: Optional[Tuple[int, ...]] = None,
+        transpose: Optional[bool] = None,
     ) -> Any:
         """Convert single parameter tensor from PaddlePaddle to PyTorch
 
@@ -167,6 +185,7 @@ class WeightConverter:
             paddle_tensor: PaddlePaddle tensor
             param_name: Parameter name (for logging)
             expected_shape: Expected target shape (for validation)
+            transpose: Explicit target-aware Linear transpose decision
 
         Returns:
             PyTorch tensor or None if conversion fails in permissive mode
@@ -176,7 +195,11 @@ class WeightConverter:
         """
         try:
             # Convert tensor
-            torch_tensor = convert_paddle_to_torch_tensor(paddle_tensor, param_name)
+            torch_tensor = convert_paddle_to_torch_tensor(
+                paddle_tensor,
+                param_name,
+                transpose=transpose,
+            )
 
             # Validate shape if expected shape provided
             if expected_shape is not None:
@@ -204,7 +227,8 @@ class WeightConverter:
         self,
         paddle_state_dict: Dict[str, Any],
         target_state_dict: Optional[Dict[str, Any]] = None,
-        mappings: Optional[List[ParameterMapping]] = None
+        mappings: Optional[List[ParameterMapping]] = None,
+        transpose_target_keys: Optional[Set[str]] = None,
     ) -> Tuple[Dict[str, Any], ConversionStatistics]:
         """Convert entire state dict from PaddlePaddle to PyTorch
 
@@ -212,6 +236,7 @@ class WeightConverter:
             paddle_state_dict: Source PaddlePaddle state dict
             target_state_dict: Optional target PyTorch state dict for shape validation
             mappings: Optional list of parameter mappings (generated if None)
+            transpose_target_keys: Target keys backed by PyTorch Linear modules
 
         Returns:
             Tuple of (torch_state_dict, ConversionStatistics)
@@ -230,7 +255,7 @@ class WeightConverter:
 
         # Convert parameters
         torch_state_dict = {}
-        converted_count = 0
+        memory_batch_size = self.config.batch_size or 64
 
         for i, mapping in enumerate(mappings):
             source_name = mapping.source_name
@@ -247,17 +272,37 @@ class WeightConverter:
             # Get expected shape if target state dict provided
             expected_shape = None
             if target_state_dict and target_name in target_state_dict:
-                expected_shape = tuple(target_state_dict[target_name].shape)
+                target_value = target_state_dict[target_name]
+                expected_shape = tuple(
+                    target_value.shape
+                    if hasattr(target_value, "shape")
+                    else target_value
+                )
 
             # Convert tensor
-            torch_tensor = self.convert_tensor(paddle_tensor, source_name, expected_shape)
+            transpose = (
+                None
+                if transpose_target_keys is None
+                else target_name in transpose_target_keys
+            )
+            torch_tensor = self.convert_tensor(
+                paddle_tensor,
+                source_name,
+                expected_shape,
+                transpose=transpose,
+            )
 
             if torch_tensor is not None:
                 torch_state_dict[target_name] = torch_tensor
-                converted_count += 1
                 stats.converted_count += 1
             else:
                 stats.skipped_count += 1
+
+            if self.config.memory_efficient_mode:
+                paddle_state_dict.pop(source_name, None)
+                del paddle_tensor
+                if (i + 1) % memory_batch_size == 0 or i + 1 == len(mappings):
+                    gc.collect()
 
             # Progress logging (every 100 parameters)
             if (i + 1) % 100 == 0:
@@ -270,7 +315,8 @@ class WeightConverter:
         self,
         input_path: str,
         output_path: str,
-        target_model_state_dict: Optional[Dict[str, Any]] = None
+        target_model_state_dict: Optional[Dict[str, Any]] = None,
+        transpose_target_keys: Optional[Set[str]] = None,
     ) -> ConversionSession:
         """Convert weights from PaddlePaddle to PyTorch (full workflow)
 
@@ -285,6 +331,7 @@ class WeightConverter:
             input_path: Path to source .pdparams file
             output_path: Path to target .pth file
             target_model_state_dict: Optional target model state dict for validation
+            transpose_target_keys: Target keys backed by PyTorch Linear modules
 
         Returns:
             ConversionSession with conversion results
@@ -334,7 +381,10 @@ class WeightConverter:
             logger.info("=== Step 3: Convert parameters ===")
             self.session.status = ConversionStatus.CONVERTING
             torch_state_dict, stats = self.convert_state_dict(
-                paddle_state_dict, target_model_state_dict, mappings
+                paddle_state_dict,
+                target_model_state_dict,
+                mappings,
+                transpose_target_keys,
             )
 
             # Update session statistics
@@ -350,9 +400,13 @@ class WeightConverter:
             metadata = {
                 "source": "PaddlePaddle",
                 "source_checkpoint": str(input_path),
+                "source_checkpoint_size_bytes": source_checkpoint.file_size_bytes,
+                "source_checkpoint_sha256": source_checkpoint.checksum,
                 "conversion_timestamp": datetime.now().isoformat(),
                 "conversion_tool_version": "0.1.0",
                 "session_id": self.session.session_id,
+                "memory_efficient_mode": self.config.memory_efficient_mode,
+                "parameter_batch_size": self.config.batch_size,
                 "conversion_stats": {
                     "total": stats.total_parameters,
                     "converted": stats.converted_count,
@@ -398,18 +452,112 @@ class WeightConverter:
             logger.error(f"Conversion failed: {e}")
             raise
 
+    def convert_batch(
+        self,
+        input_paths: Iterable[str],
+        output_directory: str,
+        target_model_state_dict: Optional[Dict[str, Any]] = None,
+        transpose_target_keys: Optional[Set[str]] = None,
+        mapping_directory: Optional[str] = None,
+        overwrite: bool = False,
+    ) -> BatchConversionSummary:
+        """Convert checkpoints independently and continue after individual failures."""
+        output_directory_path = Path(output_directory)
+        output_directory_path.mkdir(parents=True, exist_ok=True)
+        mapping_directory_path = (
+            Path(mapping_directory) if mapping_directory is not None else None
+        )
+        if mapping_directory_path is not None:
+            mapping_directory_path.mkdir(parents=True, exist_ok=True)
+
+        summary = BatchConversionSummary(
+            output_directory=str(output_directory_path)
+        )
+        for input_value in input_paths:
+            input_path = Path(input_value)
+            output_path = output_directory_path / f"{input_path.stem}.pth"
+            mapping_path = (
+                mapping_directory_path / f"{input_path.stem}.mapping.json"
+                if mapping_directory_path is not None
+                else None
+            )
+            output_existed = output_path.exists()
+
+            if output_existed and not overwrite:
+                summary.results.append(
+                    BatchConversionResult(
+                        source_path=str(input_path),
+                        output_path=str(output_path),
+                        mapping_path=str(mapping_path) if mapping_path else None,
+                        status=ConversionStatus.FAILED,
+                        error="Output file already exists",
+                    )
+                )
+                continue
+
+            file_config = replace(
+                self.config,
+                export_mapping=mapping_path is not None,
+                export_mapping_path=str(mapping_path) if mapping_path else None,
+            )
+            file_converter = WeightConverter(file_config)
+            try:
+                session = file_converter.convert(
+                    input_path=str(input_path),
+                    output_path=str(output_path),
+                    target_model_state_dict=target_model_state_dict,
+                    transpose_target_keys=transpose_target_keys,
+                )
+                summary.results.append(
+                    BatchConversionResult(
+                        source_path=str(input_path),
+                        output_path=str(output_path),
+                        mapping_path=str(mapping_path) if mapping_path else None,
+                        status=session.status,
+                        session_id=session.session_id,
+                        duration_seconds=session.duration_seconds,
+                        converted_count=session.statistics.converted_count,
+                        skipped_count=session.statistics.skipped_count,
+                    )
+                )
+            except Exception as error:
+                if not output_existed:
+                    output_path.unlink(missing_ok=True)
+                if mapping_path is not None:
+                    mapping_path.unlink(missing_ok=True)
+                failed_session = file_converter.session
+                summary.results.append(
+                    BatchConversionResult(
+                        source_path=str(input_path),
+                        output_path=str(output_path),
+                        mapping_path=str(mapping_path) if mapping_path else None,
+                        status=ConversionStatus.FAILED,
+                        session_id=(
+                            failed_session.session_id if failed_session else None
+                        ),
+                        duration_seconds=(
+                            failed_session.duration_seconds if failed_session else 0.0
+                        ),
+                        error=str(error),
+                    )
+                )
+                logger.error("Batch item failed for %s: %s", input_path, error)
+
+        summary.finish()
+        return summary
+
     @staticmethod
     def _compute_checksum(file_path: str) -> str:
-        """Compute MD5 checksum of file
+        """Compute SHA-256 checksum of file
 
         Args:
             file_path: Path to file
 
         Returns:
-            MD5 checksum as hex string
+            SHA-256 checksum as hex string
         """
-        md5_hash = hashlib.md5()
+        sha256_hash = hashlib.sha256()
         with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                md5_hash.update(chunk)
-        return md5_hash.hexdigest()
+            for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                sha256_hash.update(chunk)
+        return sha256_hash.hexdigest()

@@ -227,7 +227,9 @@ class ModelEMA:
             'step': self.step,
             'epoch': self.epoch,
             'decay': self.decay,
+            'current_decay': self._decay,
             'ema_decay_type': self.ema_decay_type,
+            'ema_black_list': sorted(self.ema_black_list),
         }
 
     def load_state_dict(self, checkpoint: dict):
@@ -240,3 +242,7 @@ class ModelEMA:
         if 'ema_state_dict' in checkpoint:
             self.resume(checkpoint['ema_state_dict'], checkpoint.get('step', 0))
             self.epoch = checkpoint.get('epoch', 0)
+            self.decay = checkpoint.get('decay', self.decay)
+            self._decay = checkpoint.get('current_decay', self.decay)
+            self.ema_decay_type = checkpoint.get(
+                'ema_decay_type', self.ema_decay_type)

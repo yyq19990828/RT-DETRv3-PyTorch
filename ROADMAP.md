@@ -3,9 +3,10 @@
 **Status**: Active
 **Last updated**: 2026-07-18
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Current execution plan**: [`M1——R18 最小训练链迁移计划`](docs/plans/2026-07-18-m1-minimal-training-chain.md)
+**Latest completed execution plan**: [`M3——训练、评估与恢复验收计划`](docs/plans/2026-07-18-m3-training-evaluation-recovery.md)
+**Current execution plan**: [`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)
 
-本路线图只列未完成的迁移大纲。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
+本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
 ## 目标
 
@@ -24,32 +25,47 @@
 
 **验收记录**：2026-07-18 本机 CPU/float32 验证通过，全量测试 `127 passed, 1 skipped`。完整环境、override 和首末 step 数据见 M1 执行计划。
 
+**完成提交**：`f95f4e0`。
+
 ## Milestone 2 — 官方权重转换与分层数值对齐（P0）
 
-- [ ] 下载并记录 R18/R34/R50 官方 Paddle checkpoint 的来源、checksum 和配置。
-- [ ] 对每个变体导出名称映射和未映射清单，审核 Linear 转置、BatchNorm 状态和特殊 head 参数。
-- [ ] 使转换后的权重以受控的 missing/unexpected key 集合加载到完整 PyTorch 模型。
-- [ ] 在 CPU/float32 上按 backbone → neck → transformer → head 比较第一个分歧激活。
-- [ ] 对齐预测、loss 分项、梯度和一次 AdamW 参数更新。
-- [ ] 实现并测试批量转换、失败隔离、转换汇总与可选低内存模式。
+- [x] 下载并记录 R18/R34/R50 官方 Paddle checkpoint 的来源、checksum 和配置。
+- [x] 对每个变体导出名称映射和未映射清单，审核 Linear 转置、BatchNorm 状态和特殊 head 参数。
+- [x] 使转换后的权重以受控的 missing/unexpected key 集合加载到完整 PyTorch 模型。
+- [x] 在 CPU/float32 上按 backbone → neck → transformer → head 比较第一个分歧激活。
+- [x] 对齐预测、loss 分项和整体梯度方向；记录优化器差异，不要求 AdamW 更新逐元素一致。
+- [x] 实现并测试批量转换、失败隔离、转换汇总与可选低内存模式。
+
+**完成证据**：R18/R34/R50 已完成官方来源/SHA-256、共 2,041 个 tensor 的目标感知转换与逐值校验、受控加载，以及单线程 CPU/float32 的分层 eval、确定性缩减训练 loss 和整体梯度方向验收。批量 CLI 已覆盖目录/glob、自动输出命名、失败后继续、JSON 汇总和原子发布；R18 低内存严格转换为 571/571，峰值 RSS 观测为 `925,780 KiB`。R50 后处理保留 2/300 个 top-k 离散边界记录。当时移交给 M3 的 optimizer LR multiplier 缺口已在 M3 阶段 1 修复。
 
 **Exit criteria**: 三个官方变体均有可重复转换命令、映射报告、加载结果和分层数值报告。
 
+**验收记录**：2026-07-18 本机验证通过；默认测试 `144 passed, 3 skipped`，完整证据见 M2 执行计划。
+
 ## Milestone 3 — 训练、评估与恢复可用（P0）
 
-- [ ] 验证 R18 完整 1 epoch 训练和 COCO val2017 评估。
-- [ ] 核对 optimizer 参数组、weight decay 排除、warmup/cosine step 单位、梯度裁剪与 EMA 顺序。
-- [ ] 验证 AMP 与 float32 的 loss/梯度有限性，记录 scaler 溢出与跳步。
-- [ ] 验证 checkpoint 恢复包含 model、EMA、optimizer、scheduler、scaler、epoch/global-step 和 RNG 状态。
-- [ ] 对比连续训练与中断恢复后紧接的 LR、loss 和参数更新。
-- [ ] 在至少 2 GPU 上验证 DDP sampler、SyncBN、loss reduce、梯度累积和 rank-0 写入。
+- [x] 验证 R18 完整 1 epoch 训练和 COCO val2017 评估。
+- [x] 核对 optimizer 参数组、ResNet `lr_mult_list=0.1`、weight decay 规则、warmup/decay step 单位、梯度裁剪与 EMA 顺序。
+- [x] 在真实 COCO 短训练中验证 AMP 与 float32 的 loss/梯度有限性，记录 scaler 溢出与跳步。
+- [x] 验证 checkpoint 恢复包含 model、EMA、optimizer、scheduler、scaler、epoch/global-step 和 RNG 状态。
+- [x] 对比连续训练与中断恢复后紧接的 LR、loss 和参数更新。
+- [x] 在 2 GPU 上验证 DDP sampler、SyncBN、同步梯度/scaler 和 rank-0 checkpoint 写入。
+- [x] 实现并验证梯度累积与 DDP `no_sync()` 边界。
+
+**完成证据**：R18 以 2-GPU AMP、每卡 batch 8 完成 train2017 1 epoch，checkpoint 记录 7319 次有效更新并通过完整 val2017，bbox AP/AP50/AP75 为 `0.468/0.643/0.504`。真实双卡短训练另行验证 `accumulate_steps=2`、DDP `no_sync()`、跨 rank 日志 loss 均值、EMA、非整窗口和 rank-0 应用日志/checkpoint。该结论只关闭训练库可用性，不代替 M4 的标准 schedule、多 seed 和 Paddle AP 对照。
 
 **Exit criteria**: Train/Eval CLI 能用真实配置稳定运行，并有恢复一致性与 DDP 集成测试。
 
+**验收记录**：2026-07-18 本机验证通过；隐藏 GPU 的默认测试 `165 passed, 8 skipped`，CUDA 定向文件另行 `8 passed`。
+
 ## Milestone 4 — COCO 精度与稳定性对齐（P1）
 
+**执行计划**：[`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)。先完成同一官方 R18 checkpoint 的 Paddle/PyTorch 完整 val2017 gate，再启动 72 epoch 与多 seed 长训。
+
+**当前进度**：R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过：Paddle/PyTorch 精确 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 全部匹配。显式 seed、官方 ImageNet R18-vd backbone 初始化、2-GPU AMP+EMA 协议、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已通过定向测试与真实双卡烟测；下一步为 seed 0 的 72 epoch 训练，当前不声称多 seed 或 R34/R50 已完成。
+
 - [ ] 对 R18 完成标准训练 schedule，保存环境、命令、配置、日志和 checkpoint。
-- [ ] 与对应 Paddle 基线比较 AP/AP50/AP75/APs/APm/APl，目标绝对差不超过 `0.5 AP`。
+- [x] 与对应 Paddle 基线比较 AP/AP50/AP75/APs/APm/APl；R18 同设备主 AP 绝对差 `1.65599e-7`，通过 `0.5 AP` 目标。
 - [ ] 在 R18 通过后依次验证 R34 和 R50，不在未定位数值差异时同时展开多变体训练。
 - [ ] 至少使用 3 个 seed 记录均值和方差；发布验收扩展到 5 个 seed。
 - [ ] 生成 `docs/reports/accuracy-validation.md`，明确区分训练误差和框架实现缺陷。

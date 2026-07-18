@@ -13,6 +13,9 @@
 
 ## 当前文档
 
+- [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：当前执行计划，先做 R18 官方同权重完整 val2017 gate，再进入 72 epoch、多 seed 和 R34/R50。
+- [M3——训练、评估与恢复验收计划](2026-07-18-m3-training-evaluation-recovery.md)：已完成，覆盖 optimizer/LR、完整 COCO epoch/val、恢复、AMP/EMA、DDP、loss reduce 与梯度累积。
+- [M2——官方 checkpoint 转换与分层数值对齐计划](2026-07-18-m2-official-checkpoint-alignment.md)：已完成的 M2 计划，覆盖三变体官方权重、分层数值、批量失败隔离和受控内存转换。
 - [M1——R18 最小训练链迁移计划](2026-07-18-m1-minimal-training-chain.md)：已完成的 M1 计划，覆盖 config、最小 COCO batch、loss、backward、optimizer 和短训练验收证据。
 - [2026-07-18 迁移进度快照](2026-07-18-migration-status.md)：对历史 `specs/` 记录与当前代码的核验结果。
 - [仓库迁移路线图](../../ROADMAP.md)：未完成工作的唯一顶层大纲。

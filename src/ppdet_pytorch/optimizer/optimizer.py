@@ -174,7 +174,7 @@ class PiecewiseDecay(object):
         self.values = values
         self.use_warmup = use_warmup
 
-    def build_scheduler(self, optimizer, step_per_epoch):
+    def build_scheduler(self, optimizer, step_per_epoch, step_offset=0):
         """
         Build piecewise decay scheduler.
 
@@ -185,8 +185,12 @@ class PiecewiseDecay(object):
         Returns:
             PiecewiseLRScheduler instance
         """
-        # Compute milestones in steps
-        milestones = [int(step_per_epoch) * i for i in self.milestones]
+        # Paddle milestones are absolute global steps. SequentialLR starts the
+        # decay scheduler at zero after warmup, so remove that offset here.
+        milestones = [
+            max(0, int(step_per_epoch) * i - int(step_offset))
+            for i in self.milestones
+        ]
 
         # Prepare gamma factors
         if self.values is not None:
@@ -350,15 +354,26 @@ class LearningRate(object):
         # Build warmup scheduler
         warmup_scheduler = warmup_config.build_scheduler(optimizer, step_per_epoch)
 
-        # Build decay scheduler
-        decay_scheduler = decay_config.build_scheduler(optimizer, step_per_epoch)
-
         # Calculate warmup steps for milestone
         if hasattr(warmup_config, 'epochs') and warmup_config.epochs is not None:
             warmup_steps = warmup_config.epochs * step_per_epoch
         else:
             warmup_steps = getattr(warmup_config, 'steps', 500)
         warmup_steps = max(warmup_steps, 1)
+
+        # Build decay scheduler. Piecewise milestones are absolute global
+        # steps in Paddle configs, while cosine progress starts after warmup.
+        if isinstance(decay_config, PiecewiseDecay):
+            decay_scheduler = decay_config.build_scheduler(
+                optimizer,
+                step_per_epoch,
+                step_offset=warmup_steps,
+            )
+        else:
+            decay_scheduler = decay_config.build_scheduler(
+                optimizer,
+                step_per_epoch,
+            )
 
         # Combine using SequentialLR
         return SequentialLR(optimizer, [warmup_scheduler, decay_scheduler], milestones=[warmup_steps])
@@ -440,11 +455,12 @@ class OptimizerBuilder():
         if optim_type != 'AdamW':
             optim_args['weight_decay'] = weight_decay
 
-        # Build parameter groups if specified
+        # Explicit config groups take precedence. Otherwise preserve Paddle's
+        # per-parameter learning-rate multipliers as PyTorch parameter groups.
         if 'param_groups' in optim_args:
             params = self._build_param_groups(model, optim_args.pop('param_groups'))
         else:
-            params = [p for p in model.parameters() if p.requires_grad]
+            params = self._build_lr_multiplier_groups(model, learning_rate)
 
         # Create PyTorch optimizer
         optimizer = self._create_optimizer(optim_type, params, learning_rate, optim_args)
@@ -454,6 +470,40 @@ class OptimizerBuilder():
             optimizer._grad_clip = grad_clip
 
         return optimizer
+
+    def _build_lr_multiplier_groups(self, model, learning_rate):
+        """Group trainable parameters by their model-declared LR multiplier."""
+        grouped_params = {}
+        for param in model.parameters():
+            if not param.requires_grad:
+                continue
+            multiplier = float(
+                getattr(param, '_optimizer_lr_multiplier', 1.0))
+            if not math.isfinite(multiplier) or multiplier < 0:
+                raise ValueError(
+                    'Learning-rate multiplier must be finite and non-negative, '
+                    'but got {}'.format(multiplier))
+            grouped_params.setdefault(multiplier, []).append(param)
+
+        if not grouped_params:
+            raise ValueError('Optimizer received no trainable parameters')
+        if set(grouped_params) == {1.0}:
+            return grouped_params[1.0]
+
+        # Keep the default-LR group first so trainer logging continues to
+        # report the configured base LR when such parameters exist.
+        multipliers = sorted(grouped_params)
+        if 1.0 in grouped_params:
+            multipliers.remove(1.0)
+            multipliers.insert(0, 1.0)
+        return [
+            {
+                'params': grouped_params[multiplier],
+                'lr': learning_rate * multiplier,
+                'lr_multiplier': multiplier,
+            }
+            for multiplier in multipliers
+        ]
 
     def _build_param_groups(self, model, param_group_configs):
         """Build parameter groups with different hyperparameters."""

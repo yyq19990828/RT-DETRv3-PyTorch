@@ -232,16 +232,24 @@ class PPYOLOEHead(nn.Module):
         for i, stride in enumerate(self.fpn_strides):
             if feats is not None:
                 _, _, h, w = feats[i].shape
+                device = feats[i].device
             else:
                 h = int(self.eval_size[0] / stride)
                 w = int(self.eval_size[1] / stride)
+                device = None
 
-            shift_x = torch.arange(end=w, dtype=dtype) + self.grid_cell_offset
-            shift_y = torch.arange(end=h, dtype=dtype) + self.grid_cell_offset
+            shift_x = (
+                torch.arange(end=w, dtype=dtype, device=device)
+                + self.grid_cell_offset)
+            shift_y = (
+                torch.arange(end=h, dtype=dtype, device=device)
+                + self.grid_cell_offset)
             shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
             anchor_point = torch.stack([shift_x, shift_y], dim=-1)
             anchor_points.append(anchor_point.reshape(-1, 2))
-            stride_tensor.append(torch.full((h * w, 1), stride, dtype=dtype))
+            stride_tensor.append(
+                torch.full(
+                    (h * w, 1), stride, dtype=dtype, device=device))
 
         anchor_points = torch.cat(anchor_points)
         stride_tensor = torch.cat(stride_tensor)
@@ -307,15 +315,19 @@ class PPYOLOEHead(nn.Module):
         if alpha > 0:
             alpha_t = alpha * label + (1 - alpha) * (1 - label)
             weight = weight * alpha_t
-        loss = F.binary_cross_entropy(score, label, reduction='none')
-        return (loss * weight).sum()
+        with torch.autocast(device_type=score.device.type, enabled=False):
+            loss = F.binary_cross_entropy(
+                score.float(), label.float(), reduction='none')
+        return (loss * weight.float()).sum()
 
     @staticmethod
     def _varifocal_loss(pred_score, gt_score, label, alpha=0.75, gamma=2.0):
         """Varifocal Loss"""
         weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        loss = F.binary_cross_entropy(pred_score, gt_score, reduction='none')
-        return (loss * weight).sum()
+        with torch.autocast(device_type=pred_score.device.type, enabled=False):
+            loss = F.binary_cross_entropy(
+                pred_score.float(), gt_score.float(), reduction='none')
+        return (loss * weight.float()).sum()
 
     def _bbox_decode(self, anchor_points, pred_dist):
         """Decode bbox from distribution"""

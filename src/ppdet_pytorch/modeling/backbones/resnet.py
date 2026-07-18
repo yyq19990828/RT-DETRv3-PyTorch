@@ -33,6 +33,7 @@ from torchvision.ops import DeformConv2d
 
 from ...core.workspace import register, serializable
 from .name_adapter import NameAdapter
+from ..batch_norm import ContiguousGradBatchNorm2d
 from ..shape_spec import ShapeSpec
 
 __all__ = ['ResNet', 'Res5Head', 'Blocks', 'BasicBlock', 'BottleNeck']
@@ -122,16 +123,31 @@ class ConvNormLayer(nn.Module):
 
         # Normalization layer
         if norm_type in ['sync_bn', 'bn']:
-            self.norm = nn.BatchNorm2d(
+            self.norm = ContiguousGradBatchNorm2d(
                 ch_out,
                 momentum=0.1,  # PyTorch default, equivalent to Paddle
                 eps=1e-05)
+
+        # Paddle's ParamAttr carries the stage learning-rate multiplier on the
+        # parameter itself. Keep the same information for OptimizerBuilder to
+        # turn into explicit PyTorch parameter groups.
+        for param in self.conv.parameters():
+            param._optimizer_lr_multiplier = float(lr)
+        for param in self.norm.parameters():
+            param._optimizer_lr_multiplier = float(lr)
 
         # Freeze normalization parameters if required
         self.freeze_norm = freeze_norm
         if freeze_norm:
             for param in self.norm.parameters():
                 param.requires_grad = False
+            self.norm.eval()
+
+    def train(self, mode=True):
+        super().train(mode)
+        if self.freeze_norm:
+            self.norm.eval()
+        return self
 
     def forward(self, inputs):
         """Forward pass"""

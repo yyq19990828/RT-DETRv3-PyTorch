@@ -274,25 +274,30 @@ class DETRLoss(nn.Module):
         return loss
 
     def _get_index_updates(self, num_query_objects, target, match_indices):
+        index_device = target[0].device
+        match_indices = [
+            (src.to(index_device), dst)
+            for src, dst in match_indices
+        ]
         batch_idx = torch.cat([
             torch.full_like(src, i) for i, (src, _) in enumerate(match_indices)
         ])
         src_idx = torch.cat([src for (src, _) in match_indices])
         src_idx += (batch_idx * num_query_objects)
         target_assign = torch.cat([
-            torch.index_select(t, 0, dst)
+            torch.index_select(t, 0, dst.to(t.device))
             for t, (_, dst) in zip(target, match_indices)
         ])
         return src_idx.unsqueeze(-1), target_assign
 
     def _get_src_target_assign(self, src, target, match_indices):
         src_assign = torch.cat([
-            torch.index_select(t, 0, I) if len(I) > 0 else t.new_zeros(
+            torch.index_select(t, 0, I.to(t.device)) if len(I) > 0 else t.new_zeros(
                 [0, t.shape[-1]])
             for t, (I, _) in zip(src, match_indices)
         ])
         target_assign = torch.cat([
-            torch.index_select(t, 0, J) if len(J) > 0 else t.new_zeros(
+            torch.index_select(t, 0, J.to(t.device)) if len(J) > 0 else t.new_zeros(
                 [0, t.shape[-1]])
             for t, (_, J) in zip(target, match_indices)
         ])
@@ -509,14 +514,16 @@ class DINOLoss(DETRLoss):
         for i in range(len(labels)):
             num_gt = len(labels[i])
             if num_gt > 0:
-                gt_idx = torch.arange(num_gt)
+                gt_idx = torch.arange(num_gt, device=labels[i].device)
                 gt_idx = gt_idx.repeat(dn_num_group)
                 assert len(dn_positive_idx[i]) == len(gt_idx)
-                dn_match_indices.append((dn_positive_idx[i], gt_idx))
+                dn_match_indices.append((
+                    dn_positive_idx[i].to(labels[i].device), gt_idx))
             else:
                 dn_match_indices.append((torch.zeros(
-                    [0], dtype=torch.int64), torch.zeros(
-                        [0], dtype=torch.int64)))
+                    [0], dtype=torch.int64, device=labels[i].device),
+                    torch.zeros(
+                        [0], dtype=torch.int64, device=labels[i].device)))
         return dn_match_indices
 
 @register
@@ -605,14 +612,16 @@ class DINOv3Loss(DETRLoss):
         for i in range(len(labels)):
             num_gt = len(labels[i])
             if num_gt > 0:
-                gt_idx = torch.arange(num_gt)
+                gt_idx = torch.arange(num_gt, device=labels[i].device)
                 gt_idx = gt_idx.repeat(dn_num_group)
                 assert len(dn_positive_idx[i]) == len(gt_idx)
-                dn_match_indices.append((dn_positive_idx[i], gt_idx))
+                dn_match_indices.append((
+                    dn_positive_idx[i].to(labels[i].device), gt_idx))
             else:
                 dn_match_indices.append((torch.zeros(
-                    [0], dtype=torch.int64), torch.zeros(
-                        [0], dtype=torch.int64)))
+                    [0], dtype=torch.int64, device=labels[i].device),
+                    torch.zeros(
+                        [0], dtype=torch.int64, device=labels[i].device)))
         return dn_match_indices
 
 @register

@@ -24,6 +24,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..batch_norm import ContiguousGradBatchNorm2d
+
 __all__ = ['ConvBNLayer', 'RepVggBlock']
 
 
@@ -71,7 +73,7 @@ class ConvBNLayer(nn.Module):
             groups=groups,
             bias=False)
 
-        self.bn = nn.BatchNorm2d(ch_out)
+        self.bn = ContiguousGradBatchNorm2d(ch_out)
         self.act = get_act_fn(act)
 
     def forward(self, x):

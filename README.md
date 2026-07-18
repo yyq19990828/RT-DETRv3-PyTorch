@@ -32,12 +32,19 @@ Paddle 及其专用依赖不属于核心运行依赖，只在 `dev` 附加依赖
 ```bash
 # 训练
 uv run rtdetrv3-train \
-  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml
+  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
+  --seed 0
 
 # 评估
 uv run rtdetrv3-eval \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth
+
+# 评估训练 checkpoint 中的 EMA，并保留 COCO prediction JSON
+uv run rtdetrv3-eval \
+  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
+  --checkpoint path/to/model.pth --use-ema \
+  --output-dir output/eval
 
 # 推理
 uv run rtdetrv3-infer \

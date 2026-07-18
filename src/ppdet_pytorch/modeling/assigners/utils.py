@@ -64,13 +64,21 @@ def pad_gt(gt_labels, gt_bboxes, gt_scores=None):
         batch_size = len(gt_bboxes)
         # pad label and bbox
         pad_gt_labels = torch.zeros(
-            [batch_size, num_max_boxes, 1], dtype=gt_labels[0].dtype)
+            [batch_size, num_max_boxes, 1],
+            dtype=gt_labels[0].dtype,
+            device=gt_labels[0].device)
         pad_gt_bboxes = torch.zeros(
-            [batch_size, num_max_boxes, 4], dtype=gt_bboxes[0].dtype)
+            [batch_size, num_max_boxes, 4],
+            dtype=gt_bboxes[0].dtype,
+            device=gt_bboxes[0].device)
         pad_gt_scores = torch.zeros(
-            [batch_size, num_max_boxes, 1], dtype=gt_bboxes[0].dtype)
+            [batch_size, num_max_boxes, 1],
+            dtype=gt_bboxes[0].dtype,
+            device=gt_bboxes[0].device)
         pad_gt_mask = torch.zeros(
-            [batch_size, num_max_boxes, 1], dtype=gt_bboxes[0].dtype)
+            [batch_size, num_max_boxes, 1],
+            dtype=gt_bboxes[0].dtype,
+            device=gt_bboxes[0].device)
         for i, (label, bbox) in enumerate(zip(gt_labels, gt_bboxes)):
             if len(label) > 0 and len(bbox) > 0:
                 pad_gt_labels[i, :len(label)] = label
@@ -209,9 +217,14 @@ def generate_anchors_for_grid_cell(feats,
     stride_tensor = []
     for feat, stride in zip(feats, fpn_strides):
         _, _, h, w = feat.shape
+        device = feat.device
         cell_half_size = grid_cell_size * stride * 0.5
-        shift_x = (torch.arange(end=w, dtype=dtype) + grid_cell_offset) * stride
-        shift_y = (torch.arange(end=h, dtype=dtype) + grid_cell_offset) * stride
+        shift_x = (
+            torch.arange(end=w, dtype=dtype, device=device) + grid_cell_offset
+        ) * stride
+        shift_y = (
+            torch.arange(end=h, dtype=dtype, device=device) + grid_cell_offset
+        ) * stride
         shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
         anchor = torch.stack(
             [
@@ -226,7 +239,10 @@ def generate_anchors_for_grid_cell(feats,
         num_anchors_list.append(len(anchors[-1]))
         stride_tensor.append(
             torch.full(
-                [num_anchors_list[-1], 1], stride, dtype=dtype))
+                [num_anchors_list[-1], 1],
+                stride,
+                dtype=dtype,
+                device=device))
     anchors = torch.cat(anchors)
     anchors = anchors.detach()
     anchor_points = torch.cat(anchor_points)

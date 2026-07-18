@@ -158,7 +158,7 @@ class LogPrinter(Callback):
             if step_id % self.log_iter == 0:
                 # Calculate ETA
                 batch_time = status.get('batch_time', 0)
-                total_epochs = getattr(self.trainer, 'epochs', 72)
+                total_epochs = getattr(self.trainer, 'end_epoch', 72)
                 eta_steps = (total_epochs - epoch_id) * steps_per_epoch - step_id
                 eta_sec = eta_steps * batch_time
                 eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
@@ -227,44 +227,44 @@ class Checkpointer(Callback):
             save_interval: Save checkpoint every N epochs
         """
         super(Checkpointer, self).__init__(trainer)
-        self.save_interval = save_interval
+        self.save_interval = int(save_interval)
+        if self.save_interval < 1:
+            raise ValueError("save_interval must be at least 1")
         self.save_dir = getattr(trainer, 'save_dir', './output')
-        os.makedirs(self.save_dir, exist_ok=True)
+        if not dist.is_initialized() or dist.get_rank() == 0:
+            os.makedirs(self.save_dir, exist_ok=True)
 
     def on_epoch_end(self, status: Dict):
         """Save checkpoint at epoch end"""
-        # Only save on rank 0 in distributed training
-        if dist.is_initialized() and dist.get_rank() != 0:
-            return
-
         mode = status.get('mode', 'train')
         if mode != 'train':
             return
 
         epoch_id = status.get('epoch_id', 0)
-        total_epochs = getattr(self.trainer, 'epochs', 72)
+        total_epochs = getattr(self.trainer, 'end_epoch', 72)
 
         # Save at specified intervals or at the last epoch
         if (epoch_id + 1) % self.save_interval == 0 or epoch_id == total_epochs - 1:
             save_name = f"epoch_{epoch_id + 1}" if epoch_id != total_epochs - 1 else "model_final"
             save_path = os.path.join(self.save_dir, f"{save_name}.pth")
 
-            # Save checkpoint
-            checkpoint = {
-                'epoch': epoch_id + 1,
-                'model_state_dict': self.trainer.model.state_dict(),
-                'optimizer_state_dict': self.trainer.optimizer.state_dict(),
-                'loss': status.get('loss', 0),
-            }
-
-            if self.trainer.scheduler is not None:
-                checkpoint['scheduler_state_dict'] = self.trainer.scheduler.state_dict()
-
-            if hasattr(self.trainer, 'scaler') and self.trainer.scaler is not None:
-                checkpoint['scaler_state_dict'] = self.trainer.scaler.state_dict()
-
-            torch.save(checkpoint, save_path)
-            logger.info(f"Saved checkpoint: {save_path}")
+            saved = save_checkpoint(
+                model=self.trainer.model,
+                optimizer=self.trainer.optimizer,
+                epoch=epoch_id + 1,
+                iteration=getattr(self.trainer, 'global_step', 0),
+                save_path=save_path,
+                config=self.trainer._convert_cfg_to_dict(self.trainer.cfg),
+                scheduler=getattr(self.trainer, 'lr', None),
+                scaler=getattr(self.trainer, 'scaler', None),
+                ema=(self.trainer.ema
+                     if getattr(self.trainer, 'use_ema', False) else None),
+                sampler_epoch=epoch_id + 1,
+                gather_distributed_rng=True,
+                loss=status.get('loss', 0),
+            )
+            if saved:
+                logger.info(f"Saved checkpoint: {save_path}")
 
 
 class BestModelSaver(Callback):
@@ -283,7 +283,8 @@ class BestModelSaver(Callback):
         self.mode = mode
         self.best_metric = -float('inf') if mode == 'max' else float('inf')
         self.save_dir = getattr(trainer, 'save_dir', './output')
-        os.makedirs(self.save_dir, exist_ok=True)
+        if not dist.is_initialized() or dist.get_rank() == 0:
+            os.makedirs(self.save_dir, exist_ok=True)
 
     def on_epoch_end(self, status: Dict):
         """Check and save best model"""
@@ -314,18 +315,20 @@ class BestModelSaver(Callback):
         if is_best:
             save_path = os.path.join(self.save_dir, "best_model.pth")
 
-            # Save checkpoint
-            checkpoint = {
-                'epoch': status.get('epoch_id', 0) + 1,
-                'model_state_dict': self.trainer.model.state_dict(),
-                'optimizer_state_dict': self.trainer.optimizer.state_dict(),
-                f'best_{self.metric_name}': self.best_metric,
-            }
-
-            if self.trainer.scheduler is not None:
-                checkpoint['scheduler_state_dict'] = self.trainer.scheduler.state_dict()
-
-            torch.save(checkpoint, save_path)
+            save_checkpoint(
+                model=self.trainer.model,
+                optimizer=self.trainer.optimizer,
+                epoch=status.get('epoch_id', 0) + 1,
+                iteration=getattr(self.trainer, 'global_step', 0),
+                save_path=save_path,
+                config=self.trainer._convert_cfg_to_dict(self.trainer.cfg),
+                best_metric=self.best_metric,
+                scheduler=getattr(self.trainer, 'lr', None),
+                scaler=getattr(self.trainer, 'scaler', None),
+                ema=(self.trainer.ema
+                     if getattr(self.trainer, 'use_ema', False) else None),
+                sampler_epoch=status.get('epoch_id', 0) + 1,
+            )
             logger.info(f"Saved best model with {self.metric_name}: {self.best_metric:.4f}")
 
 

@@ -15,11 +15,74 @@ import pytest
 import torch
 import torch.nn as nn
 from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
+    RTDETRTransformerv3,
     TransformerDecoderLayer,
     TransformerDecoder,
     MultiHeadAttention
 )
 from ppdet_pytorch.modeling.transformers.utils import MLP
+
+
+class _AttentionMaskCapture(nn.Module):
+    def forward(
+        self,
+        tgt,
+        ref_points_unact,
+        memory,
+        memory_spatial_shapes,
+        memory_level_start_index,
+        bbox_head,
+        score_head,
+        query_pos_head,
+        attn_mask=None,
+        memory_mask=None,
+        query_pos_head_inv_sig=False,
+    ):
+        self.attn_mask = attn_mask.detach().clone()
+        batch_size, num_queries = tgt.shape[:2]
+        num_classes = score_head[0].out_features
+        return (
+            tgt.new_zeros((1, batch_size, num_queries, 4)),
+            tgt.new_zeros((1, batch_size, num_queries, num_classes)),
+        )
+
+
+def test_training_attention_mask_blocks_cross_group_queries():
+    transformer = RTDETRTransformerv3(
+        num_classes=2,
+        hidden_dim=16,
+        num_queries=2,
+        backbone_feat_channels=[16],
+        feat_strides=[8],
+        num_levels=1,
+        nhead=4,
+        num_decoder_layers=1,
+        dim_feedforward=32,
+        num_denoising=1,
+        label_noise_ratio=0.0,
+        box_noise_scale=0.0,
+        num_noises=0,
+        num_noise_queries=[],
+        o2m_branch=True,
+        num_queries_o2m=2,
+    )
+    capture = _AttentionMaskCapture()
+    transformer.decoder = capture
+    transformer.train()
+
+    transformer(
+        [torch.randn(1, 16, 2, 2)],
+        gt_meta={
+            "gt_bbox": [torch.tensor([[0.5, 0.5, 0.2, 0.2]])],
+            "gt_class": [torch.tensor([[1]], dtype=torch.int64)],
+        },
+    )
+
+    # Main group: two denoising queries + two matching queries. O2M: two.
+    assert capture.attn_mask.shape == (6, 6)
+    assert not capture.attn_mask[:4, 4:].any()
+    assert not capture.attn_mask[4:, :4].any()
+    assert capture.attn_mask[4:, 4:].all()
 
 
 class TestMultiHeadAttention:

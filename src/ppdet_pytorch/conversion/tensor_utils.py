@@ -5,7 +5,7 @@ with support for shape validation and dtype detection.
 """
 
 import logging
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -208,7 +208,8 @@ def should_transpose_weight(param_name: str) -> bool:
 def convert_paddle_to_torch_tensor(
     paddle_tensor,
     param_name: str = "unknown",
-    auto_transpose: bool = True
+    auto_transpose: bool = True,
+    transpose: Optional[bool] = None,
 ):
     """Convert PaddlePaddle tensor to PyTorch tensor (full pipeline)
 
@@ -216,6 +217,8 @@ def convert_paddle_to_torch_tensor(
         paddle_tensor: PaddlePaddle tensor
         param_name: Parameter name (for logging)
         auto_transpose: Automatically transpose Linear layer weights if True
+        transpose: Explicit target-aware transpose decision. When provided,
+            this takes priority over name-based detection.
 
     Returns:
         PyTorch tensor
@@ -229,7 +232,12 @@ def convert_paddle_to_torch_tensor(
         logger.debug(f"Converted {param_name} to NumPy: shape={numpy_array.shape}, dtype={numpy_array.dtype}")
 
         # Step 2: Check if this is a Linear layer weight that needs transposition
-        if auto_transpose and should_transpose_weight(param_name) and numpy_array.ndim == 2:
+        transpose_weight = (
+            transpose
+            if transpose is not None
+            else auto_transpose and should_transpose_weight(param_name)
+        )
+        if transpose_weight and numpy_array.ndim == 2:
             logger.debug(f"Transposing Linear layer weight: {param_name} from {numpy_array.shape} to {numpy_array.T.shape}")
             numpy_array = numpy_array.T  # Transpose from (in, out) to (out, in)
 

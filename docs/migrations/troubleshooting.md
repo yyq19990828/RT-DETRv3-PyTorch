@@ -47,6 +47,12 @@ state_dict = paddle.load(str(checkpoint_path))
 uv run --no-sync python -c "from ppdet_pytorch.core.workspace import load_config; print(load_config('configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml').architecture)"
 ```
 
+## 输出目录中的 config.yaml 只有 `{}`
+
+先检查配置对象是否是 `dict`/`Mapping` 子类。某些配置容器同时具有空 `__dict__`；如果序列化代码先判断 `hasattr(obj, '__dict__')`，会丢掉实际 mapping 项并输出空配置。转换顺序应先处理 `Mapping`，再处理普通对象属性，同时把 tuple、`Path`、`torch.device` 和 NumPy scalar 转成 YAML 可表示类型。
+
+不要覆盖已完成训练的空原始快照后再声称它是运行时证据。应保留缺陷事实、记录完整 CLI overrides，并把事后重建文件明确命名为 reconstructed/effective config。修复后用新的真实训练直接检查 YAML 字节数和 checkpoint `config` 项数。
+
 ## 测试报旧 Registry、builder 或 `targets=` API 错误
 
 先确认测试是否来自 `tests/legacy/`。该目录保留迁移早期的历史用例，不代表当前公开 API，也不参与默认 pytest 收集。需要恢复覆盖时，应根据当前实现重写用例。
@@ -79,8 +85,53 @@ uv run --extra dev pytest
 5. 从 backbone 开始逐层比较激活，找到第一个超出容差的节点，不要只对比最终预测。
 6. 核对 BatchNorm running statistics、卷积权重排布、线性层转置和参数名映射。
 
+## eval 对齐但训练 loss 分歧
+
+先检查只在训练态生成的 attention mask、denoising query 和多分组 query。RT-DETRv3 的 Paddle/PyTorch decoder 都把布尔 mask 的 `True` 解释为“允许注意”，因此多分组复合 mask 必须先初始化为全 `False`，再只把每个组的对角块填为 `True`。如果从全 `True` 开始，组间 query 会错误地相互注意；eval 不生成这张训练 mask，所以完整 eval 对齐也发现不了该问题。
+
+2026-07-18 的 R18 对齐中，正是这个初始化错误导致 30 个训练 loss 分项出现分歧。修正为 block-diagonal mask 后，同一官方 checkpoint 和确定性缩减训练配置下，30 项 loss 全部通过 `rtol=1e-4, atol=1e-5`。对应单元测试直接断言主分组与 O2M 分组的交叉块全为 `False`，避免只靠最终 loss 间接覆盖。
+
+如果差异只出现在 `freeze_norm=True` 的 backbone，还要分别检查“参数是否求导”和“前向使用哪组统计”。Paddle ResNet 的冻结 BN 会使用全局 running statistics；PyTorch 仅设置 `requires_grad=False` 后，外层 `model.train()` 仍会把 BN 切到 batch statistics。R50 曾因此出现 eval 完全对齐、训练 backbone 大幅分歧。当前 ResNet 冻结 BN 会在训练态保持 eval/global-statistics 模式，并有直接回归。
+
+## 前向和 loss 对齐但完整梯度分歧
+
+先在边界 tensor 上使用完全相同的上游梯度，不要直接从最终参数梯度猜根因。R18 排查中，`_get_decoder_input`、Conv2D 和 BatchNorm 分别隔离时都通过；真正的第一个分歧是 BatchNorm 收到 NCHW → NLC 重排反传的非连续 grad-output。其逻辑数值与 contiguous 梯度相同，但 PyTorch input-gradient 明显不同。
+
+当前 `ContiguousGradBatchNorm2d` 用 backward-pre-hook 将 grad-output 规范为 contiguous，不改变参数名、state_dict 或前向结果。单元测试用同一输入和结构化非连续梯度对照标准 contiguous BatchNorm；官方三变体可选用例进一步检查整体梯度相对 L2、余弦和符号分歧率，其中 R18/R34/R50 分别比较 384/462/445 个有梯度参数。
+
+如果梯度方向已经接近但 AdamW 更新仍差异很大，再检查参数级 LR multiplier。Paddle `ParamAttr(learning_rate=...)` 不会自动迁移到 PyTorch `Parameter`；必须由 optimizer param groups 显式表达。不要把这种 10 倍 LR 差异误判为 AdamW 浮点误差。
+
+## 只有少量后处理 label 或 box 不一致
+
+先比较后处理前的 logits/boxes，再看 top-k 边界候选的分数 margin。top-k 和类别索引是离散操作；极小浮点差异可能替换一个边界候选，使按行比较的 label 与 box 同时跳变。此时应明确统计边界候选数量，继续验收全部 score、`bbox_num` 和 label 稳定行的坐标，而不是无限放宽所有坐标的容差。
+
+R50 官方权重回归中，decoder box 仅 1/1200 个值在 `rtol=1e-4` 下超差，最大绝对误差 `3.95e-5`；使用记录过的 `rtol=3e-4` 后，中间输出通过。后处理 300 个 label 中仍有 2 个边界差异，但全部 score、298 个稳定候选坐标和 `bbox_num` 通过。该证据属于“观察到的离散边界”，不能写成逐候选完全一致。
+
 ## 数值差异只出现在 GPU 或 AMP
 
 不同 CUDA/cuDNN 算法、TF32、AMP 和并行归约顺序都可以放大差异。先建立 CPU/float32 基线，再分别开启 CUDA、TF32 和 AMP，并为每种精度设定独立容差。
 
 如果差异只在续训后出现，还需核对 scheduler 的步进单位和调用顺序，以及 optimizer、EMA、GradScaler、全局步数和随机数状态是否完整恢复。详见[训练与验证经验](training-and-validation.md)。
+
+## CUDA 训练报 CPU/GPU tensor 混用
+
+首先检查不带 `device=` 的 `torch.arange/full/zeros/tensor`，尤其是 anchor 生成、assigner batch index、空 GT 分支和 SciPy matcher 返回的索引。这些路径在 CPU 单测中不会报错，但会在真实 CUDA 前向的第一个索引或 bbox decode 处失败。
+
+修复原则是让创建点跟随语义来源：anchor/stride 跟随 feature，batch index 跟随 label，匹配索引跟随被索引 tensor。修复后应同时覆盖非空 GT 和空 GT CUDA 用例。
+
+## AMP 报 BCE 不安全或首步梯度 Inf
+
+- `binary_cross_entropy` 在 CUDA autocast 中会被 PyTorch 主动拒绝。如果模型接口已输出 sigmoid probability，将 BCE 局部置于 `autocast(enabled=False)` 并以 FP32 计算；不要在未改上游输出的情况下直接换成 `binary_cross_entropy_with_logits`。
+- GradScaler 的初始 scale 过高时，前几个 batch 可能出现 Inf gradient。在 `unscale_` 之后记录 gradient norm，并根据 scale 是否下降判断 optimizer 是否被跳过。跳过时不要推进 scheduler/global-step/EMA；非 AMP 或 scaler 未跳步时出现非有限梯度，仍应立即失败。
+
+## DDP 正常结束时警告未销毁 NCCL 进程组
+
+由 `torchrun` 启动的 CLI 应在 `finally` 中调用 `torch.distributed.destroy_process_group()`。这不替代 rank-0 checkpoint 和 barrier 语义，但可以避免正常退出时由进程析构隐式回收 NCCL 资源。
+
+如果 rank 1 仍重复输出应用日志，检查 logger 是否在 `init_process_group()` 前导入。此时 `dist.is_initialized()` 为假，但 `torchrun` 已设置全局 `RANK`；logger 应使用该环境变量决定控制台 rank。非日志 rank 若没有任何 handler，Python 的 `logging.lastResort` 仍会把 WARNING 裸写到 stderr，因此还需要 `NullHandler`。PyTorch/NCCL 自身带 `[rankN]` 的原生 warning 不受应用 logger 控制，应与重复的应用日志区分。
+
+## 评估时官方转换权重缺少辅助头 anchor buffer
+
+`aux_o2m_head.anchor_points` 和 `aux_o2m_head.stride_tensor` 由 `eval_size` 与 stride 在构建时派生，官方 Paddle 权重转换结果可以不包含它们。Eval CLI 可以放行这两个已知 missing key，但必须对任何其他 missing/unexpected key 失败。不要为了跳过派生 buffer 而把整个评估权重加载改成无审计的宽松模式。
+
+评估入口还应使用当前 EvalReader 的 batch dict 和模型已后处理的 `bbox/bbox_num` 输出。如果入口仍假定 Dataset 返回 `(image, target)` 或模型返回 `pred_logits/pred_boxes`，说明它还停留在旧 API，即使单独的 postprocess 函数存在也不代表 CLI 可用。

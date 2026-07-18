@@ -59,6 +59,11 @@ def parse_args():
         help="If set True, enable continuous evaluation job."
         "This flag is only used for internal test.")
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Base random seed for reproducible training.")
+    parser.add_argument(
         "--amp",
         action='store_true',
         default=False,
@@ -123,8 +128,20 @@ def run(FLAGS, cfg):
         # init parallel environment if nranks > 1
         init_parallel_env()
 
-    if FLAGS.enable_ce:
-        set_random_seed(0)
+    seed = getattr(FLAGS, 'seed', None)
+    if seed is None and FLAGS.enable_ce:
+        seed = 0
+    if seed is not None:
+        rank = (
+            torch.distributed.get_rank()
+            if torch.distributed.is_initialized() else 0)
+        set_random_seed(seed + rank)
+        cfg['seed'] = seed
+        logger.info(
+            "Using base seed %s (process seed %s on rank %s)",
+            seed,
+            seed + rank,
+            rank)
 
     # build trainer
     # ssod_method = cfg.get('ssod_method', None)
@@ -155,7 +172,12 @@ def run(FLAGS, cfg):
         trainer.load_weights(cfg.pretrain_weights)
 
     # training
-    trainer.train(FLAGS.eval)
+    if FLAGS.eval:
+        logger.warning(
+            "Post-training evaluation is not implemented in the current "
+            "Trainer; run rtdetrv3-eval with the saved checkpoint instead."
+        )
+    trainer.train()
 
 
 def main():
@@ -205,7 +227,11 @@ def main():
     check.check_gpu(cfg.use_gpu)
     check.check_version()
 
-    run(FLAGS, cfg)
+    try:
+        run(FLAGS, cfg)
+    finally:
+        if torch.distributed.is_initialized():
+            torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":

@@ -65,6 +65,8 @@ class TestWeightConverter:
         assert checkpoint_file.framework == Framework.PADDLEPADDLE
         assert checkpoint_file.file_size_bytes > 0
         assert checkpoint_file.checksum is not None
+        assert checkpoint_file.checksum_algorithm == "sha256"
+        assert len(checkpoint_file.checksum) == 64
         assert Path(checkpoint_file.file_path).exists()
 
     def test_load_paddle_checkpoint_not_found(self, converter):
@@ -113,6 +115,26 @@ class TestWeightConverter:
         assert loaded["metadata"]["test_key"] == "test_value"
         assert len(loaded["model"]) == 2
 
+    def test_save_torch_checkpoint_preserves_existing_file_on_failure(
+        self, converter, monkeypatch, tmp_path
+    ):
+        output_path = tmp_path / "existing.pth"
+        output_path.write_bytes(b"existing")
+
+        def fail_after_partial_write(_checkpoint, temporary_path):
+            Path(temporary_path).write_bytes(b"partial")
+            raise RuntimeError("save failed")
+
+        monkeypatch.setattr(torch, "save", fail_after_partial_write)
+
+        with pytest.raises(ValueError, match="save failed"):
+            converter.save_torch_checkpoint(
+                {"weight": torch.ones(1)}, str(output_path)
+            )
+
+        assert output_path.read_bytes() == b"existing"
+        assert not list(tmp_path.glob(".existing.pth.*.tmp"))
+
     @pytest.mark.paddle
     def test_convert_tensor_basic(self, converter, paddle_module):
         """Test basic tensor conversion from PaddlePaddle to PyTorch
@@ -148,6 +170,26 @@ class TestWeightConverter:
         assert torch_tensor.shape == expected_shape
 
     @pytest.mark.paddle
+    def test_convert_tensor_honors_target_aware_square_linear_transpose(
+        self, converter, paddle_module
+    ):
+        paddle_tensor = paddle_module.to_tensor(
+            [[1.0, 2.0], [3.0, 4.0]]
+        )
+
+        torch_tensor = converter.convert_tensor(
+            paddle_tensor,
+            "square.weight",
+            expected_shape=(2, 2),
+            transpose=True,
+        )
+
+        assert torch.equal(
+            torch_tensor,
+            torch.tensor([[1.0, 3.0], [2.0, 4.0]]),
+        )
+
+    @pytest.mark.paddle
     def test_convert_tensor_shape_mismatch_strict(self, paddle_module):
         """Test tensor conversion fails in strict mode with shape mismatch"""
         config = ConversionConfig(strict_mode=True)
@@ -172,6 +214,25 @@ class TestWeightConverter:
         # Should return None in permissive mode
         result = converter.convert_tensor(paddle_tensor, "test_param", wrong_shape)
         assert result is None
+
+    @pytest.mark.paddle
+    def test_memory_efficient_conversion_releases_source_tensors(
+        self, paddle_module
+    ):
+        source_state = {
+            "first": paddle_module.to_tensor([1.0, 2.0]),
+            "second": paddle_module.to_tensor([3.0, 4.0]),
+        }
+        converter = WeightConverter(
+            ConversionConfig(memory_efficient_mode=True, batch_size=1)
+        )
+
+        converted, statistics = converter.convert_state_dict(source_state)
+
+        assert source_state == {}
+        assert statistics.converted_count == 2
+        assert torch.equal(converted["first"], torch.tensor([1.0, 2.0]))
+        assert torch.equal(converted["second"], torch.tensor([3.0, 4.0]))
 
     @pytest.mark.paddle
     def test_convert_state_dict_basic(

@@ -30,6 +30,7 @@ import torch.nn.functional as F
 
 from ...core.workspace import register, serializable
 from ..ops import get_act_fn
+from ..batch_norm import ContiguousGradBatchNorm2d
 from ..shape_spec import ShapeSpec
 from ..backbones.csp_darknet import BaseConv
 from ..backbones.cspresnet import RepVggBlock
@@ -211,7 +212,7 @@ class HybridEncoder(nn.Module):
                 nn.Sequential(
                     nn.Conv2d(
                         in_channel, hidden_dim, kernel_size=1, bias=False),
-                    nn.BatchNorm2d(hidden_dim)))
+                    ContiguousGradBatchNorm2d(hidden_dim)))
 
         # encoder transformer
         self.encoder = nn.ModuleList([

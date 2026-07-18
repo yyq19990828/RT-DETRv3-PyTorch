@@ -317,9 +317,37 @@ class TestFullConversion:
         assert session.statistics.skipped_count > 0 or session.warnings
 
     def test_batch_conversion_continues_on_failure(self, sample_checkpoint_path, tmp_path):
-        """Test batch conversion continues when individual file fails
+        """A broken checkpoint does not prevent later batch items from converting."""
+        broken_checkpoint = tmp_path / "broken.pdparams"
+        broken_checkpoint.write_bytes(b"not a paddle checkpoint")
+        output_directory = tmp_path / "converted"
+        mapping_directory = tmp_path / "mappings"
+        converter = WeightConverter(
+            ConversionConfig(
+                memory_efficient_mode=True,
+                batch_size=2,
+            )
+        )
 
-        T051: Integration test for batch conversion with one failure
-        Note: Batch conversion not yet implemented, test is placeholder
-        """
-        pytest.skip("Batch conversion not yet implemented (Phase 6)")
+        summary = converter.convert_batch(
+            input_paths=[str(broken_checkpoint), str(sample_checkpoint_path)],
+            output_directory=str(output_directory),
+            mapping_directory=str(mapping_directory),
+        )
+
+        assert summary.total_count == 2
+        assert summary.succeeded_count == 1
+        assert summary.failed_count == 1
+        failed, succeeded = summary.results
+        assert failed.status == ConversionStatus.FAILED
+        assert failed.error
+        assert not Path(failed.output_path).exists()
+        assert succeeded.status == ConversionStatus.COMPLETED
+        assert succeeded.converted_count > 0
+        assert Path(succeeded.output_path).is_file()
+        assert Path(succeeded.mapping_path).is_file()
+        assert summary.to_dict()["failed_count"] == 1
+
+        checkpoint = torch.load(succeeded.output_path, weights_only=False)
+        assert checkpoint["metadata"]["memory_efficient_mode"] is True
+        assert checkpoint["metadata"]["parameter_batch_size"] == 2

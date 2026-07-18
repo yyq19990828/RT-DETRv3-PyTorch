@@ -379,7 +379,7 @@ def main():
 
     # Load checkpoint
     logger.info(f"Loading checkpoint from {args.checkpoint}...")
-    load_checkpoint(model, args.checkpoint, strict=True)
+    load_checkpoint(args.checkpoint, model, strict=True)
 
     # Move to device and set to eval mode
     device = torch.device(args.device)

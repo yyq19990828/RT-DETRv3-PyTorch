@@ -5,6 +5,8 @@ PaddlePaddle and PyTorch formats.
 """
 
 import argparse
+import glob
+import json
 import logging
 import os
 import sys
@@ -28,22 +30,27 @@ def create_argument_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Basic conversion
+  # Target-aware conversion (recommended)
   python -m ppdet_pytorch.cli.convert \\
       --input pretrained_models/paddle/rtdetrv3_r50vd_6x_coco.pdparams \\
-      --output pretrained_models/pytorch/rtdetrv3_r50vd_6x_coco.pth
+      --output pretrained_models/pytorch/rtdetrv3_r50vd_6x_coco.pth \\
+      --config configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml
 
   # With mapping export
   python -m ppdet_pytorch.cli.convert \\
       --input input.pdparams \\
       --output output.pth \\
+      --config configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \\
       --save-mapping mapping.json
 
-  # Strict mode (fail on any mismatch)
+  # Explicitly skip target model validation
   python -m ppdet_pytorch.cli.convert \\
       --input input.pdparams \\
       --output output.pth \\
-      --strict
+      --no-validate
+
+  # Batch conversion for checkpoints sharing one model config
+  python -m ppdet_pytorch.cli.convert --batch --input 'checkpoints/*.pdparams' --output converted --config configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml --summary converted/summary.json
 
 For more information, see: docs/migrations/weight-conversion.md
         """
@@ -54,17 +61,29 @@ For more information, see: docs/migrations/weight-conversion.md
         "--input", "-i",
         type=str,
         required=True,
-        help="Path to source PaddlePaddle checkpoint file (.pdparams)"
+        help=(
+            "Source PaddlePaddle checkpoint, or a directory/glob when --batch is set"
+        )
     )
 
     parser.add_argument(
         "--output", "-o",
         type=str,
         required=True,
-        help="Path for output PyTorch checkpoint file (.pth)"
+        help="Output .pth file, or output directory when --batch is set"
     )
 
     # Optional arguments
+    parser.add_argument(
+        "--config", "-c",
+        type=str,
+        default=None,
+        help=(
+            "PyTorch model config used to build the target state_dict "
+            "(required unless --no-validate is set)"
+        )
+    )
+
     parser.add_argument(
         "--manual-mapping", "-m",
         type=str,
@@ -84,7 +103,7 @@ For more information, see: docs/migrations/weight-conversion.md
     mode_group.add_argument(
         "--strict",
         action="store_true",
-        help="Enable strict mode (fail on any shape mismatch or unmapped parameter)"
+        help="Fail on tensor conversion errors and shape mismatches",
     )
 
     mode_group.add_argument(
@@ -104,6 +123,32 @@ For more information, see: docs/migrations/weight-conversion.md
         "--force", "-f",
         action="store_true",
         help="Overwrite existing output files without confirmation"
+    )
+
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help="Convert every discovered input independently and continue on failures",
+    )
+
+    parser.add_argument(
+        "--summary",
+        type=str,
+        default=None,
+        help="Write a JSON batch summary (only valid with --batch)",
+    )
+
+    parser.add_argument(
+        "--memory-efficient",
+        action="store_true",
+        help="Release source tensors incrementally during conversion",
+    )
+
+    parser.add_argument(
+        "--parameter-batch-size",
+        type=int,
+        default=64,
+        help="Source tensors released between garbage-collection passes [default: 64]",
     )
 
     # Logging arguments
@@ -131,6 +176,31 @@ For more information, see: docs/migrations/weight-conversion.md
     return parser
 
 
+def discover_input_paths(input_value: str):
+    """Discover batch inputs from a file, directory, or glob pattern."""
+    input_path = Path(input_value)
+    if input_path.is_dir():
+        candidates = input_path.glob("*.pdparams")
+    elif glob.has_magic(input_value):
+        candidates = (Path(value) for value in glob.glob(input_value, recursive=True))
+    else:
+        candidates = [input_path]
+    return sorted(
+        (path for path in candidates if path.is_file() and path.suffix == ".pdparams"),
+        key=lambda path: str(path),
+    )
+
+
+def save_batch_summary(summary, output_path: str) -> None:
+    """Write a batch summary as UTF-8 JSON."""
+    summary_path = Path(output_path)
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(
+        json.dumps(summary.to_dict(), indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
 def validate_arguments(args: argparse.Namespace) -> None:
     """Validate command-line arguments
 
@@ -140,25 +210,85 @@ def validate_arguments(args: argparse.Namespace) -> None:
     Raises:
         SystemExit: If validation fails
     """
-    # Check input file exists
-    if not Path(args.input).exists():
-        logger.error(f"Input file not found: {args.input}")
-        sys.exit(1)
+    if args.batch:
+        if not discover_input_paths(args.input):
+            logger.error(f"No .pdparams inputs found: {args.input}")
+            sys.exit(1)
+        output_path = Path(args.output)
+        if output_path.exists() and not output_path.is_dir():
+            logger.error(f"Batch output must be a directory: {args.output}")
+            sys.exit(1)
+        if args.save_mapping and Path(args.save_mapping).exists():
+            if not Path(args.save_mapping).is_dir():
+                logger.error(
+                    f"Batch mapping output must be a directory: {args.save_mapping}"
+                )
+                sys.exit(1)
+        if args.summary and Path(args.summary).exists() and not args.force:
+            logger.error(
+                f"Batch summary already exists (use --force to overwrite): {args.summary}"
+            )
+            sys.exit(1)
+    else:
+        if not Path(args.input).exists():
+            logger.error(f"Input file not found: {args.input}")
+            sys.exit(1)
+        if not args.input.endswith(".pdparams"):
+            logger.warning(
+                f"Input file should have .pdparams extension, got: {args.input}"
+            )
+        if Path(args.output).exists() and not args.force:
+            logger.warning(f"Output file already exists: {args.output}")
+            logger.error("Refusing to overwrite existing file (use --force to override)")
+            sys.exit(1)
+        if args.summary:
+            logger.error("--summary is only valid with --batch")
+            sys.exit(1)
 
-    # Check input file extension
-    if not args.input.endswith(".pdparams"):
-        logger.warning(f"Input file should have .pdparams extension, got: {args.input}")
-
-    # Check output file doesn't exist (unless --force)
-    if Path(args.output).exists() and not args.force:
-        logger.warning(f"Output file already exists: {args.output}")
-        logger.error("Refusing to overwrite existing file (use --force to override)")
+    if args.parameter_batch_size <= 0:
+        logger.error("--parameter-batch-size must be positive")
         sys.exit(1)
 
     # Check manual mapping file exists if specified
     if args.manual_mapping and not Path(args.manual_mapping).exists():
         logger.error(f"Manual mapping file not found: {args.manual_mapping}")
         sys.exit(1)
+
+    if not args.no_validate and not args.config:
+        logger.error("--config is required unless --no-validate is set")
+        sys.exit(1)
+
+    if args.config:
+        config_path = Path(args.config)
+        if not config_path.exists():
+            logger.error(f"Target model config not found: {args.config}")
+            sys.exit(1)
+        if config_path.suffix not in {".yml", ".yaml"}:
+            logger.error(
+                f"Target model config must be YAML, got: {args.config}"
+            )
+            sys.exit(1)
+
+
+def build_target_state_dict(config_path: str):
+    """Build target shape specs and identify weights owned by Linear modules."""
+    import torch
+
+    from .. import modeling as _modeling  # noqa: F401
+    from ..core.workspace import create, load_config
+
+    cfg = load_config(str(config_path))
+    architecture = cfg.architecture
+    model = create(architecture)
+    transpose_target_keys = {
+        f"{name}.weight" if name else "weight"
+        for name, module in model.named_modules()
+        if isinstance(module, torch.nn.Linear)
+    }
+    target_shapes = {
+        name: tuple(value.shape) for name, value in model.state_dict().items()
+    }
+    return target_shapes, architecture, transpose_target_keys
 
 
 def main():
@@ -181,23 +311,68 @@ def main():
     # Validate arguments
     validate_arguments(args)
 
-    # Create conversion configuration
-    config = ConversionConfig(
-        strict_mode=args.strict,
-        manual_mapping_file=args.manual_mapping,
-        export_mapping=args.save_mapping is not None,
-        export_mapping_path=args.save_mapping,
-        log_level=log_level,
-    )
-
-    # Create converter and run conversion
-    converter = WeightConverter(config)
-
     try:
+        target_state_dict = None
+        target_architecture = None
+        transpose_target_keys = None
+        if not args.no_validate:
+            (
+                target_state_dict,
+                target_architecture,
+                transpose_target_keys,
+            ) = build_target_state_dict(args.config)
+            logger.info(
+                "Built target %s with %d state_dict keys",
+                target_architecture,
+                len(target_state_dict),
+            )
+
+        output_metadata = {
+            "target_validation": not args.no_validate,
+            "batch_conversion": args.batch,
+        }
+        if args.config:
+            output_metadata["target_config"] = str(args.config)
+        if target_architecture:
+            output_metadata["target_architecture"] = target_architecture
+
+        config = ConversionConfig(
+            strict_mode=args.strict,
+            manual_mapping_file=args.manual_mapping,
+            export_mapping=args.save_mapping is not None,
+            export_mapping_path=args.save_mapping,
+            memory_efficient_mode=args.memory_efficient,
+            batch_size=(
+                args.parameter_batch_size if args.memory_efficient else None
+            ),
+            log_level=log_level,
+            output_metadata=output_metadata,
+        )
+        converter = WeightConverter(config)
+
+        if args.batch:
+            input_paths = discover_input_paths(args.input)
+            summary = converter.convert_batch(
+                input_paths=[str(path) for path in input_paths],
+                output_directory=args.output,
+                target_model_state_dict=target_state_dict,
+                transpose_target_keys=transpose_target_keys,
+                mapping_directory=args.save_mapping,
+                overwrite=args.force,
+            )
+            if args.summary:
+                save_batch_summary(summary, args.summary)
+            logger.info("Batch inputs: %d", summary.total_count)
+            logger.info("Succeeded: %d", summary.succeeded_count)
+            logger.info("Failed: %d", summary.failed_count)
+            logger.info("Duration: %.2f seconds", summary.duration_seconds)
+            sys.exit(1 if summary.failed_count else 0)
+
         session = converter.convert(
             input_path=args.input,
             output_path=args.output,
-            target_model_state_dict=None  # No validation mode for MVP
+            target_model_state_dict=target_state_dict,
+            transpose_target_keys=transpose_target_keys,
         )
 
         # Print summary

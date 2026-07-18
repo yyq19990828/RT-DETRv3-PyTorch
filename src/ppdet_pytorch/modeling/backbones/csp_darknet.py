@@ -28,6 +28,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ...core.workspace import register, serializable
+from ..batch_norm import ContiguousGradBatchNorm2d
 from ..initializer import conv_init_
 from ..shape_spec import ShapeSpec
 
@@ -64,7 +65,7 @@ class BaseConv(nn.Module):
             padding=(ksize - 1) // 2,
             groups=groups,
             bias=bias)
-        self.bn = nn.BatchNorm2d(out_channels)
+        self.bn = ContiguousGradBatchNorm2d(out_channels)
 
         self._init_weights()
 

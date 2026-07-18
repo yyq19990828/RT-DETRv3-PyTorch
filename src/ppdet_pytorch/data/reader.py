@@ -21,6 +21,8 @@ Handle variable-length annotations and create properly batched tensors.
 import os
 import traceback
 import numpy as np
+import torch
+import torch.distributed as dist
 
 from copy import deepcopy
 
@@ -161,6 +163,7 @@ class BaseDataLoader(object):
                  num_classes=80,
                  collate_batch=True,
                  use_shared_memory=False,
+                 seed=0,
                  **kwargs):
         # sample transform
         self._sample_transforms = Compose(
@@ -173,6 +176,7 @@ class BaseDataLoader(object):
         self.shuffle = shuffle
         self.drop_last = drop_last
         self.pin_memory = bool(use_shared_memory)
+        self.seed = int(seed)
         self.kwargs = kwargs
 
     def __call__(self,
@@ -196,31 +200,55 @@ class BaseDataLoader(object):
                 self.dataset,
                 batch_size=self.batch_size,
                 shuffle=self.shuffle,
-                drop_last=self.drop_last)
+                drop_last=self.drop_last,
+                seed=self.seed)
         else:
             self._batch_sampler = batch_sampler
 
+        self._rank = dist.get_rank() if dist.is_initialized() else 0
+        self._world_size = dist.get_world_size() if dist.is_initialized() else 1
+        self._worker_generator = torch.Generator()
+        self._seed_worker_generator(epoch=0)
         self.dataloader = DataLoader(
             dataset=self.dataset,
             batch_sampler=self._batch_sampler,
             collate_fn=self._batch_transforms,
             num_workers=worker_num,
-            pin_memory=self.pin_memory)
-        self.loader = iter(self.dataloader)
+            pin_memory=self.pin_memory,
+            generator=self._worker_generator)
+        self.loader = None
 
         return self
+
+    def _seed_worker_generator(self, epoch):
+        epoch_seed = (
+            self.seed + int(epoch) * self._world_size + self._rank)
+        self._worker_generator.manual_seed(epoch_seed)
+
+    def set_epoch(self, epoch):
+        """Reset sampler and worker RNG deterministically for an epoch."""
+        if hasattr(self._batch_sampler, 'set_epoch'):
+            self._batch_sampler.set_epoch(epoch)
+        if hasattr(self.dataset, 'set_epoch'):
+            self.dataset.set_epoch(epoch)
+        self._seed_worker_generator(epoch)
+        self.loader = None
 
     def __len__(self):
         return len(self._batch_sampler)
 
     def __iter__(self):
+        if self.loader is None:
+            self.loader = iter(self.dataloader)
         return self
 
     def __next__(self):
+        if self.loader is None:
+            self.loader = iter(self.dataloader)
         try:
             return next(self.loader)
         except StopIteration:
-            self.loader = iter(self.dataloader)
+            self.loader = None
             raise
 
     def next(self):

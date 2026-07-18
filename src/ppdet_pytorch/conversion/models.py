@@ -59,7 +59,8 @@ class CheckpointFile:
         format: File format (pdparams or pth)
         file_size_bytes: Size of file in bytes
         framework: Source framework (PaddlePaddle or PyTorch)
-        checksum: MD5 hash for integrity verification (optional)
+        checksum: File hash for integrity verification (optional)
+        checksum_algorithm: Algorithm used for ``checksum``
         metadata: Embedded metadata from checkpoint (optional)
     """
     file_path: str
@@ -67,6 +68,7 @@ class CheckpointFile:
     file_size_bytes: int
     framework: Framework
     checksum: Optional[str] = None
+    checksum_algorithm: str = "sha256"
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -294,3 +296,77 @@ class ConversionSession:
             warning: Warning message to record
         """
         self.warnings.append(warning)
+
+
+@dataclass
+class BatchConversionResult:
+    """Outcome for one checkpoint in a batch conversion."""
+
+    source_path: str
+    output_path: str
+    status: ConversionStatus
+    mapping_path: Optional[str] = None
+    session_id: Optional[str] = None
+    duration_seconds: float = 0.0
+    converted_count: int = 0
+    skipped_count: int = 0
+    error: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable result."""
+        return {
+            "source_path": self.source_path,
+            "output_path": self.output_path,
+            "mapping_path": self.mapping_path,
+            "status": self.status.value,
+            "session_id": self.session_id,
+            "duration_seconds": self.duration_seconds,
+            "converted_count": self.converted_count,
+            "skipped_count": self.skipped_count,
+            "error": self.error,
+        }
+
+
+@dataclass
+class BatchConversionSummary:
+    """Aggregate outcome for an isolated multi-checkpoint conversion."""
+
+    output_directory: str
+    results: List[BatchConversionResult] = field(default_factory=list)
+    start_time: datetime = field(default_factory=datetime.now)
+    end_time: Optional[datetime] = None
+
+    @property
+    def total_count(self) -> int:
+        return len(self.results)
+
+    @property
+    def succeeded_count(self) -> int:
+        return sum(
+            result.status == ConversionStatus.COMPLETED for result in self.results
+        )
+
+    @property
+    def failed_count(self) -> int:
+        return self.total_count - self.succeeded_count
+
+    @property
+    def duration_seconds(self) -> float:
+        end_time = self.end_time or datetime.now()
+        return (end_time - self.start_time).total_seconds()
+
+    def finish(self) -> None:
+        self.end_time = datetime.now()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Return a JSON-serializable summary."""
+        return {
+            "output_directory": self.output_directory,
+            "start_time": self.start_time.isoformat(),
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "duration_seconds": self.duration_seconds,
+            "total_count": self.total_count,
+            "succeeded_count": self.succeeded_count,
+            "failed_count": self.failed_count,
+            "results": [result.to_dict() for result in self.results],
+        }

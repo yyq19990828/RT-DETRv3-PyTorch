@@ -50,7 +50,7 @@ Thumbs.db
 *.pth
 *.pt
 *.torchscript
-checkpoints/
+/checkpoints/
 /data/
 /datasets/
 logs/

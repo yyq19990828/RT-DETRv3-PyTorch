@@ -53,12 +53,16 @@ def setup_logger(
     elif isinstance(log_ranks, int):
         log_ranks = [log_ranks]
 
-    # Get local rank for distributed training
-    # Use torch.distributed if initialized, otherwise assume rank 0
+    # Logger modules are commonly imported before init_process_group(). Use
+    # torchrun's global RANK in that window so non-zero ranks do not attach a
+    # rank-0 console handler by mistake.
     if dist.is_available() and dist.is_initialized():
         local_rank = dist.get_rank()
     else:
-        local_rank = 0
+        try:
+            local_rank = int(os.environ.get("RANK", "0"))
+        except ValueError:
+            local_rank = 0
 
     # Console logging: only specified ranks
     if local_rank in log_ranks:
@@ -66,6 +70,10 @@ def setup_logger(
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
         logger.addHandler(ch)
+    elif output is None:
+        # Suppress logging.lastResort on non-log ranks. Without an explicit
+        # handler, WARNING messages would still leak to stderr unformatted.
+        logger.addHandler(logging.NullHandler())
 
     # File logging: all workers
     if output is not None:

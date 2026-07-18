@@ -29,6 +29,7 @@ import sys
 import time
 import yaml
 from collections.abc import Mapping
+from contextlib import nullcontext
 from typing import Dict, Optional
 from copy import deepcopy
 
@@ -43,7 +44,11 @@ from .. import modeling as _modeling  # noqa: F401 - trigger component registrat
 from ..core.config.schema import SchemaDict
 from ..core.workspace import create
 from ..utils.logger import setup_logger
-from ..utils.checkpoint import load_weight, load_pretrain_weight, convert_to_dict
+from ..utils.checkpoint import (
+    convert_to_dict,
+    load_checkpoint,
+    load_pretrain_weight,
+)
 from ..utils.visualizer import visualize_results, save_result
 from ..metrics import get_infer_results
 from ..data.source.category import get_categories
@@ -92,10 +97,14 @@ class Trainer:
         assert mode.lower() in ['train', 'eval', 'test'], \
             "mode should be 'train', 'eval' or 'test'"
         self.mode = mode.lower()
+        self.log_interval = cfg.get('log_iter', 50)
 
         # Training flags
         self.optimizer = None
         self.is_loaded_weights = False
+        self.accumulate_steps = int(self.cfg.get('accumulate_steps', 1))
+        if self.accumulate_steps < 1:
+            raise ValueError("accumulate_steps must be at least 1")
 
         # AMP settings (Paddle compatible)
         self.use_amp = self.cfg.get('amp', False)
@@ -161,7 +170,7 @@ class Trainer:
             logger.info(f"Model wrapped with DDP, world_size={dist.get_world_size()}")
 
         # Setup EMA (Exponential Moving Average)
-        self.use_ema = cfg.get('use_ema', False)
+        self.use_ema = self.mode == 'train' and cfg.get('use_ema', False)
         self.ema = None
         if self.use_ema:
             ema_decay = cfg.get('ema_decay', 0.9998)
@@ -179,7 +188,8 @@ class Trainer:
                 ema_decay_type=ema_decay_type,
                 cycle_epoch=cycle_epoch,
                 ema_black_list=ema_black_list,
-                ema_filter_no_grad=ema_filter_no_grad
+                ema_filter_no_grad=ema_filter_no_grad,
+                device=str(next(base_model.parameters()).device),
             )
             logger.info(f"EMA enabled with decay={ema_decay}, type={ema_decay_type}")
 
@@ -189,6 +199,7 @@ class Trainer:
 
         # Training status dict
         self.status = {}
+        self.global_step = 0
 
         # Epoch settings
         self.start_epoch = 0
@@ -238,7 +249,9 @@ class Trainer:
         # Build dataloader
         if self.mode == 'train':
             reader_name = '{}Reader'.format(capital_mode)
-            self.loader = create(self.cfg[reader_name])(
+            reader_config = dict(self.cfg[reader_name])
+            reader_config['seed'] = self.cfg.get('seed', 0) or 0
+            self.loader = create(reader_config)(
                 self.dataset, cfg.worker_num)
         
         if self.mode == 'eval':
@@ -320,7 +333,9 @@ class Trainer:
         if self.mode != 'train':
             return
 
-        steps_per_epoch = len(self.loader)
+        accumulate_steps = getattr(self, 'accumulate_steps', 1)
+        steps_per_epoch = (
+            len(self.loader) + accumulate_steps - 1) // accumulate_steps
         if steps_per_epoch < 1:
             logger.warning(
                 "Samples in dataset are less than batch_size, "
@@ -336,7 +351,9 @@ class Trainer:
         # self.optimizer = create('OptimizerBuilder')(self.lr, self.model)
         # logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
 
-        base_lr = cfg.get('base_lr', 0.001)
+        learning_rate_config = dict(cfg.get('LearningRate', {}))
+        base_lr = cfg.get(
+            'base_lr', learning_rate_config.get('base_lr', 0.001))
         # Create optimizer
         optimizer_config = dict(cfg.get('OptimizerBuilder', {}))
         optimizer_config['name'] = 'OptimizerBuilder'
@@ -344,7 +361,6 @@ class Trainer:
         logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
 
         # Create LR scheduler
-        learning_rate_config = dict(cfg.get('LearningRate', {}))
         learning_rate_config['name'] = 'LearningRate'
         self.lr = create(learning_rate_config)(steps_per_epoch, self.optimizer)
         logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
@@ -353,7 +369,13 @@ class Trainer:
     def _init_callbacks(self):
         """Initialize callbacks (Paddle compatible)"""
         if self.mode == 'train':
-            self._callbacks = [LogPrinter(self), Checkpointer(self)]
+            self._callbacks = [
+                LogPrinter(self),
+                Checkpointer(
+                    self,
+                    save_interval=self.cfg.get('snapshot_epoch', 1),
+                ),
+            ]
             # TODO: Add more callbacks based on cfg (VDL, Wandb, etc.)
             self._compose_callback = ComposeCallback(self._callbacks)
             logger.info(f"Initialized {len(self._callbacks)} callbacks for training")
@@ -382,14 +404,7 @@ class Trainer:
 
     def _convert_cfg_to_dict(self, cfg) -> dict:
         """Convert config object to dictionary for YAML saving"""
-        # Simple conversion - can be improved based on actual cfg structure
-        if hasattr(cfg, '__dict__'):
-            config_dict = {}
-            for k, v in cfg.__dict__.items():
-                if not k.startswith('_') and v != {}:
-                    config_dict[k] = v
-            return config_dict
-        return dict(cfg)
+        return convert_to_dict(cfg)
 
     def train(self):
         """
@@ -406,7 +421,10 @@ class Trainer:
 
         for epoch_id in range(self.start_epoch, self.end_epoch):
             # Set epoch for distributed sampler
-            if hasattr(self.loader, 'sampler') and hasattr(self.loader.sampler, 'set_epoch'):
+            if hasattr(self.loader, 'set_epoch'):
+                self.loader.set_epoch(epoch_id)
+            elif (hasattr(self.loader, 'sampler') and
+                    hasattr(self.loader.sampler, 'set_epoch')):
                 self.loader.sampler.set_epoch(epoch_id)
 
             # Update status
@@ -435,10 +453,15 @@ class Trainer:
         self.model.train()
 
         steps_per_epoch = len(self.loader)
+        accumulate_steps = int(getattr(
+            self, 'accumulate_steps', self.cfg.get('accumulate_steps', 1)))
+        if accumulate_steps < 1:
+            raise ValueError("accumulate_steps must be at least 1")
         batch_time_meter = AverageMeter()
         data_time_meter = AverageMeter()
 
         end = time.time()
+        self.optimizer.zero_grad()
 
         for step_id, batch in enumerate(self.loader):
             # Measure data loading time
@@ -459,65 +482,122 @@ class Trainer:
             if isinstance(batch, dict):
                 batch['epoch_id'] = epoch_id
 
-            # Forward pass with AMP
-            model_device = next(self.model.parameters()).device
-            with torch.amp.autocast(
-                    device_type=model_device.type, enabled=self.use_amp):
-                outputs = self.model(batch)
-                # Model should return dict with 'loss' key
-                loss = outputs['loss'] if isinstance(outputs, dict) else outputs
-            if not torch.isfinite(loss).all():
-                raise FloatingPointError(
-                    "Non-finite loss at epoch {}, step {}".format(
-                        epoch_id, step_id))
+            accumulation_start = (step_id // accumulate_steps) * accumulate_steps
+            accumulation_size = min(
+                accumulate_steps, steps_per_epoch - accumulation_start)
+            accumulation_step = step_id - accumulation_start + 1
+            should_step_optimizer = accumulation_step == accumulation_size
 
-            # Backward pass
-            self.optimizer.zero_grad()
+            sync_context = nullcontext()
+            if (not should_step_optimizer and
+                    isinstance(self.model, DDP)):
+                # DDP requires forward and backward to both be inside
+                # no_sync() for gradient synchronization to be skipped.
+                sync_context = self.model.no_sync()
 
-            if self.use_amp:
-                self.scaler.scale(loss).backward()
+            optimizer_step_skipped = False
+            gradient_norm = None
+            with sync_context:
+                model_device = next(self.model.parameters()).device
+                with torch.amp.autocast(
+                        device_type=model_device.type, enabled=self.use_amp):
+                    outputs = self.model(batch)
+                    loss = (
+                        outputs['loss']
+                        if isinstance(outputs, dict) else outputs)
+                if not torch.isfinite(loss).all():
+                    raise FloatingPointError(
+                        "Non-finite loss at epoch {}, step {}".format(
+                            epoch_id, step_id))
+
+                normalized_loss = loss / accumulation_size
+                if self.use_amp:
+                    self.scaler.scale(normalized_loss).backward()
+                else:
+                    normalized_loss.backward()
+
+            if should_step_optimizer and self.use_amp:
+                scale_before_step = self.scaler.get_scale()
                 self.scaler.unscale_(self.optimizer)
                 gradient_norm = self._clip_gradients()
 
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
-            else:
-                loss.backward()
+                optimizer_step_skipped = (
+                    self.scaler.get_scale() < scale_before_step)
+            elif should_step_optimizer:
                 gradient_norm = self._clip_gradients()
-
                 self.optimizer.step()
 
-            if not torch.isfinite(torch.as_tensor(gradient_norm)).all():
-                raise FloatingPointError(
-                    "Non-finite gradient norm at epoch {}, step {}".format(
-                        epoch_id, step_id))
+            if should_step_optimizer:
+                gradient_is_finite = torch.isfinite(
+                    torch.as_tensor(gradient_norm)).all()
+                if not gradient_is_finite and not optimizer_step_skipped:
+                    raise FloatingPointError(
+                        "Non-finite gradient norm at epoch {}, step {}".format(
+                            epoch_id, step_id))
 
-            # Update learning rate
-            if hasattr(self.lr, 'step'):
-                self.lr.step()
+                if optimizer_step_skipped:
+                    logger.warning(
+                        "AMP skipped optimizer step at epoch {}, step {}; "
+                        "loss scale reduced from {} to {}".format(
+                            epoch_id,
+                            step_id,
+                            scale_before_step,
+                            self.scaler.get_scale()))
+                else:
+                    # Keep optimizer-dependent state aligned with successful
+                    # updates, not individual accumulation microbatches.
+                    if hasattr(self.lr, 'step'):
+                        self.lr.step()
 
-            # Update EMA
-            if self.use_ema and self.ema:
-                base_model = self.model.module if isinstance(self.model, DDP) else self.model
-                self.ema.update(base_model)
+                    self.global_step += 1
 
-            # Measure elapsed time
+                    if self.use_ema and self.ema:
+                        base_model = (
+                            self.model.module
+                            if isinstance(self.model, DDP) else self.model)
+                        self.ema.update(base_model)
+
+                self.optimizer.zero_grad()
+
+            reported_loss = self._reduce_loss_for_logging(loss)
+
+            # Measure elapsed time, including distributed status reduction.
             batch_time = time.time() - end
             batch_time_meter.update(batch_time)
             end = time.time()
 
             # Update status for callbacks
-            self.status['loss'] = loss.item()
-            self.status['gradient_norm'] = float(
-                torch.as_tensor(gradient_norm).item())
+            self.status['loss'] = reported_loss.item()
+            self.status['gradient_norm'] = (
+                None if gradient_norm is None else float(
+                    torch.as_tensor(gradient_norm).item()))
+            self.status['optimizer_step'] = (
+                should_step_optimizer and not optimizer_step_skipped)
+            self.status['optimizer_step_skipped'] = optimizer_step_skipped
+            self.status['accumulation_step'] = accumulation_step
+            self.status['accumulation_steps'] = accumulation_size
             self.status['learning_rate'] = self.optimizer.param_groups[0]['lr']
             self.status['batch_time'] = batch_time
             self.status['batch_size'] = self._get_batch_size(batch)
-            self.status['training_staus'] = {'loss': loss.item()}  # Placeholder
+            self.status['training_staus'] = {
+                'loss': reported_loss.item()}  # Placeholder
+            self.status['global_step'] = self.global_step
 
             # Step end callback
             if self._compose_callback:
                 self._compose_callback.on_step_end(self.status)
+
+    @staticmethod
+    def _reduce_loss_for_logging(loss: torch.Tensor) -> torch.Tensor:
+        """Return a detached world-size mean for status and logging."""
+        reported_loss = loss.detach().mean()
+        if dist.is_initialized() and dist.get_world_size() > 1:
+            reported_loss = reported_loss.clone()
+            dist.all_reduce(reported_loss, op=dist.ReduceOp.SUM)
+            reported_loss /= dist.get_world_size()
+        return reported_loss
 
     def _clip_gradients(self):
         """Apply the clipping policy produced by ``OptimizerBuilder``."""
@@ -615,14 +695,23 @@ class Trainer:
         Args:
             weights: Path to checkpoint file
         """
-        # Support Distill resume weights
-        if hasattr(self.model, 'student_model'):
-            self.start_epoch = load_weight(self.model.student_model, weights, self.optimizer)
-        else:
-            self.start_epoch = load_weight(
-                self.model, weights, self.optimizer,
-                self.ema if self.use_ema else None
-            )
+        target_model = (
+            self.model.student_model
+            if hasattr(self.model, 'student_model') else self.model
+        )
+        metadata = load_checkpoint(
+            weights,
+            target_model,
+            optimizer=self.optimizer,
+            scheduler=self.lr,
+            scaler=self.scaler,
+            ema=self.ema if self.use_ema else None,
+            restore_rng=True,
+        )
+        self.start_epoch = metadata['epoch']
+        self.global_step = metadata['global_step']
+        self.status['global_step'] = self.global_step
+        self.is_loaded_weights = True
         logger.debug(f"Resume weights of epoch {self.start_epoch}")
 
     def reset_norm_param_attr(self, layer, **kwargs):

@@ -98,8 +98,9 @@ class HungarianMatcher(nn.Module):
         num_gts = [len(a) for a in gt_class]
         if sum(num_gts) == 0:
             return [(torch.tensor(
-                [], dtype=torch.int64), torch.tensor(
-                    [], dtype=torch.int64)) for _ in range(bs)]
+                [], dtype=torch.int64, device=boxes.device), torch.tensor(
+                    [], dtype=torch.int64, device=boxes.device))
+                    for _ in range(bs)]
 
         # We flatten to compute the cost matrices in a batch
         # [batch_size * num_queries, num_classes]
@@ -190,5 +191,6 @@ class HungarianMatcher(nn.Module):
         ]
 
         return [(torch.tensor(
-            i, dtype=torch.int64), torch.tensor(
-                j, dtype=torch.int64)) for i, j in indices]
+            i, dtype=torch.int64, device=boxes.device), torch.tensor(
+                j, dtype=torch.int64, device=boxes.device))
+                for i, j in indices]

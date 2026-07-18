@@ -86,6 +86,9 @@ def test_r18_config_builds_complete_model(isolated_workspace):
     assert isinstance(model.aux_o2m_head, PPYOLOEHead)
     assert isinstance(model.post_process, DETRPostProcess)
     assert sum(parameter.numel() for parameter in model.parameters()) == 22_942_893
+    assert cfg["TrainReader"]["name"] == "TrainReader"
+    assert cfg["EvalReader"]["name"] == "EvalReader"
+    assert cfg["TestReader"]["name"] == "TestReader"
 
 
 @pytest.mark.integration

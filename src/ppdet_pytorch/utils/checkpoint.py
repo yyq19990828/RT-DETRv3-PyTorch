@@ -6,16 +6,60 @@ Handles model checkpoints, optimizer states, and training resumption.
 
 import logging
 import os
+import random
+import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import numpy as np
 import torch
+import torch.distributed as dist
 import torch.nn as nn
 
 from .distributed import get_rank, is_main_process
 
 
 logger = logging.getLogger(__name__)
+
+CHECKPOINT_FORMAT_VERSION = 1
+
+
+def capture_rng_state() -> Dict[str, Any]:
+    """Capture process RNG state required for deterministic continuation."""
+    state = {
+        'python': random.getstate(),
+        'numpy': np.random.get_state(),
+        'torch_cpu': torch.get_rng_state(),
+    }
+    if torch.cuda.is_available():
+        state['torch_cuda'] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def restore_rng_state(state: Dict[str, Any]) -> None:
+    """Restore a state produced by :func:`capture_rng_state`."""
+    random.setstate(state['python'])
+    np.random.set_state(state['numpy'])
+    torch.set_rng_state(state['torch_cpu'].cpu())
+    for device_index, cuda_state in enumerate(state.get('torch_cuda', [])):
+        if device_index >= torch.cuda.device_count():
+            break
+        torch.cuda.set_rng_state(cuda_state.cpu(), device=device_index)
+
+
+def _select_rng_state(checkpoint: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Select the current rank's RNG state with legacy fallback."""
+    states_by_rank = checkpoint.get('rng_state_by_rank')
+    if states_by_rank is None:
+        return checkpoint.get('rng_state')
+
+    rank = get_rank() if dist.is_initialized() else 0
+    if rank >= len(states_by_rank) or states_by_rank[rank] is None:
+        raise RuntimeError(
+            'Checkpoint has no RNG state for rank {} (saved world size {})'
+            .format(rank, len(states_by_rank)))
+    return states_by_rank[rank]
 
 
 def save_checkpoint(
@@ -27,6 +71,10 @@ def save_checkpoint(
     config: Optional[Dict] = None,
     best_metric: Optional[float] = None,
     scheduler: Optional[Any] = None,
+    scaler: Optional[Any] = None,
+    ema: Optional[Any] = None,
+    sampler_epoch: Optional[int] = None,
+    gather_distributed_rng: bool = False,
     **kwargs
 ):
     """
@@ -41,25 +89,57 @@ def save_checkpoint(
         config: Optional config dict
         best_metric: Optional best metric value
         scheduler: Optional LR scheduler
+        scaler: Optional AMP gradient scaler
+        ema: Optional ModelEMA instance
+        sampler_epoch: Epoch used to seed a distributed sampler
+        gather_distributed_rng: Collect every rank's RNG state before rank 0
+            writes the checkpoint. All ranks must call this function when it
+            is enabled.
         **kwargs: Additional items to save
     """
+    local_rng_state = capture_rng_state()
+    rng_states_by_rank = None
+    if gather_distributed_rng and dist.is_initialized():
+        rng_states_by_rank = (
+            [None] * dist.get_world_size() if is_main_process() else None)
+        dist.gather_object(
+            local_rng_state,
+            object_gather_list=rng_states_by_rank,
+            dst=0,
+        )
+
     if not is_main_process():
-        return  # Only save on main process
+        return False  # Only rank 0 publishes the shared checkpoint.
     
     # Unwrap DDP model if needed
     model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     
     checkpoint = {
+        'format_version': CHECKPOINT_FORMAT_VERSION,
         'model': model_state,
         'epoch': epoch,
         'iteration': iteration,
+        'global_step': iteration,
+        'rng_state': local_rng_state,
     }
+
+    if rng_states_by_rank is not None:
+        checkpoint['rng_state_by_rank'] = rng_states_by_rank
     
     if optimizer is not None:
         checkpoint['optimizer'] = optimizer.state_dict()
     
     if scheduler is not None:
         checkpoint['scheduler'] = scheduler.state_dict()
+
+    if scaler is not None:
+        checkpoint['scaler'] = scaler.state_dict()
+
+    if ema is not None:
+        checkpoint['ema'] = ema.state_dict_for_save()
+
+    if sampler_epoch is not None:
+        checkpoint['sampler_epoch'] = sampler_epoch
     
     if config is not None:
         checkpoint['config'] = config
@@ -74,9 +154,23 @@ def save_checkpoint(
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Save
-    torch.save(checkpoint, save_path)
+    # Publish atomically so an interrupted write does not replace a valid
+    # checkpoint with a partial file.
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                dir=save_path.parent,
+                prefix='.{}.'.format(save_path.name),
+                suffix='.tmp',
+                delete=False) as temporary_file:
+            temporary_path = Path(temporary_file.name)
+        torch.save(checkpoint, temporary_path)
+        temporary_path.replace(save_path)
+    finally:
+        if temporary_path is not None and temporary_path.exists():
+            temporary_path.unlink()
     logger.info(f"Saved checkpoint to {save_path} (epoch={epoch}, iter={iteration})")
+    return True
 
 
 def load_checkpoint(
@@ -84,6 +178,9 @@ def load_checkpoint(
     model: nn.Module,
     optimizer: Optional[torch.optim.Optimizer] = None,
     scheduler: Optional[Any] = None,
+    scaler: Optional[Any] = None,
+    ema: Optional[Any] = None,
+    restore_rng: bool = False,
     strict: bool = True,
     map_location: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -95,6 +192,9 @@ def load_checkpoint(
         model: Model to load weights into
         optimizer: Optional optimizer to restore state
         scheduler: Optional scheduler to restore state
+        scaler: Optional AMP gradient scaler to restore
+        ema: Optional ModelEMA instance to restore
+        restore_rng: Restore Python, NumPy and PyTorch RNG state
         strict: Whether to strictly enforce state_dict key matching
         map_location: Device to map tensors to
         
@@ -112,11 +212,19 @@ def load_checkpoint(
     if map_location is None:
         map_location = f'cuda:{get_rank()}' if torch.cuda.is_available() else 'cpu'
     
-    checkpoint = torch.load(checkpoint_path, map_location=map_location)
+    checkpoint = torch.load(
+        checkpoint_path,
+        map_location=map_location,
+        weights_only=False,
+    )
     
     # Load model state
     if 'model' in checkpoint:
         model_state = checkpoint['model']
+    elif 'model_state_dict' in checkpoint:
+        model_state = checkpoint['model_state_dict']
+    elif 'state_dict' in checkpoint:
+        model_state = checkpoint['state_dict']
     else:
         # Assume entire checkpoint is model state
         model_state = checkpoint
@@ -130,19 +238,47 @@ def load_checkpoint(
     logger.info("Loaded model weights")
     
     # Load optimizer state
-    if optimizer is not None and 'optimizer' in checkpoint:
-        optimizer.load_state_dict(checkpoint['optimizer'])
+    optimizer_state = checkpoint.get(
+        'optimizer', checkpoint.get('optimizer_state_dict'))
+    if optimizer is not None and optimizer_state is not None:
+        optimizer.load_state_dict(optimizer_state)
         logger.info("Loaded optimizer state")
     
     # Load scheduler state
-    if scheduler is not None and 'scheduler' in checkpoint:
-        scheduler.load_state_dict(checkpoint['scheduler'])
+    scheduler_state = checkpoint.get(
+        'scheduler', checkpoint.get('scheduler_state_dict'))
+    if scheduler is not None and scheduler_state is not None:
+        scheduler.load_state_dict(scheduler_state)
         logger.info("Loaded scheduler state")
+
+    scaler_state = checkpoint.get('scaler', checkpoint.get('scaler_state_dict'))
+    if scaler is not None and scaler_state is not None:
+        scaler.load_state_dict(scaler_state)
+        logger.info("Loaded scaler state")
+
+    if ema is not None and 'ema' in checkpoint:
+        ema_state = checkpoint['ema']
+        if isinstance(ema_state, dict) and 'ema_state_dict' in ema_state:
+            ema.load_state_dict(ema_state)
+        else:
+            ema.resume(ema_state, checkpoint.get('global_step', 0))
+        logger.info("Loaded EMA state")
+
+    if restore_rng:
+        rng_state = _select_rng_state(checkpoint)
+        if rng_state is not None:
+            restore_rng_state(rng_state)
+            logger.info("Restored RNG state")
     
     # Extract metadata
     metadata = {
         'epoch': checkpoint.get('epoch', 0),
         'iteration': checkpoint.get('iteration', 0),
+        'global_step': checkpoint.get(
+            'global_step', checkpoint.get('iteration', 0)),
+        'sampler_epoch': checkpoint.get(
+            'sampler_epoch', checkpoint.get('epoch', 0)),
+        'format_version': checkpoint.get('format_version', 0),
         'best_metric': checkpoint.get('best_metric', None),
         'config': checkpoint.get('config', None),
     }
@@ -283,10 +419,14 @@ def convert_to_dict(obj):
     Returns:
         Dictionary representation
     """
-    if isinstance(obj, dict):
+    if isinstance(obj, Mapping):
         return {k: convert_to_dict(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
+    elif isinstance(obj, (list, tuple)):
         return [convert_to_dict(i) for i in obj]
+    elif isinstance(obj, (Path, torch.device)):
+        return str(obj)
+    elif isinstance(obj, np.generic):
+        return obj.item()
     elif hasattr(obj, '__dict__'):
         return {k: convert_to_dict(v) for k, v in obj.__dict__.items()
                 if not k.startswith('_')}

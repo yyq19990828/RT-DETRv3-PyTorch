@@ -132,10 +132,18 @@ class ATSSAssigner(nn.Module):
         # negative batch
         if num_max_boxes == 0:
             assigned_labels = torch.full(
-                [batch_size, num_anchors], bg_index, dtype=torch.int32)
-            assigned_bboxes = torch.zeros([batch_size, num_anchors, 4])
+                [batch_size, num_anchors],
+                bg_index,
+                dtype=torch.int32,
+                device=gt_labels.device)
+            assigned_bboxes = torch.zeros(
+                [batch_size, num_anchors, 4],
+                dtype=gt_bboxes.dtype,
+                device=gt_bboxes.device)
             assigned_scores = torch.zeros(
-                [batch_size, num_anchors, self.num_classes])
+                [batch_size, num_anchors, self.num_classes],
+                dtype=gt_bboxes.dtype,
+                device=gt_bboxes.device)
             return assigned_labels, assigned_bboxes, assigned_scores
 
         # 1. compute iou between gt and anchor bbox, [B, n, L]
@@ -202,7 +210,9 @@ class ATSSAssigner(nn.Module):
 
         # assigned target
         batch_ind = torch.arange(
-            end=batch_size, dtype=gt_labels.dtype).unsqueeze(-1)
+            end=batch_size,
+            dtype=gt_labels.dtype,
+            device=gt_labels.device).unsqueeze(-1)
         assigned_gt_index = assigned_gt_index + (batch_ind * num_max_boxes).to(assigned_gt_index.dtype)
         assigned_labels = torch.index_select(
             gt_labels.flatten(), 0, assigned_gt_index.flatten())

@@ -4,6 +4,7 @@
 
 worker_num: 4  # PyTorch: num_workers in DataLoader
 TrainReader:
+  name: TrainReader
   sample_transforms:
     - Decode: {}
     - RandomDistort: {prob: 0.8}
@@ -25,6 +26,7 @@ TrainReader:
 
 
 EvalReader:
+  name: EvalReader
   sample_transforms:
     - Decode: {}
     - Resize: {target_size: [640, 640], keep_ratio: False, interp: 2}
@@ -36,6 +38,7 @@ EvalReader:
 
 
 TestReader:
+  name: TestReader
   inputs_def:
     image_shape: [3, 640, 640]
   sample_transforms:

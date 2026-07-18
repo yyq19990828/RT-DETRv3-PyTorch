@@ -13,8 +13,9 @@
 - 形状一致、无 NaN/Inf 和确定性只是基础条件，不证明 Paddle 与 PyTorch 数值等价。
 - 真正的对齐需要同一份权重、相同输入、相同预处理参数和分层激活对比，最终还需要在同一数据集上验证指标。
 - 随机增强、插值、padding、NMS、浮点精度和不同后端算子都可能产生合理但可累积的差异。
-- 当前转换器只完成单检查点的基础映射；批量转换、真实低内存模式，以及 R18/R34/R50 官方权重的逐层数值验收仍未完成。
-- 转换范围只包括模型参数。优化器、学习率调度器、EMA、GradScaler、步数和随机数状态必须由训练侧重新建立或通过专门的续训格式保存。
+- 官方 R18/R34/R50 已完成共 2,041 个参数逐值转换校验、eval 分层、确定性缩减训练 loss 和完整模型整体梯度方向对齐；不要求 AdamW 逐元素完全一致。R50 后处理仍有 2/300 个 top-k 离散边界候选差异。PyTorch 已实现 ResNet LR multiplier 参数组并完成一次真实 COCO epoch/val 可运行性验收，但与 Paddle 相同的标准 schedule、多 seed 收敛和 AP 对照仍未完成；基础 LR、warmup 长度和衰减配置也仍有意保留差异。
+- 当前 batch conversion 只支持一个 config/架构；跨架构需要分别运行。低内存模式会释放源 tensor 并避免常驻完整目标模型，但 Paddle 文件与最终 PyTorch state dict 仍整体驻留，不是流式格式。
+- Paddle 权重转换范围只包括模型参数，不迁移 Paddle optimizer 状态。PyTorch 训练侧已有 schema v1 保存 optimizer、scheduler、EMA、GradScaler、步数和 RNG，但它只用于恢复可信的 PyTorch 自有 checkpoint。
 
 详细规则见[权重转换经验](weight-conversion.md)和[训练与验证经验](training-and-validation.md)。
 

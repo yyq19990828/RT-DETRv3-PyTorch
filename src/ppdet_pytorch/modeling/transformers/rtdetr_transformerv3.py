@@ -29,6 +29,7 @@ from typing import Optional, List, Tuple
 from collections import OrderedDict
 
 from ppdet_pytorch.core.workspace import register
+from ..batch_norm import ContiguousGradBatchNorm2d
 from ..layers import MultiHeadAttention
 from .utils import MLP
 from .attention import MSDeformableAttention
@@ -416,7 +417,7 @@ class RTDETRTransformerv3(nn.Module):
             self.input_proj.append(
                 nn.Sequential(OrderedDict([
                     ('conv', nn.Conv2d(in_channels, self.hidden_dim, kernel_size=1, bias=False)),
-                    ('norm', nn.BatchNorm2d(self.hidden_dim))
+                    ('norm', ContiguousGradBatchNorm2d(self.hidden_dim))
                 ])))
 
         in_channels = backbone_feat_channels[-1]
@@ -424,7 +425,7 @@ class RTDETRTransformerv3(nn.Module):
             self.input_proj.append(
                 nn.Sequential(OrderedDict([
                     ('conv', nn.Conv2d(in_channels, self.hidden_dim, kernel_size=3, stride=2, padding=1, bias=False)),
-                    ('norm', nn.BatchNorm2d(self.hidden_dim))
+                    ('norm', ContiguousGradBatchNorm2d(self.hidden_dim))
                 ])))
             in_channels = self.hidden_dim
 
@@ -496,7 +497,12 @@ class RTDETRTransformerv3(nn.Module):
         # multi group noise attention
         if self.training:
             new_size = target.shape[1]
-            new_attn_mask = torch.ones(new_size, new_size, dtype=torch.bool, device=target.device)
+            # True means allowed by TransformerDecoderLayer. Queries from
+            # different groups must remain blocked, matching Paddle's
+            # initially-false block-diagonal mask.
+            new_attn_mask = torch.zeros(
+                new_size, new_size, dtype=torch.bool, device=target.device
+            )
             begin, end = 0, 0
             
             for g_id in range(self.num_groups):
