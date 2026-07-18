@@ -13,9 +13,14 @@ import pytest
 import torch
 from pathlib import Path
 
-from tools.weight_conversion.converter import WeightConverter
-from tools.weight_conversion.models import ConversionConfig, ConversionStatus
+from ppdet_pytorch.conversion.converter import WeightConverter
+from ppdet_pytorch.conversion.models import ConversionConfig, ConversionStatus
 
+
+pytestmark = pytest.mark.paddle
+paddle = pytest.importorskip(
+    "paddle", reason="requires the PaddlePaddle development extra"
+)
 
 @pytest.mark.integration
 class TestFullConversion:
@@ -24,7 +29,13 @@ class TestFullConversion:
     @pytest.fixture
     def sample_checkpoint_path(self):
         """Get path to sample paddle checkpoint"""
-        return "tests/test_weight_conversion/fixtures/sample_paddle.pdparams"
+        return (
+            Path(__file__).resolve().parents[1]
+            / "unit"
+            / "conversion"
+            / "fixtures"
+            / "sample_paddle.pdparams"
+        )
 
     def test_convert_r50vd_model(self, sample_checkpoint_path, tmp_path):
         """Test end-to-end conversion workflow
@@ -206,11 +217,10 @@ class TestFullConversion:
 
     def test_conversion_preserves_values(self, sample_checkpoint_path, tmp_path):
         """Test that conversion preserves parameter values"""
-        import paddle
         import numpy as np
 
         # Load original paddle checkpoint
-        paddle_state = paddle.load(sample_checkpoint_path)
+        paddle_state = paddle.load(str(sample_checkpoint_path))
 
         # Convert
         output_path = tmp_path / "converted.pth"

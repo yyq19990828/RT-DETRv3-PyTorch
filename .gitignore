@@ -1,6 +1,3 @@
-pretrained_models/
-logs
-
 # Python
 __pycache__/
 *.py[cod]
@@ -29,6 +26,7 @@ MANIFEST
 venv/
 ENV/
 env/
+.uv/
 
 # IDE
 .vscode/
@@ -44,6 +42,24 @@ Thumbs.db
 # Logs
 *.log
 
+# Model, data, and training artifacts
+*.onnx
+*.pdparams
+!tests/unit/conversion/fixtures/*.pdparams
+*.pdopt
+*.pth
+*.pt
+*.torchscript
+checkpoints/
+/data/
+/datasets/
+logs/
+output/
+outputs/
+pretrained_models/
+runs/
+wandb/
+
 # Environment variables
 .env*
 
@@ -52,6 +68,12 @@ Thumbs.db
 .coverage
 htmlcov/
 .tox/
+.hypothesis/
+*.cover
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+
+# Temporary files
+*.bak
+*.tmp

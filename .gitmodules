@@ -1,0 +1,3 @@
+[submodule "third-party/RT-DETRv3-paddle"]
+	path = third-party/RT-DETRv3-paddle
+	url = https://github.com/clxia12/RT-DETRv3.git
