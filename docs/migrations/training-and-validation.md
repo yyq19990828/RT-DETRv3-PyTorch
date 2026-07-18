@@ -43,6 +43,19 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 - Paddle `use_shared_memory` 与 PyTorch `pin_memory` 不是完全相同的机制。兼容参数可以映射为性能提示，但不能在文档中宣称语义等价。
 - 多 worker 验证需要记录 `worker_init_fn`、sampler epoch、shuffle 和 drop-last 设置。
 
+## 已验证的 PyTorch 迁移陷阱
+
+以下结论在 2026-07-18 的 R18 最小训练链中已通过 PyTorch 单元或集成测试；它们仍不是 Paddle/PyTorch 数值等价证据。
+
+- Paddle 中按索引取行的逻辑在 PyTorch 中应根据语义使用 `index_select` 或高级索引；不能把 Paddle 的 `gather` 调用形式直接套给 `torch.gather`。批内 DETR 匹配要先逐样本选取，再拼接。
+- `Tensor.split(n)` 在 PyTorch 中的 `n` 是每块大小，不是“分成 n 块”。bbox 的 `x1/y1/x2/y2` 若需四个单元分量，应使用 `split(1, dim=-1)` 或 `unbind` 并检查输出数量。
+- VFL/focal loss 的动态权重依赖模型预测时，应先计算 `reduction="none"` 的 BCE，再与动态权重相乘。把可导权重直接传给 PyTorch BCE 的 `weight=` 参数会触发不支持的权重求导路径。
+- PyTorch `cross_entropy` 默认把第 2 维当作类别轴。DFL 输入如果是 `[N, 4, C]`，应先展平为 `[N*4, C]`，不能直接沿用 Paddle 支持的任意 `axis` 心智模型。
+- `one_hot` 返回整型 tensor；与 bbox/score 浮点权重相乘前要转为目标浮点 dtype。GT class 在进入 `one_hot`/`scatter` 前则必须是 `int64`/`long`。
+- 总 loss 的累加初值应从现有 loss tensor 创建标量零值，以保留 device/dtype 并避免把标量 loss 意外扩展为 shape `[1]`。
+
+**已验证的 M1 边界**：CPU/float32、seed `2026`、两张合成 COCO 图像、固定 `96×96`、batch size 2、R18 缩减 query/decoder 配置。完整 loss 键、有限梯度、裁剪、一次参数更新和 5 step 训练均通过。未验证空 GT、AMP、EMA、DDP、checkpoint 恢复或 Paddle 对齐。
+
 ## BatchNorm、AMP 与分布式训练
 
 - 通常在包装 DDP **之前** 转换 SyncBatchNorm。
@@ -72,4 +85,4 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 
 ## 当前缺口
 
-现有活跃测试覆盖部分训练策略，但尚未建立真实 COCO batch 的前向/反向基线，也没有 Paddle/PyTorch 的激活、loss、梯度和 AP 对齐报告。这些工作属于 [`ROADMAP.md`](../../ROADMAP.md) 的最高优先级。
+当前已有合成 COCO batch 的 PyTorch 前向/反向基线，但尚未使用真实 COCO 数据、官方 checkpoint 或 Paddle 进程做激活、loss、梯度、优化器更新和 AP 对齐。这些是 [`ROADMAP.md`](../../ROADMAP.md) M2–M4 的主要缺口。

@@ -238,8 +238,7 @@ def varifocal_loss_with_logits(
     pred_score = torch.sigmoid(pred_logits)
     weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
     loss = F.binary_cross_entropy_with_logits(
-        pred_logits, gt_score, weight=weight, reduction='none'
-    )
+        pred_logits, gt_score, reduction='none') * weight
     return loss.mean(1).sum() / normalizer
 
 

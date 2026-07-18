@@ -307,17 +307,15 @@ class PPYOLOEHead(nn.Module):
         if alpha > 0:
             alpha_t = alpha * label + (1 - alpha) * (1 - label)
             weight = weight * alpha_t
-        loss = F.binary_cross_entropy(
-            score, label, weight=weight, reduction='sum')
-        return loss
+        loss = F.binary_cross_entropy(score, label, reduction='none')
+        return (loss * weight).sum()
 
     @staticmethod
     def _varifocal_loss(pred_score, gt_score, label, alpha=0.75, gamma=2.0):
         """Varifocal Loss"""
         weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-        loss = F.binary_cross_entropy(
-            pred_score, gt_score, weight=weight, reduction='sum')
-        return loss
+        loss = F.binary_cross_entropy(pred_score, gt_score, reduction='none')
+        return (loss * weight).sum()
 
     def _bbox_decode(self, anchor_points, pred_dist):
         """Decode bbox from distribution"""
@@ -348,13 +346,210 @@ class PPYOLOEHead(nn.Module):
         weight_left = target_right.float() - target
         weight_right = 1 - weight_left
 
+        pred_dist = pred_dist.reshape(-1, self.reg_channels)
         loss_left = F.cross_entropy(
-            pred_dist, target_left - lower_bound,
-            reduction='none') * weight_left
+            pred_dist,
+            (target_left - lower_bound).reshape(-1),
+            reduction='none').reshape_as(target) * weight_left
         loss_right = F.cross_entropy(
-            pred_dist, target_right - lower_bound,
-            reduction='none') * weight_right
+            pred_dist,
+            (target_right - lower_bound).reshape(-1),
+            reduction='none').reshape_as(target) * weight_right
         return (loss_left + loss_right).mean(-1, keepdim=True)
+
+    def _bbox_loss(
+        self,
+        pred_dist,
+        pred_bboxes,
+        anchor_points,
+        assigned_labels,
+        assigned_bboxes,
+        assigned_scores,
+        assigned_scores_sum,
+    ):
+        mask_positive = assigned_labels != self.num_classes
+
+        if self.for_distill:
+            self.distill_pairs['mask_positive_select'] = mask_positive
+
+        if mask_positive.any():
+            bbox_mask = mask_positive.unsqueeze(-1).expand(-1, -1, 4)
+            pred_bboxes_pos = pred_bboxes.masked_select(bbox_mask).reshape(-1, 4)
+            assigned_bboxes_pos = assigned_bboxes.masked_select(
+                bbox_mask).reshape(-1, 4)
+            bbox_weight = assigned_scores.sum(-1).masked_select(
+                mask_positive).unsqueeze(-1)
+
+            loss_l1 = F.l1_loss(pred_bboxes_pos, assigned_bboxes_pos)
+            loss_iou = self.iou_loss(
+                pred_bboxes_pos, assigned_bboxes_pos) * bbox_weight
+            loss_iou = loss_iou.sum() / assigned_scores_sum
+
+            dist_mask = mask_positive.unsqueeze(-1).expand(
+                -1, -1, self.reg_channels * 4)
+            pred_dist_pos = pred_dist.masked_select(dist_mask).reshape(
+                -1, 4, self.reg_channels)
+            assigned_ltrb = self._bbox2distance(
+                anchor_points, assigned_bboxes)
+            assigned_ltrb_pos = assigned_ltrb.masked_select(
+                bbox_mask).reshape(-1, 4)
+            loss_dfl = self._df_loss(
+                pred_dist_pos,
+                assigned_ltrb_pos,
+                self.reg_range[0],
+            ) * bbox_weight
+            loss_dfl = loss_dfl.sum() / assigned_scores_sum
+
+            if self.for_distill:
+                self.distill_pairs['pred_bboxes_pos'] = pred_bboxes_pos
+                self.distill_pairs['pred_dist_pos'] = pred_dist_pos
+                self.distill_pairs['bbox_weight'] = bbox_weight
+        else:
+            loss_l1 = pred_bboxes.sum() * 0.0
+            loss_iou = pred_bboxes.sum() * 0.0
+            loss_dfl = pred_dist.sum() * 0.0
+
+        return loss_l1, loss_iou, loss_dfl
+
+    def get_loss(self, head_outs, gt_meta, aux_pred=None):
+        (
+            pred_scores,
+            pred_distri,
+            anchors,
+            anchor_points,
+            num_anchors_list,
+            stride_tensor,
+        ) = head_outs
+
+        anchor_points_s = anchor_points / stride_tensor
+        pred_bboxes = self._bbox_decode(anchor_points_s, pred_distri)
+
+        if aux_pred is not None:
+            pred_scores_aux = aux_pred[0]
+            pred_bboxes_aux = self._bbox_decode(anchor_points_s, aux_pred[1])
+
+        if 'origin_gt_class' in gt_meta:
+            gt_labels = gt_meta['origin_gt_class']
+            gt_bboxes = gt_meta['origin_gt_bbox']
+            pad_gt_mask = gt_meta['pad_origin_gt_mask']
+        else:
+            gt_labels = gt_meta['gt_class']
+            gt_bboxes = gt_meta['gt_bbox']
+            pad_gt_mask = gt_meta['pad_gt_mask']
+
+        if gt_meta['epoch_id'] < self.static_assigner_epoch:
+            assigned_labels, assigned_bboxes, assigned_scores = (
+                self.static_assigner(
+                    anchors,
+                    num_anchors_list,
+                    gt_labels,
+                    gt_bboxes,
+                    pad_gt_mask,
+                    bg_index=self.num_classes,
+                    pred_bboxes=pred_bboxes.detach() * stride_tensor,
+                )
+            )
+            alpha_l = 0.25
+        else:
+            assign_scores = pred_scores.detach()
+            assign_bboxes = pred_bboxes.detach()
+            if aux_pred is not None:
+                assign_scores = pred_scores_aux.detach()
+                assign_bboxes = pred_bboxes_aux.detach()
+            assigned_labels, assigned_bboxes, assigned_scores = self.assigner(
+                assign_scores,
+                assign_bboxes * stride_tensor,
+                anchor_points,
+                num_anchors_list,
+                gt_labels,
+                gt_bboxes,
+                pad_gt_mask,
+                bg_index=self.num_classes,
+            )
+            alpha_l = -1
+
+        assigned_bboxes = assigned_bboxes / stride_tensor
+        losses = self.get_loss_from_assign(
+            pred_scores,
+            pred_distri,
+            pred_bboxes,
+            anchor_points_s,
+            assigned_labels,
+            assigned_bboxes,
+            assigned_scores,
+            alpha_l,
+        )
+
+        if aux_pred is None:
+            return losses
+
+        aux_losses = self.get_loss_from_assign(
+            aux_pred[0],
+            aux_pred[1],
+            pred_bboxes_aux,
+            anchor_points_s,
+            assigned_labels,
+            assigned_bboxes,
+            assigned_scores,
+            alpha_l,
+        )
+        return {key: value + aux_losses[key] for key, value in losses.items()}
+
+    def get_loss_from_assign(
+        self,
+        pred_scores,
+        pred_distri,
+        pred_bboxes,
+        anchor_points_s,
+        assigned_labels,
+        assigned_bboxes,
+        assigned_scores,
+        alpha_l,
+    ):
+        if self.use_varifocal_loss:
+            one_hot_label = F.one_hot(
+                assigned_labels.long(), self.num_classes + 1)[..., :-1]
+            loss_cls = self._varifocal_loss(
+                pred_scores, assigned_scores, one_hot_label)
+        else:
+            loss_cls = self._focal_loss(
+                pred_scores, assigned_scores, alpha_l)
+
+        assigned_scores_sum = assigned_scores.sum()
+        if torch.distributed.is_initialized() and torch.distributed.get_world_size() > 1:
+            torch.distributed.all_reduce(assigned_scores_sum)
+            assigned_scores_sum /= torch.distributed.get_world_size()
+        assigned_scores_sum = assigned_scores_sum.clamp(min=1.0)
+        loss_cls = loss_cls / assigned_scores_sum
+
+        if self.for_distill:
+            self.distill_pairs['pred_cls_scores'] = pred_scores
+            self.distill_pairs['pos_num'] = assigned_scores_sum
+            self.distill_pairs['assigned_scores'] = assigned_scores
+            self.distill_pairs['target_labels'] = F.one_hot(
+                assigned_labels.long(), self.num_classes + 1)[..., :-1]
+
+        loss_l1, loss_iou, loss_dfl = self._bbox_loss(
+            pred_distri,
+            pred_bboxes,
+            anchor_points_s,
+            assigned_labels,
+            assigned_bboxes,
+            assigned_scores,
+            assigned_scores_sum,
+        )
+        loss = (
+            self.loss_weight['class'] * loss_cls
+            + self.loss_weight['iou'] * loss_iou
+            + self.loss_weight['dfl'] * loss_dfl
+        )
+        return {
+            'loss': loss,
+            'loss_cls': loss_cls,
+            'loss_iou': loss_iou,
+            'loss_dfl': loss_dfl,
+            'loss_l1': loss_l1,
+        }
 
     def post_process(self, head_outs, scale_factor):
         """Post-process predictions"""

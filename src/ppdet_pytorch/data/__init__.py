@@ -9,8 +9,10 @@ Contains data loading and transformation components:
 
 from . import source
 from . import transform
+from . import reader
 
 __all__ = [
     'source',
     'transform',
+    'reader',
 ]

@@ -215,11 +215,15 @@ class ATSSAssigner(nn.Module):
             gt_bboxes.reshape(-1, 4), 0, assigned_gt_index.flatten())
         assigned_bboxes = assigned_bboxes.reshape([batch_size, num_anchors, 4])
 
-        assigned_scores = F.one_hot(assigned_labels, self.num_classes + 1)
+        assigned_scores = F.one_hot(
+            assigned_labels, self.num_classes + 1).to(gt_bboxes.dtype)
         ind = list(range(self.num_classes + 1))
         ind.remove(bg_index)
         assigned_scores = torch.index_select(
-            assigned_scores, -1, torch.tensor(ind))
+            assigned_scores,
+            -1,
+            torch.tensor(ind, device=assigned_scores.device),
+        )
         if pred_bboxes is not None:
             # assigned iou
             ious = batch_iou_similarity(gt_bboxes, pred_bboxes) * mask_positive

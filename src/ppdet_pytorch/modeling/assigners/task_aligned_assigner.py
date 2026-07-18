@@ -185,11 +185,15 @@ class TaskAlignedAssigner(nn.Module):
             gt_bboxes.reshape(-1, 4), 0, assigned_gt_index.flatten())
         assigned_bboxes = assigned_bboxes.reshape([batch_size, num_anchors, 4])
 
-        assigned_scores = F.one_hot(assigned_labels, num_classes + 1)
+        assigned_scores = F.one_hot(
+            assigned_labels, num_classes + 1).to(gt_bboxes.dtype)
         ind = list(range(num_classes + 1))
         ind.remove(bg_index)
         assigned_scores = torch.index_select(
-            assigned_scores, -1, torch.tensor(ind))
+            assigned_scores,
+            -1,
+            torch.tensor(ind, device=assigned_scores.device),
+        )
         # rescale alignment metrics
         alignment_metrics *= mask_positive
         max_metrics_per_instance = alignment_metrics.max(dim=-1, keepdim=True)[0]

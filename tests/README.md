@@ -20,6 +20,12 @@ uv run --extra dev pytest tests/numerical
 
 # 不运行需要 Paddle 的用例
 uv run --extra dev pytest -m "not paddle"
+
+# M1 R18 最小训练链（快速回归）
+uv run --extra dev pytest tests/integration/test_rtdetrv3_training_chain.py -m "integration and not slow"
+
+# M1 R18 5-step CPU 训练
+uv run --extra dev pytest tests/integration/test_rtdetrv3_training_chain.py -m "integration and slow"
 ```
 
 目录约定：

@@ -3,6 +3,7 @@
 **Status**: Active
 **Last updated**: 2026-07-18
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
+**Current execution plan**: [`M1——R18 最小训练链迁移计划`](docs/plans/2026-07-18-m1-minimal-training-chain.md)
 
 本路线图只列未完成的迁移大纲。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -12,14 +13,16 @@
 
 ## Milestone 1 — 打通当前 API 的最小训练链（P0）
 
-- [ ] 使用当前 `workspace` 和 `configs/rtdetrv3/*.yml` 构建 R18 完整模型，不依赖 `tests/legacy/` API。
-- [ ] 使用最小 COCO fixture 构建 Dataset/DataLoader，验证一个 batch 的字段、shape、dtype、bbox 和 padding。
-- [ ] 完成一次训练态前向，输出所有 loss 分项且无 NaN/Inf。
-- [ ] 完成一次反向与 optimizer step，验证关键组件有有限梯度且参数实际更新。
-- [ ] 将 backbone、head、loss、post-process、配置构建和模型集成的历史用例按当前 API 重写回活跃测试集。
-- [ ] 在 CPU 或单 GPU 上运行 5–10 iteration 的短训练烟雾测试。
+- [x] 使用当前 `workspace` 和 `configs/rtdetrv3/*.yml` 构建 R18 完整模型，不依赖 `tests/legacy/` API。
+- [x] 使用最小 COCO fixture 构建 Dataset/DataLoader，验证一个 batch 的字段、shape、dtype、bbox 和 padding。
+- [x] 完成一次训练态前向，输出所有 loss 分项且无 NaN/Inf。
+- [x] 完成一次反向与 optimizer step，验证关键组件有有限梯度且参数实际更新。
+- [x] 将 M1 所需的 backbone、head、loss、post-process、配置构建和模型集成场景按当前 API 重写回活跃测试集。
+- [x] 在 CPU 上运行 5 iteration 的短训练烟雾测试。
 
 **Exit criteria**: 一条可在 CI/开发机重复的 config → data → model → loss → backward → optimizer 链路，关键回归不再依赖旧 Registry 或旧 builder。
+
+**验收记录**：2026-07-18 本机 CPU/float32 验证通过，全量测试 `127 passed, 1 skipped`。完整环境、override 和首末 step 数据见 M1 执行计划。
 
 ## Milestone 2 — 官方权重转换与分层数值对齐（P0）
 

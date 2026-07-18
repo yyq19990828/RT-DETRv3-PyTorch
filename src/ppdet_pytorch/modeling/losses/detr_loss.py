@@ -146,8 +146,8 @@ class DETRLoss(nn.Module):
 
         loss = dict()
         if sum(len(a) for a in gt_bbox) == 0:
-            loss[name_bbox] = torch.tensor([0.])
-            loss[name_giou] = torch.tensor([0.])
+            loss[name_bbox] = boxes.sum() * 0.0
+            loss[name_giou] = boxes.sum() * 0.0
             return loss
 
         src_bbox, target_bbox = self._get_src_target_assign(boxes, gt_bbox,
@@ -168,8 +168,8 @@ class DETRLoss(nn.Module):
 
         loss = dict()
         if sum(len(a) for a in gt_mask) == 0:
-            loss[name_mask] = torch.tensor([0.])
-            loss[name_dice] = torch.tensor([0.])
+            loss[name_mask] = masks.sum() * 0.0
+            loss[name_dice] = masks.sum() * 0.0
             return loss
 
         src_masks, target_masks = self._get_src_target_assign(masks, gt_mask,
@@ -234,8 +234,8 @@ class DETRLoss(nn.Module):
                     src_bbox, target_bbox = self._get_src_target_assign(
                         aux_boxes.detach(), gt_bbox, match_indices)
                     iou_score = bbox_iou(
-                        bbox_cxcywh_to_xyxy(src_bbox).split(4, -1),
-                        bbox_cxcywh_to_xyxy(target_bbox).split(4, -1))
+                        bbox_cxcywh_to_xyxy(src_bbox).split(1, -1),
+                        bbox_cxcywh_to_xyxy(target_bbox).split(1, -1))
                 else:
                     iou_score = None
                 if gt_score is not None:
@@ -280,27 +280,32 @@ class DETRLoss(nn.Module):
         src_idx = torch.cat([src for (src, _) in match_indices])
         src_idx += (batch_idx * num_query_objects)
         target_assign = torch.cat([
-            torch.gather(
-                t, dst, dim=0) for t, (_, dst) in zip(target, match_indices)
+            torch.index_select(t, 0, dst)
+            for t, (_, dst) in zip(target, match_indices)
         ])
-        return src_idx, target_assign
+        return src_idx.unsqueeze(-1), target_assign
 
     def _get_src_target_assign(self, src, target, match_indices):
         src_assign = torch.cat([
-            torch.gather(
-                t, I, dim=0) if len(I) > 0 else torch.zeros([0, t.shape[-1]])
+            torch.index_select(t, 0, I) if len(I) > 0 else t.new_zeros(
+                [0, t.shape[-1]])
             for t, (I, _) in zip(src, match_indices)
         ])
         target_assign = torch.cat([
-            torch.gather(
-                t, J, dim=0) if len(J) > 0 else torch.zeros([0, t.shape[-1]])
+            torch.index_select(t, 0, J) if len(J) > 0 else t.new_zeros(
+                [0, t.shape[-1]])
             for t, (_, J) in zip(target, match_indices)
         ])
         return src_assign, target_assign
 
     def _get_num_gts(self, targets, dtype="float32"):
         num_gts = sum(len(a) for a in targets)
-        num_gts = torch.tensor([num_gts], dtype=torch.float32 if dtype == "float32" else torch.int64)
+        device = targets[0].device if targets else None
+        num_gts = torch.tensor(
+            num_gts,
+            dtype=torch.float32 if dtype == "float32" else torch.int64,
+            device=device,
+        )
         if torch.distributed.is_initialized() and torch.distributed.get_world_size() > 1:
             torch.distributed.all_reduce(num_gts)
             num_gts /= torch.distributed.get_world_size()
@@ -333,8 +338,8 @@ class DETRLoss(nn.Module):
                     src_bbox, target_bbox = self._get_src_target_assign(
                         boxes.detach(), gt_bbox, match_indices)
                     iou_score = bbox_iou(
-                        bbox_cxcywh_to_xyxy(src_bbox).split(4, -1),
-                        bbox_cxcywh_to_xyxy(target_bbox).split(4, -1))
+                        bbox_cxcywh_to_xyxy(src_bbox).split(1, -1),
+                        bbox_cxcywh_to_xyxy(target_bbox).split(1, -1))
                 elif self.vfl_iou_type == 'mask':
                     assert masks is not None and gt_mask is not None, \
                         'Make sure the input has `mask` and `gt_mask`'
@@ -493,8 +498,8 @@ class DINOLoss(DETRLoss):
             total_loss.update(dn_loss)
         else:
             total_loss.update(
-                {k + '_dn': torch.tensor([0.])
-                 for k in total_loss.keys()})
+                {k + '_dn': value.new_zeros(())
+                 for k, value in total_loss.items()})
 
         return total_loss
 
@@ -589,8 +594,8 @@ class DINOv3Loss(DETRLoss):
             total_loss.update(dn_loss)
         else:
             total_loss.update(
-                {k + '_dn': torch.tensor([0.])
-                 for k in total_loss.keys()})
+                {k + '_dn': value.new_zeros(())
+                 for k, value in total_loss.items()})
 
         return total_loss
 
@@ -692,8 +697,8 @@ class MaskDINOLoss(DETRLoss):
             total_loss.update(dn_loss)
         else:
             total_loss.update(
-                {k + '_dn': torch.tensor([0.])
-                 for k in total_loss.keys()})
+                {k + '_dn': value.new_zeros(())
+                 for k, value in total_loss.items()})
 
         return total_loss
 
@@ -705,8 +710,8 @@ class MaskDINOLoss(DETRLoss):
 
         loss = dict()
         if sum(len(a) for a in gt_mask) == 0:
-            loss[name_mask] = torch.tensor([0.])
-            loss[name_dice] = torch.tensor([0.])
+            loss[name_mask] = masks.sum() * 0.0
+            loss[name_dice] = masks.sum() * 0.0
             return loss
 
         src_masks, target_masks = self._get_src_target_assign(masks, gt_mask,

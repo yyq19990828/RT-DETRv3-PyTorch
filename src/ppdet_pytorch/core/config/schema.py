@@ -226,6 +226,7 @@ def extract_schema(cls):
     schema.category = hasattr(cls, '__category__') and getattr(
         cls, '__category__') or 'module'
     schema.strict = not has_kwargs
+    schema.cls = cls
     schema.pymodule = importlib.import_module(cls.__module__)
     schema.inject = getattr(cls, '__inject__', [])
     schema.shared = getattr(cls, '__shared__', [])

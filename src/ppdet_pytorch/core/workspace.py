@@ -158,7 +158,7 @@ def merge_config(config, another_cfg=None):
     Returns: global config
     """
     global global_config
-    dct = another_cfg or global_config
+    dct = global_config if another_cfg is None else another_cfg
     return dict_merge(dct, config)
 
 
@@ -209,31 +209,60 @@ def register(cls):
 
 def create(cls_or_name, **kwargs):
     """
-    Create an instance of given module class.
+    Create an instance from a registered class or configuration block.
 
     Args:
-        cls_or_name (type or str): Class of which to create instance.
+        cls_or_name (type, str or mapping): Registered class, registered name,
+            or a configuration containing a ``name``/``type`` field.
+        **kwargs: Explicit constructor values and context consumed by
+            ``from_config`` (for example ``input_shape``).
 
     Returns: instance of type `cls_or_name`
     """
-    assert type(cls_or_name) in [type, str
-                                 ], "should be a class or name of a class"
-    name = type(cls_or_name) == str and cls_or_name or cls_or_name.__name__
-    if name in global_config:
-        if isinstance(global_config[name], SchemaDict):
-            pass
-        elif hasattr(global_config[name], "__dict__"):
-            # support instance return directly
-            return global_config[name]
+    component_config = {}
+    if isinstance(cls_or_name, collectionsAbc.Mapping):
+        component_config = dict(cls_or_name)
+        name = component_config.pop('name', None)
+        if name is None:
+            name = component_config.pop('type', None)
         else:
-            raise ValueError("The module {} is not registered".format(name))
+            component_config.pop('type', None)
+        if name is None:
+            raise ValueError(
+                "Component config must contain a 'name' or 'type' field")
+    elif isinstance(cls_or_name, str):
+        name = cls_or_name
+    elif isinstance(cls_or_name, type):
+        name = cls_or_name.__name__
     else:
+        raise TypeError(
+            "cls_or_name must be a class, registered name, or config mapping")
+
+    if name not in global_config:
         raise ValueError("The module {} is not registered".format(name))
 
-    config = global_config[name]
-    cls = getattr(config.pymodule, name)
+    registered = global_config[name]
+    if not isinstance(registered, SchemaDict):
+        if isinstance(registered, collectionsAbc.Mapping):
+            return create(registered, **kwargs)
+        if hasattr(registered, "__dict__"):
+            return registered
+        raise ValueError("The module {} is not registered".format(name))
+
+    # Work on a local schema copy so nested creation cannot mutate the global
+    # registered configuration shared by later tests or commands.
+    config = registered.copy()
+    config.update(component_config)
+    cls = getattr(config, 'cls', None) or getattr(config.pymodule, name)
     cls_kwargs = {}
-    cls_kwargs.update(global_config[name])
+    cls_kwargs.update(config)
+
+    explicit_constructor_kwargs = {
+        key: value for key, value in kwargs.items() if key in config.schema
+    }
+    from_config_context = {
+        key: value for key, value in kwargs.items() if key not in config.schema
+    }
 
     # parse `shared` annoation of registered modules
     if getattr(config, 'shared', None):
@@ -252,40 +281,31 @@ def create(cls_or_name, **kwargs):
 
     # parse `inject` annoation of registered modules
     if getattr(cls, 'from_config', None):
-        cls_kwargs.update(cls.from_config(config, **kwargs))
+        cls_kwargs.update(cls.from_config(config, **from_config_context))
 
     if getattr(config, 'inject', None):
         for k in config.inject:
-            target_key = config[k]
+            target_key = explicit_constructor_kwargs.get(k, config[k])
             # optional dependency
             if target_key is None:
                 continue
 
-            if isinstance(target_key, dict) or hasattr(target_key, '__dict__'):
-                if 'name' not in target_key.keys():
-                    continue
-                inject_name = str(target_key['name'])
-                if inject_name not in global_config:
-                    raise ValueError(
-                        "Missing injection name {} and check it's name in cfg file".
-                        format(k))
-                target = global_config[inject_name]
-                for i, v in target_key.items():
-                    if i == 'name':
-                        continue
-                    target[i] = v
-                if isinstance(target, SchemaDict):
-                    cls_kwargs[k] = create(inject_name)
+            if isinstance(target_key, collectionsAbc.Mapping):
+                if 'name' in target_key or 'type' in target_key:
+                    cls_kwargs[k] = create(target_key)
+                else:
+                    cls_kwargs[k] = target_key
             elif isinstance(target_key, str):
                 if target_key not in global_config:
-                    raise ValueError("Missing injection config:", target_key)
-                target = global_config[target_key]
-                if isinstance(target, SchemaDict):
-                    cls_kwargs[k] = create(target_key)
-                elif hasattr(target, '__dict__'):  # serialized object
-                    cls_kwargs[k] = target
+                    raise ValueError(
+                        "Missing injection config: {}".format(target_key))
+                cls_kwargs[k] = create(target_key)
             else:
-                raise ValueError("Unsupported injection type:", target_key)
+                cls_kwargs[k] = target_key
+
+    # Explicit values have the highest priority, but only constructor fields
+    # are forwarded. Context-only values were consumed by ``from_config``.
+    cls_kwargs.update(explicit_constructor_kwargs)
     # prevent modification of global config values of reference types
     # (e.g., list, dict) from within the created module instances
     #kwargs = copy.deepcopy(kwargs)

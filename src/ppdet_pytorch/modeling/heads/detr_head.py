@@ -148,7 +148,8 @@ class DINOv3Head(nn.Module):
                     # Match Paddle: loss.update({key: loss.get(key, paddle.zeros([1])) + value})
                     for key, value in loss_o2m.items():
                         loss_key = key + '_o2m_branch'
-                        loss[loss_key] = loss.get(loss_key, torch.zeros([1], device=value.device, dtype=value.dtype)) + value
+                        loss[loss_key] = loss.get(
+                            loss_key, value.new_zeros(())) + value
 
                 # Split queries by groups
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:590-595
@@ -195,7 +196,7 @@ class DINOv3Head(nn.Module):
                     # Accumulate losses across groups
                     # Match Paddle: loss.update({key: loss.get(key, paddle.zeros([1])) + value})
                     for key, value in loss_gid.items():
-                        loss[key] = loss.get(key, torch.zeros([1], device=value.device, dtype=value.dtype)) + value
+                        loss[key] = loss.get(key, value.new_zeros(())) + value
 
                 # Average losses across groups (except o2m_branch losses)
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:622-624
@@ -239,4 +240,3 @@ class DINOv3Head(nn.Module):
                 dec_out_logits[self.eval_idx],  # (B, N, num_classes)
                 None  # No auxiliary outputs in eval mode
             )
-

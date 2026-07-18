@@ -13,5 +13,6 @@
 
 ## 当前文档
 
+- [M1——R18 最小训练链迁移计划](2026-07-18-m1-minimal-training-chain.md)：已完成的 M1 计划，覆盖 config、最小 COCO batch、loss、backward、optimizer 和短训练验收证据。
 - [2026-07-18 迁移进度快照](2026-07-18-migration-status.md)：对历史 `specs/` 记录与当前代码的核验结果。
 - [仓库迁移路线图](../../ROADMAP.md)：未完成工作的唯一顶层大纲。
