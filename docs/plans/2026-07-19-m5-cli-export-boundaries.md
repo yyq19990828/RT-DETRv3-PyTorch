@@ -34,7 +34,8 @@ M1–M3 已建立当前 PyTorch API 的训练、评估、恢复与权重转换�
 - [x] 重写 Infer CLI：复用统一 workspace、TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则。
 - [x] 为 Infer 参数校验、旧下划线参数别名、预处理、batch、阈值、输出拆分和类别映射添加活跃单元测试。
 - [x] 使用官方 R18 checkpoint 在 CPU/FP32 上验证真实 COCO 单图、JSON 和 batch 4 目录推理。
-- [ ] 补齐 workspace 冲突矩阵、重复配置加载和进程内全局状态隔离测试，并修正文档中的过时描述。
+- [x] 补齐 workspace 冲突矩阵、重复配置加载和进程内全局状态隔离测试，并修正文档中的过时描述。
+- [x] 完成 RT-DETRv3 配置迁移指南，区分 Paddle YAML 的直接支持、必要改写与尚未支持字段。
 - [ ] 补齐 Train/Eval/Infer/Convert 的统一 `--help`、错误路径和端到端 CLI contract；记录 Paddle-only 参数及替代方式。
 - [ ] 建立导出适配层，完成 ONNX/ONNXRuntime 输出回归并记录算子和动态轴限制。
 - [ ] 完成 TorchScript 保存/加载回归；验证 batch 1/4/8、支持的输入尺寸和空阈值结果。
@@ -68,7 +69,11 @@ M1–M3 已建立当前 PyTorch API 的训练、评估、恢复与权重转换�
 | 2026-07-19 | 删除 CLI 手写 letterbox/ImageNet 归一化和外置 NMS | 当前配置明确使用 TestReader Resize/Normalize，模型已完成 top-k 和原图坐标恢复；重复实现会制造语义分叉 |
 | 2026-07-19 | 保留下划线参数作为别名，文档使用连字符参数 | 兼顾仓库 README 的历史命令和当前 Python CLI 命名习惯，不保留已失效的内部模型合同 |
 | 2026-07-19 | Infer 复用 Eval 的受控 checkpoint 加载 | 官方转换权重允许两个可派生 buffer 缺失，但其他 missing/unexpected key 必须失败；训练 checkpoint 还可显式选择 EMA |
+| 2026-07-19 | 每次 `load_config()` 替换上一份 YAML 运行时值，但保留注册 schema | 长生命周期进程和批量转换不能让前一模型字段泄漏；需要增量修改时已有显式 `merge_config()` |
+| 2026-07-19 | 显式 inject 参数先递归创建，且不再被原始 dict/string 覆盖 | 保持“显式值优先”同时满足构造函数需要实例的类型合同 |
 
 ## 完成记录
 
 进行中。第一阶段基于提交 `9d76bb6a17e1` 后的工作树完成：Python `3.12.11`、PyTorch `2.5.1+cu121`、OpenCV `4.5.5`、CPU/FP32；R18 checkpoint SHA-256 为 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`，验证图片 `000000000139.jpg` SHA-256 为 `ffe0f0cec3b2e27aab1967229cdf0a0d7751dcdd5800322f0b8ac0dffb3b8a8d`。单图最高结果为 `chair / 0.9240278006`；隐藏 GPU 的默认全量回归为 `200 passed, 8 skipped, 6 warnings in 9.31s`，sdist/wheel 构建成功且产物随后清理。这些结果只证明当前 Infer CLI 与官方 checkpoint 可运行且未破坏活跃回归，不单独构成新的 Paddle/PyTorch 数值对齐结论。
+
+第二阶段完成 workspace 冲突矩阵、显式 inject 修复和连续配置隔离，并新增 RT-DETRv3 配置支持矩阵。R18 → R50 → R18 同进程实建恢复正确 depth 和参数量；23 项 workspace/训练链/转换定向测试通过，随后隐藏 GPU 的默认全量回归为 `206 passed, 8 skipped, 6 warnings in 9.51s`。这证明当前三变体的配置切换边界，不把结论外推到尚未迁移的 PaddleDetection 架构。

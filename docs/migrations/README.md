@@ -11,6 +11,7 @@
 - [历史规格整合记录](spec-history.md)：原 `specs/001`–`005` 的去向、冲突和可信度说明。
 - [权重转换经验](weight-conversion.md)：参数命名、张量布局、校验层级和已知边界。
 - [注册与配置迁移](registry-and-configuration.md)：`workspace`、`__inject__`、`__shared__` 和 YAML 继承的语义。
+- [RT-DETRv3 配置迁移指南](configuration-guide.md)：Paddle YAML 字段的直接支持、必要改写和未支持矩阵。
 - [训练与数值验证](training-and-validation.md)：数据、优化器、调度器、DDP 及分层对齐方法。
 - [CLI 与导出迁移](cli-and-export.md)：当前 Infer 数据流、Paddle 参数差异以及 ONNX/TorchScript 验收约束。
 

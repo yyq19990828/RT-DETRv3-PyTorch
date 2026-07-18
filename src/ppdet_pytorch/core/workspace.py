@@ -109,7 +109,11 @@ def _load_config_with_base(file_path):
 
 def load_config(file_path):
     """
-    Load config from file.
+    Load one isolated config from file.
+
+    Registered component schemas are preserved, while runtime values from a
+    previous call are removed before the newly parsed config is merged.
+    ``_BASE_`` files are still merged as one config before that replacement.
 
     Args:
         file_path (str): Path of the config file to be loaded.
@@ -119,12 +123,24 @@ def load_config(file_path):
     _, ext = os.path.splitext(file_path)
     assert ext in ['.yml', '.yaml'], "only support yaml files for now"
 
-    # load config from file and merge into global config
+    # Parse first so a malformed file does not destroy the active workspace.
     cfg = _load_config_with_base(file_path)
     cfg['filename'] = os.path.splitext(os.path.split(file_path)[-1])[0]
+    _reset_runtime_config()
     merge_config(cfg)
 
     return global_config
+
+
+def _reset_runtime_config():
+    """Keep registrations while removing values from earlier config loads."""
+    registered = {
+        name: extract_schema(config.cls)
+        for name, config in global_config.items()
+        if isinstance(config, SchemaDict)
+    }
+    global_config.clear()
+    global_config.update(registered)
 
 
 def dict_merge(dct, merge_dct):
@@ -283,11 +299,14 @@ def create(cls_or_name, **kwargs):
     if getattr(cls, 'from_config', None):
         cls_kwargs.update(cls.from_config(config, **from_config_context))
 
-    if getattr(config, 'inject', None):
+    inject_fields = set(getattr(config, 'inject', None) or [])
+    if inject_fields:
         for k in config.inject:
             target_key = explicit_constructor_kwargs.get(k, config[k])
             # optional dependency
             if target_key is None:
+                if k in explicit_constructor_kwargs:
+                    cls_kwargs[k] = None
                 continue
 
             if isinstance(target_key, collectionsAbc.Mapping):
@@ -303,9 +322,11 @@ def create(cls_or_name, **kwargs):
             else:
                 cls_kwargs[k] = target_key
 
-    # Explicit values have the highest priority, but only constructor fields
-    # are forwarded. Context-only values were consumed by ``from_config``.
-    cls_kwargs.update(explicit_constructor_kwargs)
+    # Explicit values have the highest priority. Injected fields were already
+    # resolved above and must not be replaced by their raw string/dict input.
+    for key, value in explicit_constructor_kwargs.items():
+        if key not in inject_fields:
+            cls_kwargs[key] = value
     # prevent modification of global config values of reference types
     # (e.g., list, dict) from within the created module instances
     #kwargs = copy.deepcopy(kwargs)

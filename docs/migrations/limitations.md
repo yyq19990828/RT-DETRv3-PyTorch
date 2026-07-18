@@ -29,8 +29,8 @@
 ## 配置与 API
 
 - PyTorch 保留了部分 PaddleDetection 风格的 YAML 和注册机制，但两个框架的对象创建、参数注入和 DataLoader 语义不能假设完全等价。
-- 当前 `create()` 只接受类或注册名，不接受任意配置字典；显式关键字参数会传给 `from_config()`，不会自动成为构造函数覆盖项。
-- 组件依赖导入时注册，且 `global_config` 会随加载过程累积。测试和长生命周期进程必须控制导入顺序并隔离全局状态。
+- 当前 `create()` 接受类、注册名、全局命名配置块或带 `name`/`type` 的配置映射；不带组件名的任意字典会失败。显式构造参数优先于配置块和 `from_config()`，显式注入目标会先递归解析。
+- 组件依赖仍在导入时注册。`load_config()` 现已隔离连续 YAML 的运行时值并保留注册 schema，但 `global_config` 仍是当前进程共享的活动配置；测试中的临时 `merge_config()` 和手工修改仍必须在前后恢复。
 - 数据集路径使用仓库相对默认值，实际训练仍需根据本机数据位置覆盖配置。
 
-当前行为和设计约束见[注册与配置经验](registry-and-configuration.md)。
+当前行为和设计约束见[注册与配置经验](registry-and-configuration.md)与[配置迁移指南](configuration-guide.md)。
