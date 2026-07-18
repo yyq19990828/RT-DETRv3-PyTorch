@@ -112,6 +112,8 @@ GradScaler 检测到溢出时，`scaler.step()` 会跳过 optimizer 更新并降
 - **M4 初始化协议已验证**：官方 R18 正式训练依赖 ImageNet `ResNet18_vd_pretrained`，不能沿用 M3 的完整检测 checkpoint。转换后的 115 个 backbone tensor 完整加载；真实 2-GPU AMP+EMA 烟测完成 1 次有效更新并成功用 Eval CLI 的 `--use-ema` 读取保存的 EMA 权重。小样本 AP 不作精度证据。
 - **M4 同权重推理 gate 已验证**：同一官方 R18 checkpoint、val2017、CPU/FP32、batch 16 条件下，Paddle/PyTorch 独立复算 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 在同类、坐标 L∞ `<=1px` 下全部匹配。对不同设备或框架的 prediction 不应只按 score 排名强行对齐；临界 score 交换会被误认为大坐标偏差，应按同图、同类、score 阈值和明确像素容差匹配。
 - **checkpoint 频率应进入容量预算**：启用 EMA 的 R18 checkpoint 实测约 368 MB。Trainer 现已把 `snapshot_epoch` 传给 Checkpointer，并保证 final epoch 无论间隔都保存；M4 三 seed 使用间隔 3，在恢复窗口与磁盘占用之间做显式权衡。
+- **社区分片实验也要先固定证据 schema**：[`scripts/run_stability_experiment.py`](../../scripts/run_stability_experiment.py) 一次运行一个 `model + seed`，把 commit/dirty 状态、环境、GPU、协议、输入 checksum、原始日志、退出码、最终 checkpoint checksum 和 EMA COCO 指标分开落盘。转换 checkpoint 的 metadata 含时间戳，整个文件 SHA 不足以判定 tensor 是否相同，因此脚本另算忽略 metadata 的有序 tensor SHA。只有 commit、tensor 输入和协议一致的成功结果才能聚合；社区成员自行改小 batch、卡数或 epoch 的结果只能标记为观察。
+- **长期运行可以在已声明边界主动截断，但必须先原子保存再发信号**：M4 seed 0 的 3-epoch probe 在 `epoch_3.pth` 发布后才向 torchrun 发送 SIGINT。checkpoint 记录 `epoch/sampler_epoch=3`、`global_step=21972`、scaler、optimizer、scheduler、EMA 和 2 份不同的 rank RNG；model/optimizer/EMA tensor 全部有限。launcher 因主动 SIGINT 返回非零不应误记为训练崩溃，但该短 probe 同样不能冒充 72 epoch 精度或多 seed 稳定性证据。
 
 可复现命令使用环境变量，避免在文档中固化工作站路径：
 
@@ -163,4 +165,4 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
 
 ## 当前缺口
 
-官方 R18/R34/R50 已完成 checkpoint 参数转换、eval 分层激活、受控训练 loss、head/loss 输出梯度和完整模型整体梯度方向对齐。PyTorch 已表达 ResNet LR multiplier、锁定 piecewise 的全局 step 语义，并验证自有 checkpoint 恢复、真实 COCO 完整 epoch/val2017、AMP、EMA、2-GPU DDP 和梯度累积。标准 schedule、多 seed、R18/R34/R50 的 Paddle AP 对照和性能基准仍是 [`ROADMAP.md`](../../ROADMAP.md) M4 及后续里程碑的主要缺口。
+官方 R18/R34/R50 已完成 checkpoint 参数转换、eval 分层激活、受控训练 loss、head/loss 输出梯度和完整模型整体梯度方向对齐。PyTorch 已表达 ResNet LR multiplier、锁定 piecewise 的全局 step 语义，并验证自有 checkpoint 恢复、真实 COCO 完整 epoch/val2017、AMP、EMA、2-GPU DDP 和梯度累积。标准 schedule、多 seed、R18/R34/R50 的 Paddle AP 对照和性能基准仍是 [`ROADMAP.md`](../../ROADMAP.md) M4 及后续里程碑的主要缺口；其中 72 epoch、多 seed 和 R34/R50 长训已于 2026-07-19 因本机时间成本标记为 deferred，并改由统一脚本支持 GitHub 社区分片征集。

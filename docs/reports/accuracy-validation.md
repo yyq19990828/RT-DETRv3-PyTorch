@@ -152,17 +152,23 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
 
 | 模型 | seed | schedule | checkpoint SHA-256 | AP | AP50 | AP75 | 状态 |
 |---|---:|---|---|---:|---:|---:|---|
-| R18 | 0 | PyTorch 72 epoch | — | — | — | — | 执行中（2026-07-18 22:52 CST 启动） |
-| R18 | 1 | PyTorch 72 epoch | — | — | — | — | 计划 |
-| R18 | 2 | PyTorch 72 epoch | — | — | — | — | 计划 |
+| R18 | 0 | PyTorch 72 epoch | — | — | — | — | deferred；3-epoch probe 已停止并审计 |
+| R18 | 1 | PyTorch 72 epoch | — | — | — | — | deferred |
+| R18 | 2 | PyTorch 72 epoch | — | — | — | — | deferred |
 
-均值和标准差只能在三次训练均完成并核对配置后填写。M3 的单次 1 epoch 结果不能进入该统计。显式 seed 与 checkpoint 恢复已由 19 个定向测试覆盖 Python/NumPy/PyTorch RNG、单/多卡 sampler、epoch 和 DataLoader workers；另一个真实 2-GPU、32 图 smoke 记录 `seed=17`、8 次更新、`sampler_epoch=1` 和 90 项有效配置。在修复 DDP 只保存 rank 0 RNG 的缺口后，又用真实双卡烟测确认 checkpoint 收集了 2 份不同的 rank RNG state，且新单测会在恢复时选择当前 rank。这些只证明协议传播和恢复边界，不是多 seed 稳定性结果。
+均值和标准差只能在三次训练均完成并核对配置后填写；2026-07-19 因约 11 天双卡时间成本决定暂缓完整稳定性实验，表中不得填入推断值。M3 的单次 1 epoch 和当前 3-epoch checkpoint 探针都不能进入该统计。显式 seed 与 checkpoint 恢复已由 19 个定向测试覆盖 Python/NumPy/PyTorch RNG、单/多卡 sampler、epoch 和 DataLoader workers；另一个真实 2-GPU、32 图 smoke 记录 `seed=17`、8 次更新、`sampler_epoch=1` 和 90 项有效配置。在修复 DDP 只保存 rank 0 RNG 的缺口后，又用真实双卡烟测确认 checkpoint 收集了 2 份不同的 rank RNG state，且新单测会在恢复时选择当前 rank。这些只证明协议传播和恢复边界，不是多 seed 稳定性结果。
 
 **观察到（2026-07-18 23:04 CST 快照）**：seed 0 正式训练使用 world size 2、每 rank batch 8、AMP、EMA、官方 ImageNet backbone 初始化和 `snapshot_epoch=3`，有效 `config.yaml` 已落盘。epoch 0 已到 step 1100，7 次 AMP 跳步把 scale 从 `65536` 降至 `512`，warmup 在成功 update 边界后达到 base LR `1e-4`；loss 有限，未出现 OOM、NCCL 错误或热降频。这是运行中快照，不能填写本表的 checkpoint/AP 字段。
+
+**计划变更（2026-07-19）**：不继续 seed 0 的 72 epoch，也不启动 seed 1/2 或 R34/R50 长训。当前运行已在首个 3-epoch checkpoint 原子落盘后主动停止；该探针不作最终 COCO AP 或稳定性证据。
+
+**已验证（2026-07-19 02:44 CST）**：3-epoch probe 完成 `21987` 个数据 batch，其中 `21972` 次 optimizer/scheduler/EMA update 成功、15 次由 AMP GradScaler 跳过。`epoch_3.pth` 为 `368376901` 字节，SHA-256 `08d4977d9fa0ac963dce8c364895070e3a961aaadf0d7ac0ea5da7a97372116c`；记录 `epoch=3`、`global_step=21972`、`sampler_epoch=3`、scaler `scale=512`、2 个 optimizer parameter group 和 2 份不同的 per-rank RNG state。648 个 model tensor、1260 个 optimizer tensor、648 个 EMA tensor 全部有限，scheduler/EMA step 都等于 `21972`。checkpoint 保存后由监视器主动向 torchrun 发送 SIGINT，未进入第 4 epoch 的日志；退出码不代表训练故障。该 checkpoint 未跑最终 val2017，也不进入上表 AP 或三 seed 统计。
+
+**社区执行入口（2026-07-19）**：[`scripts/run_stability_experiment.py`](../../scripts/run_stability_experiment.py) 可把一个 `model + seed` 作为独立任务运行，自动保存环境、协议、输入 checksum、日志、最终 checkpoint checksum 和 EMA COCO 指标。完整长训仍是 deferred 状态；GitHub Issue 回传结果只有在 commit、输入和训练协议一致时才可填入上表。
 
 ## 当前结论与局限
 
 - M4 尚未完成；R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过，主 AP 绝对差 `1.65599e-7`，score `>=0.3` 的 `53780` 个 prediction 全部匹配。
 - 本机 Paddle/PyTorch AP50 均约为 `0.65615`，官方表的 `0.662` 仍是未定位的发布环境/评估差异；双框架本机结果一致，因此它不阻塞当前 PyTorch 长训。
 - Paddle CPU build 使全量评估耗时超过 100 分钟，但未降低本次同设备双框架证据标准。
-- R34/R50 必须等待 R18 的同权重门槛与训练协议稳定后再开始。
+- 72 epoch、多 seed 和 R34/R50 长训均已 deferred；恢复前需要明确的时间预算和新决策。

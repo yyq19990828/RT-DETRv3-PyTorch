@@ -1,8 +1,8 @@
 # M4——COCO 精度与稳定性对齐计划
 
-- 状态：`in-progress`
+- 状态：`deferred`
 - 创建日期：`2026-07-18`
-- 最后更新：`2026-07-18`
+- 最后更新：`2026-07-19`
 - 负责人：`maintainer`
 - 对应路线图：[`ROADMAP.md` Milestone 4](../../ROADMAP.md)
 - 前置计划：[`M3——训练、评估与恢复验收`](2026-07-18-m3-training-evaluation-recovery.md)
@@ -10,6 +10,10 @@
 ## 背景
 
 M3 已证明 R18 能在真实 COCO 上完成完整 epoch、val2017、恢复、AMP/EMA 和 DDP，但“官方转换权重再训练 1 epoch”的 AP `0.468` 只属于可运行性证据。M4 要建立同权重推理精度、完整训练 schedule 和多 seed 稳定性证据，不能把类名、shape、短训或单次 AP 当作 Paddle/PyTorch 精度对齐。
+
+## 暂缓说明（2026-07-19）
+
+R18 官方同权重完整 val2017 gate 已通过，但完整 `3 seeds × 72 epoch` 预计占用约 11 天双卡时间，当前不继续执行。已经启动的 seed 0 运行已在首个 3-epoch checkpoint 原子落盘后停止，并完成 checkpoint 结构与可恢复状态审计；该结果属于训练/恢复探针，不填写最终 AP、均值或方差。R34/R50 长训同时暂缓，恢复本计划需要新的明确决策和时间预算。
 
 ### 当前基线
 
@@ -71,15 +75,54 @@ M3 已证明 R18 能在真实 COCO 上完成完整 epoch、val2017、恢复、AM
 
 该协议刻意保留当前 PyTorch schedule，不声称与 Paddle AdamW 更新逐元素一致。正式命令必须显式覆盖 `pretrain_weights=pretrained_models/pytorch/ResNet18_vd_pretrained.pth`，不能沿用 M3 为可运行性而使用的完整检测 checkpoint。
 
+### 社区分片执行
+
+完整实验暂缓本机执行，但仓库提供 [`scripts/run_stability_experiment.py`](../../scripts/run_stability_experiment.py)，便于在 GitHub Issue 中由不同贡献者各自认领一个 `model + seed`。脚本一次只启动一个任务，默认固定 2 GPU、每 rank batch 8、AMP、EMA、72 epoch、每 3 epoch保存，并在成功训练后自动评估最终 EMA checkpoint。
+
+先按 [`weight-conversion.md`](../migrations/weight-conversion.md#r18-vd-backbone-预训练权重2026-07-18) 准备官方 ImageNet backbone 转换权重，然后验证命令；`--dry-run` 不创建文件或启动训练：
+
+```bash
+uv sync --extra dev
+export COCO_ROOT=/path/to/coco2017
+.venv/bin/python scripts/run_stability_experiment.py \
+  --model r18 --seed 1 --coco-root "$COCO_ROOT" --dry-run
+```
+
+确认无误后移除 `--dry-run`。结果写入 `output/stability/r18-seed-1/`：
+
+- `metadata.json`：commit/dirty 状态、环境、GPU、完整协议、命令和输入 checksum；预训练权重同时记录整个文件 SHA 与忽略转换元数据的有序 tensor SHA；
+- `train.log` 与 `eval.log`：原始训练和评估日志；
+- `result.json`：退出码、最终 checkpoint checksum 与六项 COCO AP；
+- `model_final.pth` 和 `eval/`：checkpoint 与 COCO 预测产物，不建议直接作为 Issue 附件上传。
+
+中断后应保持全部参数不变，并显式传入同一目录中的周期 checkpoint：
+
+```bash
+.venv/bin/python scripts/run_stability_experiment.py \
+  --model r18 --seed 1 --coco-root "$COCO_ROOT" \
+  --resume output/stability/r18-seed-1/epoch_3.pth
+```
+
+Issue 第一批只认领 R18 的 seed `0/1/2`。R34/R50 的 CLI 入口已经保留，但仍受“R18 三次完成后再展开”的阶段 gate 约束，并需要各自的官方 backbone 转换权重。转换文件的 metadata 含时间戳，整个文件 SHA 可能不同；合并统计应核对 `pretrain_tensor_sha256`，并同时核对相同 commit、config/annotation checksum、world size、每 rank batch、epoch、AMP/EMA 和评估方式。任何改参结果只能记为观察，不能混入均值与标准差。
+
+建议 Issue 用下列清单认领，避免重复计算：
+
+- [ ] R18 / seed 0
+- [ ] R18 / seed 1
+- [ ] R18 / seed 2
+
+完成者应在评论中给出 commit、认领项、`metadata.json`、`result.json`、`train.log`、`eval.log`，并说明训练是否中断/恢复。checkpoint 只报告 `result.json` 中的 SHA-256；若需要共享大文件，应使用外部制品存储，不直接上传到 Issue。maintainer 审核证据前保持清单未完成，审核通过后再把对应结果写入准确率报告。
+
 ### 阶段 3：R18 标准 schedule 与稳定性
 
-- [ ] 完成 seed 0 的 72 epoch 训练与 val2017，记录 checkpoint checksum 和全部 COCO 指标（执行中；2026-07-18 22:52 CST 启动）。
-- [ ] 对 seed 1、2 重复相同协议，报告均值、标准差和单 seed 离群情况。
-- [ ] 仅在 3 seed 证据完成后判断 R18 是否满足精度与稳定性门槛。
+- [x] 提供单 `model + seed` 社区执行脚本，自动记录环境、协议、文件/权重 tensor checksum、日志、最终 EMA 指标和恢复命令；定向测试 `8 passed`。
+- [ ] 完成 seed 0 的 72 epoch 训练与 val2017，记录 checkpoint checksum 和全部 COCO 指标。（deferred；3-epoch probe 已停止并审计）
+- [ ] 对 seed 1、2 重复相同协议，报告均值、标准差和单 seed 离群情况。（deferred）
+- [ ] 仅在 3 seed 证据完成后判断 R18 是否满足精度与稳定性门槛。（deferred）
 
 ### 阶段 4：R34/R50 与报告
 
-- [ ] 在 R18 门槛通过后依次运行 R34、R50 的同权重完整 val 和训练验收。
+- [ ] 在 R18 门槛通过后依次运行 R34、R50 的同权重完整 val 和训练验收。（deferred）
 - [ ] 更新模型表、权重 checksum、可复现命令和局限说明。
 - [ ] 完成准确率报告并把可复用结论推广到 `docs/migrations/`。
 
@@ -112,7 +155,9 @@ M3 已证明 R18 能在真实 COCO 上完成完整 epoch、val2017、恢复、AM
 | 2026-07-18 | 正式训练每 3 epoch 保存 | EMA checkpoint 实测约 368 MB；三 seed 每 epoch保存约需 79.5 GB，每 3 epoch 可降至约 26.5 GB，同时把最大恢复窗口限制在 3 epoch |
 | 2026-07-18 | DDP checkpoint 按 rank 保存 RNG | rank process 使用 `base + rank`；只保存 rank 0 RNG 会让所有 rank 恢复成同一随机状态 |
 | 2026-07-18 | R18 同权重 gate 通过 | 同 CPU/FP32 精确 AP 差仅 `1.65599e-7`，且 score `>=0.3` 的预测全部匹配；可进入 72 epoch 长训 |
+| 2026-07-19 | 暂缓完整稳定性实验 | `3 seeds × 72 epoch` 约需 11 天双卡时间；当前只保留 3-epoch checkpoint 探针，不继续 R34/R50 长训 |
+| 2026-07-19 | 用 GitHub Issue 分片征集完整运行 | 每位贡献者只运行一个 `model + seed`，脚本统一记录可复现证据；社区结果仍必须经过协议和 checksum 审核 |
 
 ## 完成记录
 
-M4 已完成 R18 官方同权重 CPU/FP32 完整 val2017 gate，精确 AP 差 `1.65599e-7`，prediction 高置信度匹配也通过；显式 seed、官方 backbone 初始化、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已验证。默认全量回归为 `181 passed, 8 skipped`，CUDA 定向回归为 `8 passed`。seed 0 的 R18 72 epoch 长训已于 2026-07-18 22:52 CST 启动；23:04 快照已观察到 epoch 0 step 1100，warmup 达到 base LR `1e-4`，loss 有限，无 OOM/NCCL/热降频。该快照只证明启动和初期稳定，不是 72 epoch 或多 seed 完成证据。
+M4 已完成 R18 官方同权重 CPU/FP32 完整 val2017 gate，精确 AP 差 `1.65599e-7`，prediction 高置信度匹配也通过；显式 seed、官方 backbone 初始化、EMA Eval CLI、DDP per-rank RNG checkpoint 和社区分片执行入口已验证。默认全量回归为 `190 passed, 8 skipped`，CUDA 定向回归为 `8 passed`。seed 0 在 3 epoch 内完成 `21972` 次有效 update、15 次 AMP 自恢复跳步，随后原子保存 `epoch_3.pth` 并按计划主动停止；checkpoint 为 `368376901` 字节，SHA-256 `08d4977d9fa0ac963dce8c364895070e3a961aaadf0d7ac0ea5da7a97372116c`，model/optimizer/EMA 无非有限 tensor，EMA/scheduler step 均为 `21972`，且包含 2 份不同的 rank RNG state。完整 72 epoch、多 seed 与 R34/R50 长训仍为 deferred；该 3-epoch 结果不产生训练精度或稳定性结论。

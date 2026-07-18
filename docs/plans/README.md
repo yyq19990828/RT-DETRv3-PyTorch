@@ -5,7 +5,7 @@
 ## 文件约定
 
 - 命名：`YYYY-MM-DD-<topic>.md`。
-- 状态：`draft`、`in-progress`、`blocked`、`completed`或 `cancelled`。
+- 状态：`draft`、`in-progress`、`deferred`、`blocked`、`completed`或 `cancelled`。
 - 计划中的命令以仓库根目录为工作目录。
 - 完成后补充实际验收结果；可复用的迁移结论应沉淀到 `docs/migrations/`。
 
@@ -13,7 +13,7 @@
 
 ## 当前文档
 
-- [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：当前执行计划，先做 R18 官方同权重完整 val2017 gate，再进入 72 epoch、多 seed 和 R34/R50。
+- [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：同权重完整 val2017 gate 已通过；本机长训于 2026-07-19 暂缓，已提供 GitHub 社区分片执行脚本。
 - [M3——训练、评估与恢复验收计划](2026-07-18-m3-training-evaluation-recovery.md)：已完成，覆盖 optimizer/LR、完整 COCO epoch/val、恢复、AMP/EMA、DDP、loss reduce 与梯度累积。
 - [M2——官方 checkpoint 转换与分层数值对齐计划](2026-07-18-m2-official-checkpoint-alignment.md)：已完成的 M2 计划，覆盖三变体官方权重、分层数值、批量失败隔离和受控内存转换。
 - [M1——R18 最小训练链迁移计划](2026-07-18-m1-minimal-training-chain.md)：已完成的 M1 计划，覆盖 config、最小 COCO batch、loss、backward、optimizer 和短训练验收证据。

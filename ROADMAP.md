@@ -1,7 +1,7 @@
 # RT-DETRv3 PyTorch Migration Roadmap
 
 **Status**: Active
-**Last updated**: 2026-07-18
+**Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M3——训练、评估与恢复验收计划`](docs/plans/2026-07-18-m3-training-evaluation-recovery.md)
 **Current execution plan**: [`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)
@@ -60,15 +60,15 @@
 
 ## Milestone 4 — COCO 精度与稳定性对齐（P1）
 
-**执行计划**：[`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)。先完成同一官方 R18 checkpoint 的 Paddle/PyTorch 完整 val2017 gate，再启动 72 epoch 与多 seed 长训。
+**执行计划**：[`M4——COCO 精度与稳定性对齐计划`](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)。同一官方 R18 checkpoint 的 Paddle/PyTorch 完整 val2017 gate 已完成；72 epoch、多 seed 与 R34/R50 长训因时间成本暂缓，恢复前需要新的明确决策。
 
-**当前进度**：R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过：Paddle/PyTorch 精确 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 全部匹配。显式 seed、官方 ImageNet R18-vd backbone 初始化、2-GPU AMP+EMA 协议、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已通过定向测试与真实双卡烟测。seed 0 的 72 epoch 正式训练已于 2026-07-18 22:52 CST 启动；23:04 快照已越过 warmup 并保持 loss 有限，当前不声称单 seed、多 seed 或 R34/R50 已完成。
+**当前进度**：R18 官方同权重 CPU/FP32 完整 val2017 gate 已通过：Paddle/PyTorch 精确 AP 分别为 `0.480477300367/0.480477134768`，绝对差 `1.65599e-7`；score `>=0.3` 的 `53780` 个 prediction 全部匹配。显式 seed、官方 ImageNet R18-vd backbone 初始化、2-GPU AMP+EMA 协议、EMA Eval CLI 和 DDP per-rank RNG checkpoint 已通过定向测试与真实双卡烟测。seed 0 已在 3 epoch 边界原子保存并主动停止；checkpoint 的 model/optimizer/EMA tensor 全部有限，恢复状态完整，但该探针不作标准 schedule、单 seed 精度或多 seed 稳定性证据。仓库已提供单 `model + seed` 的社区执行脚本，长训通过 GitHub Issue #3 分片认领，结果需按 commit、协议和 checksum 审核后才能进入统计。
 
-- [ ] 对 R18 完成标准训练 schedule，保存环境、命令、配置、日志和 checkpoint。
+- [ ] 对 R18 完成标准训练 schedule，保存环境、命令、配置、日志和 checkpoint。（deferred）
 - [x] 与对应 Paddle 基线比较 AP/AP50/AP75/APs/APm/APl；R18 同设备主 AP 绝对差 `1.65599e-7`，通过 `0.5 AP` 目标。
-- [ ] 在 R18 通过后依次验证 R34 和 R50，不在未定位数值差异时同时展开多变体训练。
-- [ ] 至少使用 3 个 seed 记录均值和方差；发布验收扩展到 5 个 seed。
-- [ ] 生成 `docs/reports/accuracy-validation.md`，明确区分训练误差和框架实现缺陷。
+- [ ] 在 R18 通过后依次验证 R34 和 R50，不在未定位数值差异时同时展开多变体训练。（deferred）
+- [ ] 至少使用 3 个 seed 记录均值和方差；发布验收扩展到 5 个 seed。（deferred）
+- [x] 生成 `docs/reports/accuracy-validation.md`，明确区分训练误差和框架实现缺陷。
 
 **Exit criteria**: 每个声称支持的模型变体都有可复现的精度报告和可获取的权重。
 
