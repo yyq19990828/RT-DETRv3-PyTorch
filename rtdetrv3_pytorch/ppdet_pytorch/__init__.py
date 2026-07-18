@@ -23,10 +23,13 @@ Example:
 """
 
 from .core import workspace
+# Import modeling to trigger all registrations
+from . import modeling
 
 __version__ = '1.0.0'
 
 __all__ = [
     'workspace',
+    'modeling',
     '__version__',
 ]

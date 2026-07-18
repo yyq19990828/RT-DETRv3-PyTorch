@@ -20,6 +20,9 @@ Trainer for RT-DETRv3 PyTorch.
 
 Configuration-driven trainer compatible with Paddle's Trainer API.
 """
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import os
 import sys
@@ -44,6 +47,7 @@ from ..optimizer import ModelEMA
 from .callbacks import ComposeCallback, LogPrinter, Checkpointer
 from .naive_sync_bn import convert_syncbn
 
+MOT_ARCH = ['JDE', 'FairMOT', 'DeepSORT', 'ByteTrack', 'CenterTrack']
 logger = setup_logger('rtdetrv3.engine')
 
 __all__ = ['Trainer']
@@ -98,6 +102,9 @@ class Trainer:
             self.log_ranks = [0]
 
         # Create save directory
+        # TODO need clarify 
+        train_results_path = os.path.abspath(
+            os.path.join(self.cfg.save_dir, "train_result.json"))
         self.save_dir = cfg.get('save_dir', './output')
         if dist.is_initialized():
             if dist.get_rank() == 0:
@@ -115,7 +122,7 @@ class Trainer:
                     yaml.dump(config_dict, f)
 
         # Build dataset and dataloader (using create() factory)
-        self._build_data()
+        self._build_data(cfg)
 
         # Build model (using create() factory)
         self._build_model()
@@ -187,65 +194,110 @@ class Trainer:
 
         logger.info(f"Trainer initialized in '{self.mode}' mode")
 
-    def _build_data(self):
+    def _build_data(self, cfg):
         """Build dataset and dataloader using create() factory (Paddle pattern)"""
         capital_mode = self.mode.capitalize()
 
-        # Create dataset: TrainDataset, EvalDataset, or TestDataset
-        dataset_name = f'{capital_mode}Dataset'
-        self.dataset = create(dataset_name)()
-        self.cfg[dataset_name] = self.dataset
+        # Build dataset
+        if cfg.architecture in MOT_ARCH and self.mode in [
+                'eval', 'test'
+        ] and cfg.metric not in ['COCO', 'VOC']:
+            self.dataset = self.cfg['{}MOTDataset'.format(
+                capital_mode)] = create('{}MOTDataset'.format(capital_mode))()
+        else:
+            self.dataset = self.cfg['{}Dataset'.format(capital_mode)] = create(
+                '{}Dataset'.format(capital_mode))()
 
-        logger.info(f"Dataset '{dataset_name}' created with {len(self.dataset)} samples")
+        if cfg.architecture == 'DeepSORT' and self.mode == 'train':
+            logger.error('DeepSORT has no need of training on mot dataset.')
+            sys.exit(1)
 
-        # Create dataloader (only for train and eval modes)
-        if self.mode in ['train', 'eval']:
-            reader_name = f'{capital_mode}Reader'
-            worker_num = self.cfg.get('worker_num', 4)
+        if cfg.architecture == 'FairMOT' and self.mode == 'eval':
+            images = self.parse_mot_images(cfg)
+            self.dataset.set_images(images)
 
-            # For eval mode, might need custom batch sampler
-            if self.mode == 'eval':
+        if cfg.architecture == 'JDE' and self.mode == 'train':
+            self.cfg['JDEEmbeddingHead'][
+                'num_identities'] = self.dataset.num_identities_dict[0]
+            # JDE only support single class MOT now.
+
+        if cfg.architecture == 'FairMOT' and self.mode == 'train':
+            self.cfg['FairMOTEmbeddingHead'][
+                'num_identities_dict'] = self.dataset.num_identities_dict
+            # FairMOT support single class and multi-class MOT now.
+
+        # Build dataloader
+        if self.mode == 'train':
+            self.loader = create('{}Reader'.format(capital_mode))(
+                self.dataset, cfg.worker_num)
+        
+        if self.mode == 'eval':
+            if cfg.architecture == 'FairMOT':
+                self.loader = create('EvalMOTReader')(self.dataset, 0)
+            elif cfg.architecture == "METRO_Body":
+                reader_name = '{}Reader'.format(self.mode.capitalize())
+                self.loader = create(reader_name)(self.dataset, cfg.worker_num)
+            else:
                 # PyTorch equivalent of Paddle's BatchSampler
                 from torch.utils.data import BatchSampler, SequentialSampler
-                batch_size = self.cfg.get('EvalReader', {}).get('batch_size', 1)
+                batch_size = self.cfg.EvalReader['batch_size']
                 self._eval_batch_sampler = BatchSampler(
                     SequentialSampler(self.dataset),
                     batch_size=batch_size,
                     drop_last=False
                 )
-                self.loader = create(reader_name)(
-                    self.dataset, worker_num, self._eval_batch_sampler
-                )
-            else:
-                # Train mode
-                self.loader = create(reader_name)(self.dataset, worker_num)
+                reader_name = '{}Reader'.format(self.mode.capitalize())
+                # If metric is VOC, need to be set collate_batch=False.
+                if cfg.metric == 'VOC':
+                    self.cfg[reader_name]['collate_batch'] = False
+                self.loader = create(reader_name)(self.dataset, cfg.worker_num,
+                                                  self._eval_batch_sampler)
 
-            logger.info(f"DataLoader '{reader_name}' created")
-
-    def _build_model(self):
+    def _build_model(self, cfg):
         """Build model using create() factory (Paddle pattern)"""
-        # Check if model is pre-built in cfg
-        if 'model' in self.cfg:
+        # build model
+        if 'model' not in self.cfg:
+            self.model = create(cfg.architecture)
+        else:
             self.model = self.cfg.model
             self.is_loaded_weights = True
-            logger.info("Using pre-built model from config")
+
+        if cfg.architecture == 'YOLOX':
+            for k, m in self.model.named_modules():
+                if isinstance(m, nn.BatchNorm2d):
+                    m.eps = 1e-3  # for amp(fp16)
+                    m.momentum = 0.97  # 0.03 in pytorch
+
+        # reset norm param attr for setting them in optimizer
+        if 'reset_norm_param_attr' in cfg and cfg['reset_norm_param_attr']:
+            self.model = self.reset_norm_param_attr(
+                self.model, weight_attr=None, bias_attr=None)
+
+        # normalize params for deploy
+        if 'slim' in cfg and cfg['slim_type'] == 'OFA':
+            self.model.model.load_meanstd(cfg['TestReader'][
+                'sample_transforms'])
+        elif 'slim' in cfg and cfg['slim_type'] == 'Distill':
+            self.model.student_model.load_meanstd(cfg['TestReader'][
+                'sample_transforms'])
+        elif 'slim' in cfg and cfg[
+                'slim_type'] == 'DistillPrune' and self.mode == 'train':
+            self.model.student_model.load_meanstd(cfg['TestReader'][
+                'sample_transforms'])
         else:
-            # Create model using architecture name
-            architecture = self.cfg.get('architecture', 'RTDETRV3')
-            self.model = create(architecture)
-            logger.info(f"Model '{architecture}' created")
+            self.model.load_meanstd(cfg['TestReader']['sample_transforms'])
 
-        # Move model to GPU
-        if torch.cuda.is_available():
-            self.model = self.model.cuda()
+        # get Params
+        print_params = self.cfg.get('print_params', False)
+        if print_params:
+            params = sum([
+                p.numel() for n, p in self.model.named_parameters()
+                if all([x not in n for x in ['_mean', '_variance', 'aux_']])
+            ])  # exclude BatchNorm running status
+            logger.info('Model Params : {} M.'.format((params / 1e6).numpy()[
+                0]))
 
-        # Print model parameters
-        if self.cfg.get('print_params', False):
-            total_params = sum(p.numel() for p in self.model.parameters())
-            trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
-            logger.info(f"Model Params: {total_params / 1e6:.2f}M (trainable: {trainable_params / 1e6:.2f}M)")
-
-    def _build_optimizer(self):
+    def _build_optimizer(self, cfg):
         """Build optimizer and LR scheduler using create() factory (Paddle pattern)"""
         if self.mode != 'train':
             return
@@ -256,14 +308,25 @@ class Trainer:
                 "Samples in dataset are less than batch_size, "
                 "please set smaller batch_size in TrainReader."
             )
+        
+        # paddle version
+        # # Create LR scheduler
+        # self.lr = create('LearningRate')(steps_per_epoch)
+        # logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
 
-        # Create LR scheduler
-        self.lr = create('LearningRate')(steps_per_epoch)
-        logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
+        # # Create optimizer
+        # self.optimizer = create('OptimizerBuilder')(self.lr, self.model)
+        # logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
 
+        self.lr = cfg.get('base_lr', 0.001)
         # Create optimizer
         self.optimizer = create('OptimizerBuilder')(self.lr, self.model)
         logger.info(f"Optimizer created: {type(self.optimizer).__name__}")
+
+        # Create LR scheduler
+        self.lr = create('LearningRate')(steps_per_epoch, self.optimizer)
+        logger.info(f"LearningRate scheduler created for {steps_per_epoch} steps/epoch")
+
 
     def _init_callbacks(self):
         """Initialize callbacks (Paddle compatible)"""
@@ -491,6 +554,35 @@ class Trainer:
                 self.ema if self.use_ema else None
             )
         logger.debug(f"Resume weights of epoch {self.start_epoch}")
+
+    def reset_norm_param_attr(self, layer, **kwargs):
+        if isinstance(layer, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
+            src_state_dict = layer.state_dict()
+            if isinstance(layer, nn.BatchNorm2d):
+                layer = nn.BatchNorm2d(
+                    num_features=layer.num_features,
+                    momentum=layer.momentum,
+                    epsilon=layer.eps,
+                    **kwargs)
+            elif isinstance(layer, nn.LayerNorm):
+                layer = nn.LayerNorm(
+                    normalized_shape=layer.normalized_shape,
+                    epsilon=layer.eps,
+                    **kwargs)
+            else:
+                layer = nn.GroupNorm(
+                    num_groups=layer.num_groups,
+                    num_channels=layer.num_channels,
+                    epsilon=layer.eps,
+                    **kwargs)
+            layer.set_state_dict(src_state_dict)
+        else:
+            for name, sublayer in layer.named_children():
+                new_sublayer = self.reset_norm_param_attr(sublayer, **kwargs)
+                if new_sublayer is not sublayer:
+                    setattr(layer, name, new_sublayer)
+
+        return layer
 
 
 class AverageMeter:

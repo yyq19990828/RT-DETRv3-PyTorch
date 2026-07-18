@@ -20,3 +20,5 @@ from . import task_aligned_assigner
 from .utils import *
 from .atss_assigner import *
 from .task_aligned_assigner import *
+
+__all__ = utils.__all__ + atss_assigner.__all__ + task_aligned_assigner.__all__

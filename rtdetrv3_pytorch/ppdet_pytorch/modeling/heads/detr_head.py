@@ -22,53 +22,42 @@ import torch.nn.functional as F
 from typing import Optional, Tuple, Dict, List
 from ppdet_pytorch.core.workspace import register
 
+__all__ = ['DINOv3Head']
+
 
 @register
 class DINOv3Head(nn.Module):
     """
     DINOv3 Detection Head
 
-    This head processes the outputs from the RTDETRTransformerv3 decoder.
-    In training mode, it handles loss computation.
-    In eval mode, it simply returns the decoder predictions.
-
     Following PaddlePaddle's implementation for consistency.
-
-    Reference:
-    - PaddlePaddle: ppdet/modeling/heads/detr_head.py:542-646
+    Reference: ppdet/modeling/heads/detr_head.py:542-645
 
     Args:
-        loss_fn: Loss function module (DINOv3Loss instance)
-        eval_idx: Which decoder layer to use for evaluation (-1 means last layer)
+        loss: Loss function (default: 'DINOLoss')
+        eval_idx: Which decoder layer to use for evaluation (default: -1 = last layer)
         o2m: One-to-many multiplier for auxiliary loss (default: 4)
         o2m_branch: Whether to use one-to-many branch (default: False)
         num_queries_o2m: Number of one-to-many queries (default: 450)
-        num_classes: Number of object classes (default: 80)
-        hidden_dim: Hidden dimension from transformer (default: 256)
     """
 
-    __category__ = 'head'
-    __inject__ = ['loss']  # Inject loss function from config
-    __shared__ = ['o2m_branch', 'num_queries_o2m']  # Shared from global config
+    __inject__ = ['loss']
+    __shared__ = ['o2m_branch', 'num_queries_o2m']
 
     def __init__(
         self,
-        loss: Optional[nn.Module] = None,  # Renamed to match Paddle: 'loss' instead of 'loss_fn'
+        loss='DINOLoss',
         eval_idx: int = -1,
         o2m: int = 4,
         o2m_branch: bool = False,
-        num_queries_o2m: int = 450,
-        num_classes: int = 80,
-        hidden_dim: int = 256
+        num_queries_o2m: int = 450
     ):
         super().__init__()
-        self.loss = loss  # Match Paddle's naming
+        self.loss = loss
         self.eval_idx = eval_idx
         self.o2m = o2m
         self.o2m_branch = o2m_branch
         self.num_queries_o2m = num_queries_o2m
-        self.num_classes = num_classes
-        self.hidden_dim = hidden_dim
 
     def forward(
         self,
@@ -141,21 +130,25 @@ class DINOv3Head(nn.Module):
 
                     # Compute o2m branch loss
                     # Concatenate encoder + decoder outputs for o2m
-                    out_bboxes_o2m = [enc_topk_bboxes_o2m] + [dec_out_bboxes_o2m[i] for i in range(dec_out_bboxes_o2m.shape[0])]
-                    out_logits_o2m = [enc_topk_logits_o2m] + [dec_out_logits_o2m[i] for i in range(dec_out_logits_o2m.shape[0])]
+                    # Match Paddle: paddle.concat([enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m])
+                    out_bboxes_o2m = torch.cat([enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m])
+                    out_logits_o2m = torch.cat([enc_topk_logits_o2m.unsqueeze(0), dec_out_logits_o2m])
 
                     loss_o2m = self.loss(
                         out_bboxes_o2m,
                         out_logits_o2m,
                         inputs['gt_bbox'],
                         inputs['gt_class'],
+                        dn_out_bboxes=None,
+                        dn_out_logits=None,
                         dn_meta=None,
                         o2m=self.o2m
                     )
                     # Add o2m_branch suffix to loss keys
+                    # Match Paddle: loss.update({key: loss.get(key, paddle.zeros([1])) + value})
                     for key, value in loss_o2m.items():
                         loss_key = key + '_o2m_branch'
-                        loss[loss_key] = loss.get(loss_key, torch.zeros_like(value)) + value
+                        loss[loss_key] = loss.get(loss_key, torch.zeros([1], device=value.device, dtype=value.dtype)) + value
 
                 # Split queries by groups
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:590-595
@@ -183,33 +176,26 @@ class DINOv3Head(nn.Module):
                     )
 
                     # Concatenate encoder + decoder outputs
-                    out_bboxes_gid = [enc_topk_bboxes[g_id]] + [dec_out_bboxes_gid[i] for i in range(dec_out_bboxes_gid.shape[0])]
-                    out_logits_gid = [enc_topk_logits[g_id]] + [dec_out_logits_gid[i] for i in range(dec_out_logits_gid.shape[0])]
-
-                    # Convert denoising outputs to list format
-                    dn_out_bboxes_list = [dn_out_bboxes_gid[i] for i in range(dn_out_bboxes_gid.shape[0])]
-                    dn_out_logits_list = [dn_out_logits_gid[i] for i in range(dn_out_logits_gid.shape[0])]
-
-                    # Prepare dn_meta dict with denoising outputs
-                    dn_meta_gid = {
-                        'dn_positive_idx': dn_meta[g_id]['dn_positive_idx'],
-                        'dn_num_group': dn_meta[g_id]['dn_num_group'],
-                        'dn_out_bboxes': dn_out_bboxes_list,
-                        'dn_out_logits': dn_out_logits_list
-                    }
+                    # Match Paddle: paddle.concat([enc_topk_bboxes[g_id].unsqueeze(0), dec_out_bboxes_gid])
+                    out_bboxes_gid = torch.cat([enc_topk_bboxes[g_id].unsqueeze(0), dec_out_bboxes_gid])
+                    out_logits_gid = torch.cat([enc_topk_logits[g_id].unsqueeze(0), dec_out_logits_gid])
 
                     # Compute loss for this group
+                    # Match Paddle: passes dn_out_bboxes_gid and dn_out_logits_gid directly (as tensors)
                     loss_gid = self.loss(
                         out_bboxes_gid,
                         out_logits_gid,
                         inputs['gt_bbox'],
                         inputs['gt_class'],
-                        dn_meta=dn_meta_gid
+                        dn_out_bboxes=dn_out_bboxes_gid,
+                        dn_out_logits=dn_out_logits_gid,
+                        dn_meta=dn_meta[g_id]
                     )
 
                     # Accumulate losses across groups
+                    # Match Paddle: loss.update({key: loss.get(key, paddle.zeros([1])) + value})
                     for key, value in loss_gid.items():
-                        loss[key] = loss.get(key, torch.zeros_like(value)) + value
+                        loss[key] = loss.get(key, torch.zeros([1], device=value.device, dtype=value.dtype)) + value
 
                 # Average losses across groups (except o2m_branch losses)
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:622-624
@@ -222,64 +208,26 @@ class DINOv3Head(nn.Module):
             # Case 2: No denoising or single-group denoising
             # Following Paddle: ppdet/modeling/heads/detr_head.py:626-642
             else:
+                # Set dn outputs to None (loss function will handle dn_meta internally)
+                # Match Paddle: ppdet/modeling/heads/detr_head.py:627
+                dn_out_bboxes, dn_out_logits = None, None
+
                 # Concatenate encoder + decoder outputs
-                # Following Paddle: ppdet/modeling/heads/detr_head.py:629-632
-                out_bboxes = [enc_topk_bboxes] + [dec_out_bboxes[i] for i in range(dec_out_bboxes.shape[0])]
-                out_logits = [enc_topk_logits] + [dec_out_logits[i] for i in range(dec_out_logits.shape[0])]
+                # Match Paddle: paddle.concat([enc_topk_bboxes.unsqueeze(0), dec_out_bboxes])
+                out_bboxes = torch.cat([enc_topk_bboxes.unsqueeze(0), dec_out_bboxes])
+                out_logits = torch.cat([enc_topk_logits.unsqueeze(0), dec_out_logits])
 
-                # Prepare dn_meta if present
-                if dn_meta is not None:
-                    # Convert denoising outputs to list format
-                    # Note: In single-group case, dn_meta is a dict, not a list
-                    # We need to extract dn outputs from dec_out using dn_num_split
-                    dn_num_split = dn_meta['dn_num_split']
-
-                    # Split each decoder layer's output into dn and matching parts
-                    dn_out_bboxes_list = []
-                    dn_out_logits_list = []
-                    out_bboxes_clean = [enc_topk_bboxes]  # Start with encoder outputs
-                    out_logits_clean = [enc_topk_logits]
-
-                    for layer_idx in range(dec_out_bboxes.shape[0]):
-                        dn_bbox, match_bbox = torch.split(
-                            dec_out_bboxes[layer_idx],
-                            dn_num_split,
-                            dim=1
-                        )
-                        dn_logit, match_logit = torch.split(
-                            dec_out_logits[layer_idx],
-                            dn_num_split,
-                            dim=1
-                        )
-                        dn_out_bboxes_list.append(dn_bbox)
-                        dn_out_logits_list.append(dn_logit)
-                        out_bboxes_clean.append(match_bbox)
-                        out_logits_clean.append(match_logit)
-
-                    # Update dn_meta with outputs
-                    dn_meta_with_outputs = {
-                        'dn_positive_idx': dn_meta['dn_positive_idx'],
-                        'dn_num_group': dn_meta['dn_num_group'],
-                        'dn_out_bboxes': dn_out_bboxes_list,
-                        'dn_out_logits': dn_out_logits_list
-                    }
-
-                    # Use cleaned outputs (without dn queries)
-                    out_bboxes = out_bboxes_clean
-                    out_logits = out_logits_clean
-                    dn_meta_arg = dn_meta_with_outputs
-                else:
-                    dn_meta_arg = None
-
-                # Compute loss
+                # Compute loss (loss function handles dn_meta internally)
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:634-642
                 return self.loss(
                     out_bboxes,
                     out_logits,
                     inputs['gt_bbox'],
                     inputs['gt_class'],
-                    dn_meta=dn_meta_arg,
-                    gt_score=inputs.get('gt_score', None)  # Support gt_score like Paddle line 642
+                    dn_out_bboxes=dn_out_bboxes,
+                    dn_out_logits=dn_out_logits,
+                    dn_meta=dn_meta,
+                    gt_score=inputs.get('gt_score', None)
                 )
         else:
             # Evaluation mode: return predictions from specified decoder layer
@@ -292,32 +240,3 @@ class DINOv3Head(nn.Module):
                 None  # No auxiliary outputs in eval mode
             )
 
-    @classmethod
-    def from_config(cls, cfg: Dict, global_config: Optional[Dict] = None) -> Dict:
-        """
-        Build DINOv3Head from config (PaddlePaddle-style).
-
-        Args:
-            cfg: Head configuration dict
-            global_config: Global configuration for shared values
-
-        Returns:
-            Dict of kwargs for DINOv3Head.__init__
-
-        Example config:
-            {
-                'eval_idx': -1,
-                'o2m': 4,
-                'o2m_branch': False,
-                'num_queries_o2m': 450
-            }
-        """
-        return {
-            'loss': cfg.get('loss', None),  # Match Paddle's naming
-            'eval_idx': cfg.get('eval_idx', -1),
-            'o2m': cfg.get('o2m', 4),
-            'o2m_branch': cfg.get('o2m_branch', False),
-            'num_queries_o2m': cfg.get('num_queries_o2m', 450),
-            'num_classes': cfg.get('num_classes', 80),
-            'hidden_dim': cfg.get('hidden_dim', 256)
-        }

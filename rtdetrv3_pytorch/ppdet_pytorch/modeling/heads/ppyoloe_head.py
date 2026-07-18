@@ -28,7 +28,14 @@ from typing import List, Dict, Optional, Tuple
 from ...core.workspace import register
 from ..bbox_utils import batch_distance2bbox
 from ..initializer import bias_init_with_prob, constant_, normal_
+from ..assigners.utils import generate_anchors_for_grid_cell
 from ..backbones.cspresnet import ConvBNLayer, RepVggBlock
+from ..ops import get_static_shape, get_act_fn
+from ..layers import MultiClassNMS
+from ..losses import GIoULoss
+
+# TODO: Import assigners when needed for full training implementation
+# from ..assigners import ATSSAssigner, TaskAlignedAssigner
 
 __all__ = ['PPYOLOEHead']
 
@@ -108,7 +115,7 @@ class PPYOLOEHead(nn.Module):
             self.sm_use = False
             self.reg_range = (0, reg_max + 1)
         self.reg_channels = self.reg_range[1] - self.reg_range[0]
-        # self.iou_loss = GIoULoss()  # Will be injected or created separately
+        self.iou_loss = GIoULoss()
         self.loss_weight = loss_weight
         self.use_varifocal_loss = use_varifocal_loss
         self.eval_size = eval_size
@@ -117,6 +124,8 @@ class PPYOLOEHead(nn.Module):
         self.static_assigner = static_assigner
         self.assigner = assigner
         self.nms = nms
+        if isinstance(self.nms, MultiClassNMS) and trt:
+            self.nms.trt = trt
         self.exclude_nms = exclude_nms
         self.exclude_post_process = exclude_post_process
         self.use_shared_conv = use_shared_conv
@@ -126,6 +135,9 @@ class PPYOLOEHead(nn.Module):
         # stem
         self.stem_cls = nn.ModuleList()
         self.stem_reg = nn.ModuleList()
+        # Get activation function - match Paddle's logic
+        # Paddle: act = get_act_fn(act, trt=trt) if act is None or isinstance(act, (str, dict)) else act
+        # For PyTorch: ESEAttn will handle act parameter internally
         for in_c in self.in_channels:
             self.stem_cls.append(ESEAttn(in_c, act=act, attn_conv=attn_conv))
             self.stem_reg.append(ESEAttn(in_c, act=act, attn_conv=attn_conv))
@@ -141,6 +153,7 @@ class PPYOLOEHead(nn.Module):
 
         # projection conv
         self.proj_conv = nn.Conv2d(self.reg_channels, 1, 1, bias=False)
+        self.proj_conv.skip_quant = True  # For compatibility with Paddle (quantization flag)
         self._init_weights()
 
         if self.for_distill:
@@ -168,34 +181,49 @@ class PPYOLOEHead(nn.Module):
             self.register_buffer('anchor_points', anchor_points)
             self.register_buffer('stride_tensor', stride_tensor)
 
+    def m_avg_pool2d(self, feat, w, h):
+        """Manual average pooling for NPU compatibility"""
+        batch_size, channels, _, _ = feat.shape
+        feat_flat = feat.reshape(batch_size, channels, -1)
+        feat_mean = feat_flat.mean(dim=2)
+        feat_mean = feat_mean.reshape(batch_size, channels, w, h)
+        return feat_mean
+
     def forward_train(self, feats, targets, aux_pred=None):
-        """Training forward pass
+        """Training forward pass - matches Paddle implementation"""
+        # Generate anchors for training
+        anchors, anchor_points, num_anchors_list, stride_tensor = \
+            generate_anchors_for_grid_cell(
+                feats, self.fpn_strides, self.grid_cell_scale,
+                self.grid_cell_offset)
 
-        Note: This is a placeholder. Full implementation requires:
-        - generate_anchors_for_grid_cell
-        - assigner modules (ATSSAssigner, TaskAlignedAssigner)
-        - GIoULoss
-        These should be migrated separately.
-        """
-        # For now, return simple outputs like the original simplified version
-        cls_score_list = []
-        reg_distri_list = []
-
+        cls_score_list, reg_distri_list = [], []
         for i, feat in enumerate(feats):
+            # Use m_avg_pool2d for NPU, otherwise use F.adaptive_avg_pool2d
+            # Note: torch doesn't have device.get_device() like Paddle, so always use adaptive
             avg_feat = F.adaptive_avg_pool2d(feat, (1, 1))
             cls_logit = self.pred_cls[i](self.stem_cls[i](feat, avg_feat) + feat)
             reg_distri = self.pred_reg[i](self.stem_reg[i](feat, avg_feat))
-
+            # cls and reg
             cls_score = torch.sigmoid(cls_logit)
             cls_score_list.append(cls_score.flatten(2).permute(0, 2, 1))
             reg_distri_list.append(reg_distri.flatten(2).permute(0, 2, 1))
-
         cls_score_list = torch.cat(cls_score_list, dim=1)
         reg_distri_list = torch.cat(reg_distri_list, dim=1)
 
-        # TODO: Implement full loss computation with assigners
-        # return self.get_loss([...], targets, aux_pred)
-        return cls_score_list, reg_distri_list
+        # Handle teacher mode or get_data mode
+        if targets.get('is_teacher', False):
+            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distri_list)
+            return cls_score_list, pred_deltas * stride_tensor, pred_dfls
+
+        if targets.get('get_data', False):
+            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distri_list)
+            return cls_score_list, pred_deltas * stride_tensor, pred_dfls
+
+        return self.get_loss([
+            cls_score_list, reg_distri_list, anchors, anchor_points,
+            num_anchors_list, stride_tensor
+        ], targets, aux_pred)
 
     def _generate_anchors(self, feats=None, dtype=torch.float32):
         """Generate anchors for evaluation"""
@@ -298,6 +326,13 @@ class PPYOLOEHead(nn.Module):
         pred_dist = self.proj_conv(pred_dist.permute(0, 3, 1, 2)).squeeze(1)
         return batch_distance2bbox(anchor_points, pred_dist)
 
+    def _bbox_decode_fake(self, pred_dist):
+        """Decode bbox distribution without anchor points (for teacher/get_data mode)"""
+        _, l, _ = pred_dist.shape
+        pred_dist_dfl = F.softmax(pred_dist.reshape(-1, l, 4, self.reg_channels), dim=-1)
+        pred_dist = self.proj_conv(pred_dist_dfl.permute(0, 3, 1, 2)).squeeze(1)
+        return pred_dist, pred_dist_dfl
+
     def _bbox2distance(self, points, bbox):
         """Convert bbox to distance format"""
         x1y1, x2y2 = torch.split(bbox, 2, -1)
@@ -342,7 +377,6 @@ class PPYOLOEHead(nn.Module):
             if self.exclude_nms:
                 return pred_bboxes, pred_scores, None
             else:
-                # TODO: Implement NMS
-                # bbox_pred, bbox_num, nms_keep_idx = self.nms(pred_bboxes, pred_scores)
-                # return bbox_pred, bbox_num, nms_keep_idx
-                return pred_bboxes, pred_scores, None
+                # TODO: NMS needs to be fully implemented
+                bbox_pred, bbox_num, nms_keep_idx = self.nms(pred_bboxes, pred_scores)
+                return bbox_pred, bbox_num, nms_keep_idx

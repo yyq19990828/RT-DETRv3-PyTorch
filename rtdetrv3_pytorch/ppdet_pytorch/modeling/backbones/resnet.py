@@ -29,8 +29,10 @@ from typing import List, Dict, Optional, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision.ops import DeformConv2d
 
 from ...core.workspace import register, serializable
+from .name_adapter import NameAdapter
 from ..shape_spec import ShapeSpec
 
 __all__ = ['ResNet', 'Res5Head', 'Blocks', 'BasicBlock', 'BottleNeck']
@@ -93,8 +95,7 @@ class ConvNormLayer(nn.Module):
                 groups=groups,
                 bias=False)
         else:
-            # DCN v2 not implemented in this version
-            # Use standard conv as fallback
+            # use torchvision.ops to implement DCN v2 
             self.offset_channel = 2 * filter_size**2
             self.mask_channel = filter_size**2
 
@@ -110,7 +111,7 @@ class ConvNormLayer(nn.Module):
             nn.init.constant_(self.conv_offset.bias, 0.)
 
             # Use standard conv as DCN is not implemented
-            self.conv = nn.Conv2d(
+            self.conv = DeformConv2d(
                 in_channels=ch_in,
                 out_channels=ch_out,
                 kernel_size=filter_size,
@@ -137,13 +138,12 @@ class ConvNormLayer(nn.Module):
         if not self.dcn_v2:
             out = self.conv(inputs)
         else:
-            # DCN v2 forward (simplified, not fully implemented)
+            # DCN v2 forward
             offset_mask = self.conv_offset(inputs)
             offset = offset_mask[:, :self.offset_channel, :, :]
             mask = offset_mask[:, self.offset_channel:, :, :]
             mask = torch.sigmoid(mask)
-            # Fall back to standard conv since DCN is not implemented
-            out = self.conv(inputs)
+            out = self.conv(inputs, offset, mask=mask)
 
         if self.norm_type in ['bn', 'sync_bn']:
             out = self.norm(out)
@@ -466,6 +466,7 @@ class Blocks(nn.Module):
                  ch_in,
                  ch_out,
                  count,
+                 name_adapter,
                  stage_num,
                  variant='b',
                  groups=1,
@@ -495,11 +496,14 @@ class Blocks(nn.Module):
         """
         super(Blocks, self).__init__()
 
-        self.blocks = nn.ModuleList()
+        self.blocks = []
         for i in range(count):
+            # Use NameAdapter to generate block name (same as Paddle)
+            conv_name = name_adapter.fix_layer_warp_name(stage_num, count, i)
+
             # First block may have stride=2 (except for stage 2)
             # First block always has shortcut=False (needs downsampling or channel matching)
-            block_obj = block(
+            layer = block(
                 ch_in=ch_in,
                 ch_out=ch_out,
                 stride=2 if i == 0 and stage_num != 2 else 1,
@@ -513,7 +517,10 @@ class Blocks(nn.Module):
                 freeze_norm=freeze_norm,
                 dcn_v2=dcn_v2,
                 std_senet=std_senet)
-            self.blocks.append(block_obj)
+
+            # Register with custom name (like Paddle's add_sublayer)
+            self.add_module(conv_name, layer)
+            self.blocks.append(layer)
 
             # Update ch_in for next block
             if i == 0:
@@ -647,17 +654,23 @@ class ResNet(nn.Module):
         self._out_channels = [block.expansion * v for v in ch_out_list]
         self._out_strides = [4, 8, 16, 32]
 
+        # Create NameAdapter (same as Paddle)
+        na = NameAdapter(self)
+
         # Residual stages
-        self.res_layers = nn.ModuleList()
+        # Use list to maintain reference, but register with add_module for correct naming
+        self.res_layers = []
         for i in range(num_stages):
             lr_mult = lr_mult_list[i]
             stage_num = i + 2
+            res_name = "res{}".format(stage_num)  # Generate "res2", "res3", "res4", "res5"
 
             res_layer = Blocks(
                 block,
                 self.ch_in,
                 ch_out_list[i],
                 count=block_nums[i],
+                name_adapter=na,
                 stage_num=stage_num,
                 variant=variant,
                 groups=groups,
@@ -669,6 +682,8 @@ class ResNet(nn.Module):
                 dcn_v2=(i in self.dcn_v2_stages),
                 std_senet=std_senet)
 
+            # Register sublayer with custom name (like Paddle's add_sublayer)
+            self.add_module(res_name, res_layer)
             self.res_layers.append(res_layer)
             self.ch_in = self._out_channels[i]
 
@@ -742,12 +757,16 @@ class Res5Head(nn.Module):
         if depth < 50:
             feat_in = 256
 
+        # Create NameAdapter (same as Paddle)
+        na = NameAdapter(self)
+
         block = BottleNeck if depth >= 50 else BasicBlock
         self.res5 = Blocks(
             block,
             feat_in,
             feat_out,
             count=3,
+            name_adapter=na,
             stage_num=5)
         self.feat_out = feat_out if depth < 50 else feat_out * 4
 

@@ -121,7 +121,12 @@ def build_pytorch_model(config_path: str):
     config_path = Path(config_path)
     logger.info(f"Building PyTorch model from config: {config_path}")
 
-    # Import PyTorch model builder and config loader
+    # Add PyTorch codebase to path
+    pytorch_codebase = project_root / "rtdetrv3_pytorch"
+    if str(pytorch_codebase) not in sys.path:
+        sys.path.insert(0, str(pytorch_codebase))
+
+    # Import PyTorch model builder and config loader using workspace
     try:
         from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
         from ppdet_pytorch.core.workspace import load_config, create
@@ -172,13 +177,13 @@ def build_pytorch_model(config_path: str):
             logger.warning(f"Missing keys in checkpoint: {len(missing_keys)}")
             if len(missing_keys) <= 10:
                 for key in missing_keys:
-                    logger.debug(f"  Missing: {key}")
+                    logger.warning(f"  Missing: {key}")
 
         if unexpected_keys:
             logger.warning(f"Unexpected keys in checkpoint: {len(unexpected_keys)}")
             if len(unexpected_keys) <= 10:
                 for key in unexpected_keys:
-                    logger.debug(f"  Unexpected: {key}")
+                    logger.warning(f"  Unexpected: {key}")
     else:
         logger.warning("No checkpoint path specified in config")
 

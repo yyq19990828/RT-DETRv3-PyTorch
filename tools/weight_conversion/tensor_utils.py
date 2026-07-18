@@ -184,6 +184,7 @@ def should_transpose_weight(param_name: str) -> bool:
     linear_patterns = [
         '.linear1.weight',  # FFN first linear
         '.linear2.weight',  # FFN second linear
+        '.fc.weight',  # Fully connected layers (MLPs in heads)
         '_head.weight',  # Classification/regression heads (ends with _head.weight)
         'enc_score_head',  # Encoder score head
         'dec_score_head',  # Decoder score head
@@ -192,7 +193,8 @@ def should_transpose_weight(param_name: str) -> bool:
         'query_pos_head',  # Query position head
         'sampling_offsets.weight',  # Deformable attention
         'attention_weights.weight',  # Deformable attention
-        'in_proj_weight',  # MultiheadAttention combined QKV projection
+        'out_proj.weight',  # MultiHeadAttention output projection
+        # NOTE: in_proj_weight should NOT be transposed - Paddle and PyTorch use same format [embed_dim, 3*embed_dim]
     ]
 
     # Check if parameter name matches any linear pattern

@@ -29,28 +29,9 @@ import torch
 import torch.nn as nn
 
 from ..core.workspace import register
+from .utils import get_bn_running_state_names
 
 __all__ = ['ModelEMA']
-
-
-def _get_bn_running_state_names(model: nn.Module) -> Set[str]:
-    """
-    Get names of BatchNorm running states (running_mean, running_var, num_batches_tracked).
-
-    Args:
-        model: PyTorch model
-
-    Returns:
-        Set of parameter names for BN running states
-    """
-    bn_states = set()
-    for name, module in model.named_modules():
-        if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d, nn.SyncBatchNorm)):
-            prefix = name + ('.' if name else '')
-            bn_states.add(prefix + 'running_mean')
-            bn_states.add(prefix + 'running_var')
-            bn_states.add(prefix + 'num_batches_tracked')
-    return bn_states
 
 
 @register
@@ -100,7 +81,7 @@ class ModelEMA:
         self.ema_black_list = self._match_ema_black_list(model_state_keys, ema_black_list)
 
         # Get BN running states
-        bn_states_names = _get_bn_running_state_names(model)
+        bn_states_names = get_bn_running_state_names(model)
 
         # Filter out parameters that don't require gradients
         if ema_filter_no_grad:

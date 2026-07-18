@@ -32,10 +32,8 @@ ResNet:
   norm_decay: 0.
 
 HybridEncoder:
-  # For PyTorch: hidden_dim already incorporates expansion factor
-  # Original Paddle config: hidden_dim=256, expansion=0.5
-  # PyTorch uses: 256 * 0.5 = 128
-  hidden_dim: 128
+  # Match Paddle config exactly - hidden_dim is the feature dimension
+  hidden_dim: 256
   use_encoder_idx: [2]
   num_encoder_layers: 1
   encoder_layer:

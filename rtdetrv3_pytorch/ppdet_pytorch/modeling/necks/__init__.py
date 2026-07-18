@@ -1,10 +1,8 @@
 """
 Neck Networks for RT-DETRv3
 
-Available necks:
-- HybridEncoder: FPN-PAN neck for multi-scale feature fusion
+This module is currently empty.
+All encoder modules (including HybridEncoder) are in the transformers module.
 """
 
-from .hybrid_encoder import HybridEncoder
-
-__all__ = ['HybridEncoder']
+__all__ = []

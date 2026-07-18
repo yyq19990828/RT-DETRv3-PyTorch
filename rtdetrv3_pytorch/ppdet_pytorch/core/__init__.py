@@ -1,46 +1,15 @@
-"""
-Core module for RT-DETRv3 PyTorch
+#   Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-Migrated from PaddlePaddle RT-DETRv3/ppdet/core
-Provides the unified registration system and workspace utilities.
-
-Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
-Adapted for PyTorch by RT-DETRv3 PyTorch Team.
-"""
-
-from .workspace import (
-    global_config,
-    load_config,
-    merge_config,
-    get_registered_modules,
-    create,
-    register,
-    serializable,
-    dump_value,
-)
-
-from .config import (
-    SchemaDict,
-    SchemaValue,
-    SharedConfig,
-    extract_schema,
-    Callable,
-)
-
-__all__ = [
-    # workspace functions
-    'global_config',
-    'load_config',
-    'merge_config',
-    'get_registered_modules',
-    'create',
-    'register',
-    'serializable',
-    'dump_value',
-    # config classes
-    'SchemaDict',
-    'SchemaValue',
-    'SharedConfig',
-    'extract_schema',
-    'Callable',
-]
+from . import config

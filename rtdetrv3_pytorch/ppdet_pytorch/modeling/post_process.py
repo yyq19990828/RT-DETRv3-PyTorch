@@ -1,287 +1,250 @@
-"""
-DETR Post-processing for RT-DETRv3
+# Copyright (c) 2020 PaddlePaddle Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-This module implements post-processing for DETR-based models, converting model
-outputs to final detection results.
-
-Components:
-- DETRPostProcessor: Main post-processing class for object detection
-- bbox_cxcywh_to_xyxy: Coordinate conversion utility
-
-Following PaddlePaddle's implementation for consistency.
-
-Reference:
-- PaddlePaddle RT-DETR: ppdet/modeling/post_process.py:450-586
-"""
-
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Tuple, Optional
+from ppdet_pytorch.core.workspace import register
+from .transformers import bbox_cxcywh_to_xyxy
+try:
+    from collections.abc import Sequence
+except Exception:
+    from collections import Sequence
+
+__all__ = [
+    'DETRPostProcess',
+]
 
 
-def bbox_cxcywh_to_xyxy(bbox: torch.Tensor) -> torch.Tensor:
+def paste_mask(masks, boxes, im_h, im_w, assign_on_cpu=False):
     """
-    Convert bounding boxes from (cx, cy, w, h) to (x1, y1, x2, y2) format
-
-    Args:
-        bbox: Bounding boxes in (cx, cy, w, h) format, shape (..., 4)
-
-    Returns:
-        Bounding boxes in (x1, y1, x2, y2) format, shape (..., 4)
-
-    Example:
-        >>> bbox = torch.tensor([[0.5, 0.5, 0.2, 0.3]])
-        >>> bbox_cxcywh_to_xyxy(bbox)
-        tensor([[0.4, 0.35, 0.6, 0.65]])
+    Paste the mask prediction to the original image.
     """
-    cxcy, wh = bbox.split(2, dim=-1)
-    return torch.cat([cxcy - 0.5 * wh, cxcy + 0.5 * wh], dim=-1)
+    x0_int, y0_int = 0, 0
+    x1_int, y1_int = im_w, im_h
+    x0, y0, x1, y1 = torch.split(boxes, 1, dim=1)
+    N = masks.shape[0]
+    img_y = torch.arange(y0_int, y1_int, device=boxes.device, dtype=boxes.dtype) + 0.5
+    img_x = torch.arange(x0_int, x1_int, device=boxes.device, dtype=boxes.dtype) + 0.5
+
+    img_y = (img_y - y0) / (y1 - y0) * 2 - 1
+    img_x = (img_x - x0) / (x1 - x0) * 2 - 1
+    # img_x, img_y have shapes (N, w), (N, h)
+
+    if assign_on_cpu:
+        img_x = img_x.cpu()
+        img_y = img_y.cpu()
+    gx = img_x[:, None, :].expand(
+        N, img_y.shape[1], img_x.shape[1])
+    gy = img_y[:, :, None].expand(
+        N, img_y.shape[1], img_x.shape[1])
+    grid = torch.stack([gx, gy], dim=3)
+    img_masks = F.grid_sample(masks, grid, align_corners=False)
+    return img_masks[:, 0]
 
 
-def bbox_xyxy_to_cxcywh(bbox: torch.Tensor) -> torch.Tensor:
+def multiclass_nms(bboxs, num_classes, match_threshold=0.6, match_metric='iou'):
+    final_boxes = []
+    for c in range(num_classes):
+        idxs = bboxs[:, 0] == c
+        if np.count_nonzero(idxs) == 0: continue
+        r = nms(bboxs[idxs, 1:], match_threshold, match_metric)
+        final_boxes.append(np.concatenate([np.full((r.shape[0], 1), c), r], 1))
+    return final_boxes
+
+
+def nms(dets, match_threshold=0.6, match_metric='iou'):
+    """ Apply NMS to avoid detecting too many overlapping bounding boxes.
+        Args:
+            dets: shape [N, 5], [score, x1, y1, x2, y2]
+            match_metric: 'iou' or 'ios'
+            match_threshold: overlap thresh for match metric.
     """
-    Convert bounding boxes from (x1, y1, x2, y2) to (cx, cy, w, h) format
+    if dets.shape[0] == 0:
+        return dets[[], :]
+    scores = dets[:, 0]
+    x1 = dets[:, 1]
+    y1 = dets[:, 2]
+    x2 = dets[:, 3]
+    y2 = dets[:, 4]
+    areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+    order = scores.argsort()[::-1]
 
-    Args:
-        bbox: Bounding boxes in (x1, y1, x2, y2) format, shape (..., 4)
+    keep = []
+    while order.size > 0:
+        i = order[0]
+        keep.append(i)
 
-    Returns:
-        Bounding boxes in (cx, cy, w, h) format, shape (..., 4)
-    """
-    x1y1, x2y2 = bbox.split(2, dim=-1)
-    return torch.cat([(x1y1 + x2y2) / 2, x2y2 - x1y1], dim=-1)
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+
+        w = np.maximum(0.0, xx2 - xx1 + 1)
+        h = np.maximum(0.0, yy2 - yy1 + 1)
+        inter = w * h
+
+        if match_metric == 'iou':
+            union = areas[i] + areas[order[1:]] - inter
+            match_value = inter / union
+        elif match_metric == 'ios':
+            smaller = np.minimum(areas[i], areas[order[1:]])
+            match_value = inter / smaller
+        else:
+            raise ValueError()
+
+        inds = np.where(match_value < match_threshold)[0]
+        order = order[inds + 1]
+
+    dets = dets[keep, :]
+    return dets
 
 
-class DETRPostProcessor(nn.Module):
-    """
-    Post-processor for DETR-based detection models
+@register
+class DETRPostProcess(object):
+    __shared__ = ['num_classes', 'use_focal_loss', 'with_mask']
+    __inject__ = []
 
-    This class handles the conversion of model outputs (normalized coordinates and logits)
-    to final detection results (pixel coordinates, scores, and labels).
-
-    Key features:
-    - Multi-group query support (O2O, O2M)
-    - Flexible coordinate decoding (original or padded)
-    - Top-K selection
-    - Support for both Softmax and Sigmoid classification
-
-    Following PaddlePaddle's implementation for consistency.
-
-    Reference:
-    - PaddlePaddle: ppdet/modeling/post_process.py:450-586
-
-    Args:
-        num_classes: Number of object classes (default: 80 for COCO)
-        num_top_queries: Number of top queries to keep (default: 100)
-        dual_queries: Whether using dual query mechanism (O2O + O2M) (default: False)
-        dual_groups: Number of dual query groups (default: 0)
-                    0 = O2O + O2M (2 groups)
-                    1 = O2O + Noise + O2M (3 groups)
-        use_focal_loss: Whether to use sigmoid (True) or softmax (False) for classification
-        bbox_decode_type: Coordinate decoding type ('origin' or 'pad')
-                         'origin': decode to original image size
-                         'pad': decode to padded image size
-    """
-
-    def __init__(
-        self,
-        num_classes: int = 80,
-        num_top_queries: int = 100,
-        dual_queries: bool = False,
-        dual_groups: int = 0,
-        use_focal_loss: bool = False,
-        bbox_decode_type: str = 'origin'
-    ):
-        super().__init__()
-        assert bbox_decode_type in ['origin', 'pad'], \
-            f"bbox_decode_type must be 'origin' or 'pad', got {bbox_decode_type}"
+    def __init__(self,
+                 num_classes=80,
+                 num_top_queries=100,
+                 dual_queries=False,
+                 dual_groups=0,
+                 use_focal_loss=False,
+                 with_mask=False,
+                 mask_stride=4,
+                 mask_threshold=0.5,
+                 use_avg_mask_score=False,
+                 bbox_decode_type='origin'):
+        super(DETRPostProcess, self).__init__()
+        assert bbox_decode_type in ['origin', 'pad']
 
         self.num_classes = num_classes
         self.num_top_queries = num_top_queries
         self.dual_queries = dual_queries
         self.dual_groups = dual_groups
         self.use_focal_loss = use_focal_loss
+        self.with_mask = with_mask
+        self.mask_stride = mask_stride
+        self.mask_threshold = mask_threshold
+        self.use_avg_mask_score = use_avg_mask_score
         self.bbox_decode_type = bbox_decode_type
 
-    def forward(
-        self,
-        bboxes: torch.Tensor,
-        logits: torch.Tensor,
-        im_shape: torch.Tensor,
-        scale_factor: torch.Tensor,
-        pad_shape: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _mask_postprocess(self, mask_pred, score_pred):
+        mask_score = torch.sigmoid(mask_pred)
+        mask_pred = (mask_score > self.mask_threshold).to(mask_score.dtype)
+        if self.use_avg_mask_score:
+            avg_mask_score = (mask_pred * mask_score).sum([-2, -1]) / (
+                mask_pred.sum([-2, -1]) + 1e-6)
+            score_pred *= avg_mask_score
+
+        return mask_pred.flatten(0, 1).to(torch.int32), score_pred
+
+    def __call__(self, head_out, im_shape, scale_factor, pad_shape=None):
         """
-        Post-process model outputs to final detection results
+        Decode the bbox and mask.
 
         Args:
-            bboxes: Predicted bounding boxes in (cx, cy, w, h) format, normalized to [0, 1]
-                   Shape: (batch_size, num_queries, 4)
-            logits: Classification logits
-                   Shape: (batch_size, num_queries, num_classes) if use_focal_loss
-                          (batch_size, num_queries, num_classes + 1) if not use_focal_loss
-            im_shape: Original image shape before padding (batch_size, 2) [height, width]
-            scale_factor: Scale factor used for resizing (batch_size, 2) [scale_h, scale_w]
-            pad_shape: Padded image shape (batch_size, 2) [height, width]
-                      Required if bbox_decode_type == 'pad'
-
+            head_out (tuple): bbox_pred, cls_logit and masks of bbox_head output.
+            im_shape (Tensor): The shape of the input image without padding.
+            scale_factor (Tensor): The scale factor of the input image.
+            pad_shape (Tensor): The shape of the input image with padding.
         Returns:
-            bbox_pred: Detection results (N, 6) where N = batch_size * num_top_queries
-                      Each row: [class_id, confidence_score, x1, y1, x2, y2]
-            bbox_num: Number of detections per batch (batch_size,)
-
-        Processing flow:
-            1. Extract O2O queries if using dual_queries
-            2. Convert bbox from (cx, cy, w, h) to (x1, y1, x2, y2)
-            3. Calculate original image size (remove padding)
-            4. Scale bbox to pixel coordinates
-            5. Apply sigmoid/softmax to logits
-            6. Select top-K detections
-            7. Assemble final output
+            bbox_pred (Tensor): The output prediction with shape [N, 6], including
+                labels, scores and bboxes. The size of bboxes are corresponding
+                to the input image, the bboxes may be used in other branch.
+            bbox_num (Tensor): The number of prediction boxes of each batch with
+                shape [bs], and is N.
         """
-        # Step 1: Extract O2O queries if using dual_queries
-        # Following Paddle: ppdet/modeling/post_process.py:491-494
+        bboxes, logits, masks = head_out
         if self.dual_queries:
             num_queries = logits.shape[1]
-            # Keep only first 1/(dual_groups+1) queries (O2O group)
-            # dual_groups=0 (O2O+O2M): keep 50%
-            # dual_groups=1 (O2O+Noise+O2M): keep 33.3%
-            keep_queries = int(num_queries // (self.dual_groups + 1))
-            logits = logits[:, :keep_queries, :]
-            bboxes = bboxes[:, :keep_queries, :]
+            logits, bboxes = logits[:, :int(num_queries // (self.dual_groups + 1)), :], \
+                             bboxes[:, :int(num_queries // (self.dual_groups + 1)), :]
 
-        # Step 2: Convert bbox from (cx, cy, w, h) to (x1, y1, x2, y2)
-        # Following Paddle: ppdet/modeling/post_process.py:496
         bbox_pred = bbox_cxcywh_to_xyxy(bboxes)
-
-        # Step 3: Calculate original image size (remove padding and scaling)
-        # Following Paddle: ppdet/modeling/post_process.py:497-499
+        # calculate the original shape of the image
         origin_shape = torch.floor(im_shape / scale_factor + 0.5)
-
-        # Step 4: Calculate output shape for coordinate scaling
-        # Following Paddle: ppdet/modeling/post_process.py:500-510
+        img_h, img_w = origin_shape.split(1, dim=-1)
         if self.bbox_decode_type == 'pad':
-            # Decode to padded image coordinates
-            assert pad_shape is not None, "pad_shape is required when bbox_decode_type='pad'"
+            # calculate the shape of the image with padding
             out_shape = pad_shape / im_shape * origin_shape
             out_shape = out_shape.flip(-1).tile(1, 2).unsqueeze(1)
         elif self.bbox_decode_type == 'origin':
-            # Decode to original image coordinates
             out_shape = origin_shape.flip(-1).tile(1, 2).unsqueeze(1)
-            # out_shape: (B, 1, 4) = [[w, h, w, h]]
         else:
-            raise ValueError(f"Invalid bbox_decode_type: {self.bbox_decode_type}")
+            raise Exception(
+                f'Wrong `bbox_decode_type`: {self.bbox_decode_type}.')
+        bbox_pred *= out_shape
 
-        # Scale bbox from normalized [0, 1] to pixel coordinates
-        # Following Paddle: ppdet/modeling/post_process.py:511
-        bbox_pred = bbox_pred * out_shape
+        scores = torch.sigmoid(logits) if self.use_focal_loss else F.softmax(
+            logits, dim=-1)[:, :, :-1]
 
-        # Step 5: Apply activation to classification logits
-        # Following Paddle: ppdet/modeling/post_process.py:513-514
-        if self.use_focal_loss:
-            # Sigmoid for multi-label classification (Focal Loss)
-            scores = torch.sigmoid(logits)
-        else:
-            # Softmax for single-label classification, remove background class
-            scores = F.softmax(logits, dim=-1)[:, :, :-1]
-
-        # Step 6: Select top-K detections
-        # Following Paddle: ppdet/modeling/post_process.py:516-537
         if not self.use_focal_loss:
-            # Softmax mode: each query selects one class
-            # Following Paddle: ppdet/modeling/post_process.py:517-527
-            scores, labels = scores.max(dim=-1)  # (B, Q)
-
+            scores, labels = scores.max(-1), scores.argmax(-1)
             if scores.shape[1] > self.num_top_queries:
-                # Select top-K queries by score
-                scores, index = torch.topk(scores, self.num_top_queries, dim=-1)
-
-                # Gather corresponding labels and bboxes
-                batch_size = scores.shape[0]
-                batch_ind = torch.arange(batch_size, device=scores.device).unsqueeze(-1).expand(
-                    -1, self.num_top_queries
-                )
-
-                # Use advanced indexing to gather
-                labels = labels[batch_ind, index]
-                bbox_pred = bbox_pred[batch_ind, index]
+                scores, index = torch.topk(
+                    scores, self.num_top_queries, dim=-1)
+                batch_ind = torch.arange(
+                    end=scores.shape[0], device=scores.device).unsqueeze(-1).tile(
+                        1, self.num_top_queries)
+                index = torch.stack([batch_ind, index], dim=-1)
+                labels = labels[index[..., 0], index[..., 1]]
+                bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
         else:
-            # Sigmoid mode: flatten and select top-K across all classes
-            # Following Paddle: ppdet/modeling/post_process.py:529-537
-            scores_flat = scores.flatten(1)  # (B, Q*C)
-            scores, index = torch.topk(scores_flat, self.num_top_queries, dim=-1)
-
-            # Recover class ID from flattened index
+            scores, index = torch.topk(
+                scores.flatten(1), self.num_top_queries, dim=-1)
             labels = index % self.num_classes
-            # Recover query index
-            query_index = index // self.num_classes
+            index = index // self.num_classes
+            batch_ind = torch.arange(end=scores.shape[0], device=scores.device).unsqueeze(-1).tile(
+                1, self.num_top_queries)
+            index = torch.stack([batch_ind, index], dim=-1)
+            bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
 
-            # Gather bboxes
-            batch_size = scores.shape[0]
-            batch_ind = torch.arange(batch_size, device=scores.device).unsqueeze(-1).expand(
-                -1, self.num_top_queries
-            )
-            bbox_pred = bbox_pred[batch_ind, query_index]
+        mask_pred = None
+        if self.with_mask:
+            assert masks is not None
+            assert masks.shape[0] == 1
+            masks = masks[index[..., 0], index[..., 1]]
+            if self.bbox_decode_type == 'pad':
+                masks = F.interpolate(
+                    masks,
+                    scale_factor=self.mask_stride,
+                    mode="bilinear",
+                    align_corners=False)
+                # TODO: Support prediction with bs>1.
+                # remove padding for input image
+                h, w = im_shape.to(torch.int32)[0]
+                masks = masks[..., :h, :w]
+            # get pred_mask in the original resolution.
+            img_h = img_h[0].to(torch.int32)
+            img_w = img_w[0].to(torch.int32)
+            masks = F.interpolate(
+                masks,
+                size=[img_h, img_w],
+                mode="bilinear",
+                align_corners=False)
+            mask_pred, scores = self._mask_postprocess(masks, scores)
 
-        # Step 7: Assemble final output
-        # Following Paddle: ppdet/modeling/post_process.py:575-580
-        bbox_pred = torch.cat([
-            labels.unsqueeze(-1).float(),  # class_id (float32)
-            scores.unsqueeze(-1),          # confidence_score (0-1)
-            bbox_pred                       # x1, y1, x2, y2 (pixel coordinates)
-        ], dim=-1)
-
-        # Reshape to (N, 6) where N = batch_size * num_top_queries
-        # Following Paddle: ppdet/modeling/post_process.py:582-584
+        bbox_pred = torch.cat(
+            [
+                labels.unsqueeze(-1).to(torch.float32), scores.unsqueeze(-1),
+                bbox_pred
+            ],
+            dim=-1)
         bbox_num = torch.full(
-            (bbox_pred.shape[0],),
-            self.num_top_queries,
-            dtype=torch.int32,
-            device=bbox_pred.device
-        )
+            (bbox_pred.shape[0],), self.num_top_queries, dtype=torch.int32, device=bbox_pred.device)
         bbox_pred = bbox_pred.reshape(-1, 6)
-
-        return bbox_pred, bbox_num
-
-
-def build_detr_post_processor(
-    num_classes: int = 80,
-    num_top_queries: int = 100,
-    dual_queries: bool = False,
-    dual_groups: int = 0,
-    use_focal_loss: bool = True,
-    bbox_decode_type: str = 'origin'
-) -> DETRPostProcessor:
-    """
-    Build DETRPostProcessor from config
-
-    Args:
-        num_classes: Number of object classes
-        num_top_queries: Number of top detections to keep
-        dual_queries: Enable dual query mechanism (O2O + O2M)
-        dual_groups: Number of query groups
-        use_focal_loss: Use sigmoid (True) or softmax (False)
-        bbox_decode_type: Coordinate decoding type
-
-    Returns:
-        DETRPostProcessor instance
-
-    Example:
-        >>> # For RT-DETRv3 with O2M branch
-        >>> post_processor = build_detr_post_processor(
-        ...     num_classes=80,
-        ...     num_top_queries=300,
-        ...     dual_queries=True,
-        ...     dual_groups=1,  # O2O + Noise + O2M
-        ...     use_focal_loss=True
-        ... )
-    """
-    return DETRPostProcessor(
-        num_classes=num_classes,
-        num_top_queries=num_top_queries,
-        dual_queries=dual_queries,
-        dual_groups=dual_groups,
-        use_focal_loss=use_focal_loss,
-        bbox_decode_type=bbox_decode_type
-    )
+        return bbox_pred, bbox_num, mask_pred
