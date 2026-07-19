@@ -1,10 +1,11 @@
 # 发布候选验证报告
 
-- 状态：`v0.1.0 assets rebuilt from local tag; artifacts not published`
+- 状态：`v0.1.0 published; all 11 assets publicly read back`
 - 验证日期：`2026-07-19`
 - 发布加固基线提交：`dc09cd8`
+- 发布 tag 提交：`c0317ef8475f82b53951ef88b92120b63c08aaa6`
 
-本报告证明当前源码包和模型清单具备发布条件，不表示 Git tag、GitHub Release、PyPI 或模型 Hub 已经发布。发布前还需要维护者确认版本号和对外上传。
+本报告记录 `v0.1.0` annotated tag、GitHub Release 和 11 个公开 asset 的重建、上传及回读证据。wheel 尚未发布到 PyPI，权重也未镜像到 Hugging Face Model Hub；这些未执行项不影响 GitHub Release 的已验证状态。
 
 ## 源码包与 CI
 
@@ -29,6 +30,9 @@
 - GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在原子暂存提交 `51847eb` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 - `v0.1.0` 发布元数据批次将 distribution repository/tag 与四个权重的精确 asset URL 固化到 manifest，发布检查不再只验证 HTTPS 前缀，还会拒绝 repository、tag 或文件名不一致。Models/manifest/release 定向回归为 `27 passed`，四个 manifest 条目和 `12` 个真实本地文件/报告校验通过；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，覆盖率为 `50.98%/90.80%`。本段证明 tag 提交的输入元数据可用，不替代后续从 tag 重建和公开 URL 回读。
 - 本地 annotated tag `v0.1.0` 指向提交 `c0317ef8475f82b53951ef88b92120b63c08aaa6`。从该 tag 的 detached 独立工作树构建 wheel/sdist，与真实四权重/四 mapping report 原子暂存为 `dist/releases/v0.1.0/` 下恰好 `11` 个普通文件。tag 内发布检查、独立 `--verify-release-dir` 和系统 `sha256sum --check` 全部通过，输出 `11 release assets, 10 checksummed assets`。wheel/sdist 内嵌 manifest 与 tag 源文件的 SHA-256 均为 `7f0dcc2b95cb3c0b7049185c0d9f267f00544fafba6a08cd874714f993001620`；解包 wheel 在仓库外按 `r18/r34/r50/r18-backbone` 读出四个 `published` 固定 URL。临时工作树和构建目录已清理，实际上传目录按维护者要求保留。
+- GitHub Actions [run 29687238968](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29687238968) 在发布文档提交 `80d2a80` 上通过全部 `6` 个 job：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+- [`v0.1.0` GitHub Release](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0) 于 `2026-07-19T12:37:30Z` 公开，非草稿、非预发布，包含恰好 `11` 个 asset。GitHub 返回的 size 与 digest 均和 tag 重建目录一致；先通过 Release 下载接口回读，再从无认证固定 URL 回读全部资产，两次均通过严格目录校验和系统 checksum。两个约 `438 MiB` 的临时下载目录均已清理。
+- `rtdetrv3-models download r18` 从公开 URL 下载 `92,075,629` 字节的 R18 权重并验证 SHA-256 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`。该文件在 CPU/FP32 上完成 COCO `000000000139.jpg` 单图推理，阈值 `0.3` 生成 `30` 条检测和可视化；四图 COCO Eval 处理 `2` 个 batch 并写出 `1,200` 条候选。四图 AP 只证明 Eval 链路可运行，不作为正式精度证据；临时权重、子集和输出已清理。
 
 ## v0.1.0 实际上传归档
 
@@ -49,7 +53,7 @@
 
 ## 模型产物
 
-| 模型 | 转换文件大小 | 发布 SHA-256 候选 |
+| 模型 | 转换文件大小 | 已发布 SHA-256 |
 |---|---:|---|
 | R18 | `92,075,629` | `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547` |
 | R34 | `137,170,947` | `e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272` |
@@ -71,15 +75,13 @@
 
 不建议把权重放入普通 Git、Git LFS 或 PyPI wheel：普通 Git 会增大所有用户的 clone 历史，Git LFS 会让源码 checkout 与模型下载耦合，wheel 则会让只需要代码的安装承担约 `435.5 MiB` 模型体积。GitHub Release 作为唯一权威源，Hub 只作同 checksum 镜像，可以让版本归属和用户下载路径都保持简单。
 
-`rtdetrv3-models list/verify/download` 已完成 manifest 解析、四个转换产物的本地校验、HTTPS 限制、临时文件校验后原子替换和不匹配既有文件保护。三个检测权重使用 `r18/r34/r50`，训练初始化权重使用 `r18-backbone`；alias 由 manifest 声明，并由 CLI 与发布检查共同拒绝重复或非法值。维护者已确认 `v0.1.0`，manifest 的四个产物已写入固定 tag URL；发布检查会要求 URL 严格等于 distribution repository、tag 和权重文件名的组合。在 GitHub Release 实际上传并回读前，这仍不是公开下载端到端证据。
+`rtdetrv3-models list/verify/download` 已完成 manifest 解析、四个转换产物的本地校验、HTTPS 限制、临时文件校验后原子替换和不匹配既有文件保护。三个检测权重使用 `r18/r34/r50`，训练初始化权重使用 `r18-backbone`；alias 由 manifest 声明，并由 CLI 与发布检查共同拒绝重复或非法值。维护者已确认 `v0.1.0`，manifest 的四个产物已写入固定 tag URL；发布检查会要求 URL 严格等于 distribution repository、tag 和权重文件名的组合。公开 Release 已完成 11-asset 整体回读；Models CLI 还使用公开 R18 asset 完成了 checksum、Infer 和 Eval 冒烟，因此 R18 下载是端到端证据。R34、R50 和 R18-vd backbone 的公开 URL 已由整体回读验证，但未分别重复运行模型 CLI 推理。
 
-## 尚未完成的发布动作
-
-2026-07-19 实际查询时，远程仓库尚无 tag 和 GitHub Release；因此本地扁平目录预演不能替代真实公开 URL 证据。
+## 发布动作验收
 
 - [x] 确认 `v0.1.0` 版本号和 asset 文件名，在 tag 所指提交中将四个产物改为 `published` 并写入该 tag 的固定 HTTPS URL。
 - [x] 创建本地 annotated tag，从 tag 的干净工作树重建 wheel/sdist，用 `scripts/check_release.py --stage-release-dir` 生成并验证完整 11-asset 目录。
-- [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
-- [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再将公开回读证据写入本报告。
+- [x] 上传 GitHub Release，并核对 11 个 asset 的 size 和 GitHub digest。Hugging Face 镜像未启用，仍是可选后续项。
+- [x] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 和系统 checksum，并用公开 R18 权重完成 Models/Infer/Eval smoke。
 
-直接维护范围的 90% 覆盖率目标已有托管证据，R18 CUDA/COCO 端到端 DataLoader/profile 已有本机证据；M4 完整长训仍按维护者决策 deferred。本报告不会把未验证项改写为已验证。
+直接维护范围的 90% 覆盖率目标已有托管证据，R18 CUDA/COCO 端到端 DataLoader/profile 已有本机证据，`v0.1.0` GitHub Release 已完成公开回读；M4 完整长训仍按维护者决策 deferred。本报告不会把 PyPI、Hub 镜像、完整 R34/R50 精度或四图 AP 改写为已验证。

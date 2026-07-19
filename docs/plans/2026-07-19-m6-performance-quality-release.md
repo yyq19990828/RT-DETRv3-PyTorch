@@ -1,6 +1,6 @@
 # M6——性能、质量与发布计划
 
-- 状态：`in-progress`
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -55,7 +55,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 增加单命令原子发布暂存：拒绝覆盖已有目录，失败清理半成品，并用真实四权重完成 11-asset 严格回读。
 - [x] 维护者确认 `v0.1.0`，四个产物在 manifest 中固定到该 tag 的精确 GitHub Release URL。
 - [x] 从本地 annotated `v0.1.0` tag 的 detached 工作树重建实际 wheel/sdist，生成并严格回读待上传的 11-asset 目录。
-- [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
+- [x] 对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
 
@@ -77,6 +77,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] wheel 安装后公开 CLI help、Infer、Eval 和 Export smoke 可重复；Models CLI 安装后合同纳入本轮验收。
 - [x] 发布候选清单、法律文件、wheel/sdist 内容和本地模型文件 checksum 通过自动检查。
 - [x] R18/R34/R50 同权重 COCO 单图对比使用统一渲染器，并保留原始预测和逐项匹配误差。
+- [x] 固定 tag 的 11 个公开 asset 通过匿名下载、严格 checksum 回读和系统 checksum 复核；公开下载的 R18 权重通过 Models/Infer/Eval 冒烟。
 
 ## 决策记录
 
@@ -113,7 +114,9 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 ## 完成记录
 
-进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。该批当时的 Mypy 门禁为 6 个 source file/目录，123 项全包数字为后续已校正的历史快照。
+以下按 2026-07-19 的执行顺序保留阶段快照；中途段落中的“进行中”“尚未执行”和“待复验”只描述当时状态，当前状态以文首和本节末尾为准。
+
+已完成。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。该批当时的 Mypy 门禁为 6 个 source file/目录，123 项全包数字为后续已校正的历史快照。
 
 同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。
 
@@ -207,4 +210,10 @@ GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 
 `v0.1.0` 发布输入已在创建 tag 前收口：manifest 新增 distribution repository/tag，四个权重使用精确的固定 tag asset URL，发布检查对 repository、tag 和权重文件名做组合校验。Models/manifest/release 定向回归为 `27 passed`，本地 `12` 个真实文件/报告校验通过；全仓 Ruff `174` 文件、Mypy `107` source file 和隐藏 GPU 的非 Paddle `340 passed, 5 skipped, 34 deselected` 通过，覆盖率为 `50.98%/90.80%`。该证据只覆盖 tag 输入；实际归档 checksum 必须在 tag 创建后重建记录。
 
-本地 annotated `v0.1.0` tag 指向 `c0317ef8475f82b53951ef88b92120b63c08aaa6`。从 detached tag 工作树构建的 wheel/sdist 与真实四权重/四 mapping report 组成 `dist/releases/v0.1.0/` 下的 11 个实际上传文件；tag 内发布检查、独立严格回读和系统 checksum 复核均通过。wheel/sdist 的 SHA-256 为 `ffd8db68649abf132216105c48cdb6cccdf1ed9b0ebf94dc40c3036e70b33ee9`/`0d42b6935ecae2d0fe12e2b1be388b3647819822a60feda66ac5fdaff5ef176a`；包内 manifest 与 tag 源文件逐字节一致，临时工作树已清理。tag 和资产仍未推送/公开，M6 保持进行中。
+本地 annotated `v0.1.0` tag 指向 `c0317ef8475f82b53951ef88b92120b63c08aaa6`。从 detached tag 工作树构建的 wheel/sdist 与真实四权重/四 mapping report 组成 `dist/releases/v0.1.0/` 下的 11 个实际上传文件；tag 内发布检查、独立严格回读和系统 checksum 复核均通过。wheel/sdist 的 SHA-256 为 `ffd8db68649abf132216105c48cdb6cccdf1ed9b0ebf94dc40c3036e70b33ee9`/`0d42b6935ecae2d0fe12e2b1be388b3647819822a60feda66ac5fdaff5ef176a`；包内 manifest 与 tag 源文件逐字节一致，临时工作树已清理。此段记录发布前重建状态；最终公开验收如下。
+
+GitHub Actions [run 29687238968](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29687238968) 在提交 `80d2a80` 上通过全部 6 个 job。Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+
+维护者确认后，annotated tag 和 11 个重建资产发布到 [`v0.1.0` GitHub Release](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0)。Release 于 `2026-07-19T12:37:30Z` 公开，非草稿、非预发布；GitHub 记录的每个 asset size/digest 与本地重建清单一致。先经 GitHub Release 下载接口回读全部资产，再用无认证 HTTP 从 11 个固定 URL 回读，两个空目录都通过 `scripts/check_release.py --verify-release-dir` 和系统 `sha256sum --check`；约 438 MiB 的临时下载均已清理。
+
+最后从公开 URL 使用 `rtdetrv3-models download r18` 下载 R18，得到 `92,075,629` 字节且 SHA-256 为 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`。该文件在 CPU/FP32 上对 COCO `000000000139.jpg` 生成 30 条阈值 `0.3` 检测和可视化，并完成四图、两个 batch 的 Eval，产出 1,200 条候选；四图 AP 只作为链路冒烟，不作为正式精度结论。临时权重、子集和输出已清理。M6 至此完成；M4 长训与多 seed 仍按维护者决策 deferred，不影响本里程碑发布验收。

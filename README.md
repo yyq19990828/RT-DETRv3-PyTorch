@@ -122,13 +122,13 @@ uv run --extra quality python scripts/check_quality.py
 uv run --extra quality python scripts/check_quality.py --fix
 ```
 
-## 发布候选检查
+## v0.1.0 发布检查
 
 wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模型权重、数据集或 Paddle 子模块。安装 wheel 后，从仓库外仍可使用 `configs/...` 路径访问包内配置。发布候选权重的来源、大小、SHA-256 和 mapping 数记录在 [`configs/checkpoints/rtdetrv3_coco.yml`](configs/checkpoints/rtdetrv3_coco.yml)。
 
-当前发布候选已通过本地和托管 CI 验证，但权重还没有对外发布。计划以 GitHub Releases 作版本绑定的主下载源，可选同步 Hugging Face Model Hub；具体限制、checksum 规则和剩余发布步骤见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
+[`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0) 已通过 GitHub Releases 对外发布，包含 wheel、sdist、四个 PyTorch 权重、四份 mapping report 和 `SHA256SUMS`，共 11 个 asset。固定 tag 的全部资产已通过匿名公开下载、严格 checksum 回读和系统 `sha256sum` 复核；具体环境、命令和限制见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
 
-`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；`download` 只有在 GitHub Release 的实际资产上传后才能完成公开回读，发布执行期间不把仅写入 URL 记为下载已验证。
+`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；`download` 已使用公开 R18 asset 完成端到端校验，并用该下载文件通过 CPU 单图 Infer 和四图 COCO Eval 链路冒烟。
 
 ```bash
 # 构建 wheel 与 sdist

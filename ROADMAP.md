@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)
-**Current execution plan**: [`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)
+**Latest completed execution plan**: [`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)
+**Current execution plan**: 暂无；后续工作从本路线图中的 deferred 项重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -91,7 +91,7 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；最新托管非 Paddle CPU 覆盖率为全包 50.99%、直接维护范围 90.80%，回退下限已提高到 50.5%/90%，直接维护范围的 90% 目标已有托管证据。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 与真实 COCO 端到端性能证据均已通过。PyTorch 四个 model-only workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%；COCO 端到端推理吞吐为 Paddle 的 1.579×，可见 input-pipeline stall 占 29.68%，按维护者决策只记录差异而不追求完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，11 个上传资产已支持单命令原子组装、拒绝覆盖和失败清理；三个检测权重与 R18-vd backbone 初始化权重已纳入统一发布合同，R18/R34/R50 的 Paddle 原权重/PyTorch 转换权重均完成 COCO 同图统一渲染和机器可读差异报告。维护者已确认 `v0.1.0`，四个权重 URL 已固定到该 tag 的精确 asset 名称。详见[性能报告](docs/reports/performance-validation.md)、[发布候选报告](docs/reports/release-validation.md)和[预测可视化报告](docs/reports/prediction-visualization.md)。权重公开发布和从公开 URL 回读尚未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；最新托管非 Paddle CPU 覆盖率为全包 50.99%、直接维护范围 90.80%，回退下限已提高到 50.5%/90%，直接维护范围的 90% 目标已有托管证据。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 与真实 COCO 端到端性能证据均已通过。PyTorch 四个 model-only workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%；COCO 端到端推理吞吐为 Paddle 的 1.579×，可见 input-pipeline stall 占 29.68%，按维护者决策只记录差异而不追求完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，11 个上传资产已支持单命令原子组装、拒绝覆盖和失败清理；三个检测权重与 R18-vd backbone 初始化权重已纳入统一发布合同，R18/R34/R50 的 Paddle 原权重/PyTorch 转换权重均完成 COCO 同图统一渲染和机器可读差异报告。维护者已确认并发布 `v0.1.0`；11 个固定 tag 资产已通过匿名公开回读，公开下载的 R18 权重也已通过 CPU Infer/Eval 链路冒烟。详见[性能报告](docs/reports/performance-validation.md)、[发布报告](docs/reports/release-validation.md)和[预测可视化报告](docs/reports/prediction-visualization.md)。
 
 - [x] 在同一硬件、驱动、batch 和精度下建立 Paddle/PyTorch 基准；两个官方 wheel 的 CUDA/cuDNN 版本不同，已分别记录而不声称完全同运行时。
 - [x] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
@@ -122,9 +122,11 @@
 - [x] 将四份 mapping report 的 size/SHA-256 固化到 manifest，并完成 11-asset 扁平 Release 目录的严格回读预演。
 - [x] 将四权重、四报告、wheel/sdist 和 `SHA256SUMS` 收敛为单命令原子暂存，并用真实 11-asset 目录严格回读。
 - [x] 确认 `v0.1.0`，从本地 annotated tag 的 detached 工作树重建并校验实际 11-asset 上传目录。
-- [ ] 以固定 tag 公开发布三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
+- [x] 以固定 tag 公开发布三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。
+
+**验收记录**：2026-07-19，annotated tag `v0.1.0` 指向 `c0317ef`，GitHub Release 的 11 个公开资产完成匿名下载与双重 checksum 回读；公开 R18 权重完成 Models CLI 下载、单图 Infer 和四图 COCO Eval 冒烟。提交 `80d2a80` 的最终 GitHub Actions 6 个 job 全部通过。
 
 ## 依赖顺序
 
