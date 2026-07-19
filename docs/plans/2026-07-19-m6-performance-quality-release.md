@@ -34,7 +34,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
 - [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
 - [ ] 生成模块级覆盖率报告，区分已迁移核心合同与尚未支持的继承代码，逐步建立可执行阈值。
-- [ ] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke；CUDA 用独立受控 job/自托管证据。
+- [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
+- [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
 - [ ] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
 - [ ] 在同一硬件执行 R18 基准并定位吞吐或峰值显存未达目标的第一处瓶颈，再决定是否扩展 R34/R50。
 - [ ] 生成发布清单和最终验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
@@ -53,7 +54,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 第一批范围经 Ruff 实际格式化后，定向测试与默认全量测试通过。
 - [x] Ruff 全活跃范围经格式化、lint 和默认全量测试验证通过。
 - [ ] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
-- [ ] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
+- [x] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
 - [ ] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
 - [x] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
 
@@ -73,4 +74,6 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。Mypy 仍只对 6 个 source file/目录通过，初始全包 123 项尚未清完。
 
-同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。GitHub 托管 runner 结果仍需在推送后确认；覆盖率阈值、完整 Mypy、CUDA CI、性能和发布候选仍未完成。
+同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。
+
+GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29670978523) 在提交 `b2ffcff` 上完成托管验收：Python 3.9/3.10/3.11/3.12 四个 CPU jobs 均为 `211 passed, 7 skipped, 17 deselected`；质量 job 为 158 个 Ruff 文件和 6 个 Mypy source 通过；wheel job 成功构建并完成 `34 passed` smoke。首次 run 在测试前因 UV 0.7/0.11 锁文件修订差异失败，统一 `required-version` 并用 UV `0.11.29` 重建锁文件后关闭。覆盖率阈值、完整 Mypy、CUDA CI、性能和发布候选仍未完成。

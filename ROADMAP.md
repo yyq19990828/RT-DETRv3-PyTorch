@@ -103,7 +103,8 @@
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
   - [x] 增加 Python 3.9–3.12 非 Paddle CPU workflow，并在本机 UV 隔离环境验证锁文件安装和测试。
-  - [ ] 确认 GitHub 托管 CPU jobs 通过，并补充受控 CUDA job/证据。
+  - [x] GitHub 托管 Python 3.9–3.12 CPU jobs、质量门禁和 wheel smoke 通过。
+  - [ ] 补充受控 CUDA job 或自托管验证证据。
 - [ ] 发布模型库、checksum、配置、许可说明和最终验证报告。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。
