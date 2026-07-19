@@ -154,4 +154,6 @@ Models CLI 加固阶段新增 manifest 驱动的 `list/verify/download`：未发
 
 GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29679546423) 在提交 `e1a306b` 上通过全部 6 个 jobs：质量 job 为 Ruff 172 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `272 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,512/13,535`（`48.11%`）和直接维护范围 `1,429/1,989`（`71.85%`）；wheel 安装后六个 CLI、包内配置和 `34 passed` smoke 均通过。
 
-转换器/YAML 配置批次把 Paddle-only 集成用例中的核心编排合同拆为 16 个纯 CPU 回归，覆盖 checkpoint 元数据、shape/transpose 传递、严格/宽松失败、内存释放、完整 session metadata、mapping 导出、批量失败隔离和 YAML 构造/序列化。回归修复 `Callable` 可变默认参数跨实例共享，以及批量转换在同名 mapping 已存在时未遵守 `--force` 的问题。本机非 Paddle CPU 为 `288 passed, 5 skipped, 34 deselected`，全包 `6,689/13,538`（`49.41%`），直接维护范围 `1,607/1,992`（`80.67%`），门槛提高到 49%/80%；托管证据待本轮提交后补录。
+转换器/YAML 配置批次把 Paddle-only 集成用例中的核心编排合同拆为 16 个纯 CPU 回归，覆盖 checkpoint 元数据、shape/transpose 传递、严格/宽松失败、内存释放、完整 session metadata、mapping 导出、批量失败隔离和 YAML 构造/序列化。回归修复 `Callable` 可变默认参数跨实例共享，以及批量转换在同名 mapping 已存在时未遵守 `--force` 的问题。本机非 Paddle CPU 为 `288 passed, 5 skipped, 34 deselected`，全包 `6,689/13,538`（`49.41%`），直接维护范围 `1,607/1,992`（`80.67%`），门槛提高到 49%/80%。
+
+GitHub Actions [run 29680140237](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29680140237) 在提交 `3fbd4ec` 上通过全部 6 个 jobs：质量 job 为 Ruff 174 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `288 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,690/13,538`（`49.42%`）和直接维护范围 `1,607/1,992`（`80.67%`）；wheel 安装后六个 CLI 和 `34 passed` smoke 均通过。
