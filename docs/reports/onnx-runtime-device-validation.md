@@ -104,4 +104,4 @@ ORT CUDA 默认 `use_tf32=1` 时相对默认 eager CUDA 为 `6.06865e-4/0.023864
 
 实现与本地证据提交 `dc97927`/`983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全部通过。Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`；Python 3.12 全包/直接维护范围覆盖率为 `7,079/13,748 (51.49%)` 和 `1,991/2,200 (90.50%)`。托管 Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查、六个安装后 CLI、包外配置加载和 `65 passed` wheel smoke 同时通过。
 
-本报告只声明 R18、当前 Python Infer CLI、固定 640、FP32、ORT 1.23.2 和本机 CUDA 12.1/cuDNN 9。它不证明 R34/R50 ONNX CUDA、动态高宽、AMP/FP16、I/O Binding、TensorRT、C++/mobile 或性能收益。CPU/GPU 的独立门槛也不能外推为 Paddle/PyTorch 逐位等价。
+本报告只声明 M11 时的 R18、Python Infer CLI、固定 640、FP32、ORT 1.23.2 和本机 CUDA 12.1/cuDNN 9。R34/R50 ONNX CUDA 后续由 [M12](variant-export-device-validation.md) 验证，并确认不能继承 R18 的严格门槛。本报告仍不证明动态高宽、AMP/FP16、I/O Binding、TensorRT、C++/mobile 或性能收益；CPU/GPU 的独立门槛也不能外推为 Paddle/PyTorch 逐位等价。

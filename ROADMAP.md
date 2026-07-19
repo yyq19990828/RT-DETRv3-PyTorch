@@ -4,7 +4,7 @@
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)
-**Current execution plan**: 暂无；M4 长训保持 deferred，后续从尚未覆盖的 provider/外部部署边界重新立项
+**Current execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)；M4 长训保持 deferred
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -194,6 +194,19 @@
 
 **验收记录**：2026-07-19，实现提交 `dc97927`。R18 四图的 ONNX CUDA/CPU 相对同设备 eager 最大 score/box 误差分别为 `6.06865e-4/0.0238647 px` 和 `6.82473e-6/0.000183105 px`，两组均无候选重排。提交 `983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[ONNX Runtime 设备验证报告](docs/reports/onnx-runtime-device-validation.md)。
 
+## Milestone 12 — R34/R50 导出后端设备矩阵（P1）
+
+**执行计划**：[`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)。不外推 R18 证据，分别验证两个已发布深层变体的 ONNX/TorchScript CUDA/CPU 用户侧路径。
+
+**当前结果**：12 条用户路径均完成，TorchScript CUDA/CPU 逐值一致，ONNX CPU 延续 M8 门槛。R34/R50 ONNX CUDA 功能与候选一对一匹配成立，但分别观测到 `0.00141865/0.0375671 px` 和 `0.000972390/0.0349426 px`，未通过 R18 的 `1e-3/0.03 px` 严格门槛；该偏差保留为 provider 限制，不用事后包络改写全局合同。
+
+- [x] 从既有公开 checkpoint 重建 R34/R50 固定 640 ONNX/TorchScript 临时产物。
+- [x] 对两个变体运行 eager/ONNX/TorchScript × CUDA/CPU 的四图 batch 4 Infer。
+- [x] 按同设备 eager 逐图一对一比较全部阈值后检测，并记录渲染差异和近似候选换序。
+- [x] 更新多变体设备支持矩阵、限制和复现报告，清理全部中间产物。
+
+**Exit criteria**: R34/R50 的两个导出后端在显式 CUDA 与 CPU 上均完成真实四图推理；每项执行计划中预注册的类别、score、box 和分组门槛，任何未通过项必须保留为限制而不能改写成对齐证据；结论不外推到动态高宽、低精度或性能。
+
 ## 依赖顺序
 
 ```text
@@ -201,7 +214,7 @@ M1 最小训练链
  ├──> M2 权重/数值对齐 ──> M4 精度对齐
  └──> M3 训练/评估/恢复 ─┘
 M1–M3 ──> M5 CLI/导出
-M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出 ──> M9 导出产物推理 ──> M10 TorchScript CUDA ──> M11 ONNX Runtime CUDA
+M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出 ──> M9 导出产物推理 ──> M10 TorchScript CUDA ──> M11 ONNX Runtime CUDA ──> M12 多变体设备矩阵
 ```
 
 ## 不作为当前阻塞的延伸项

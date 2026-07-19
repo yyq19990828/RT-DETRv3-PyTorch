@@ -5,13 +5,15 @@
 - 代码基线：`de5a805` 后的 M8 工作树；实现与本报告在同一提交固化
 - 输入权重：`v0.1.0` R34/R50 已发布 checkpoint
 
+> 历史快照（2026-07-19，M8）：本文记录 CPU 导出 tensor 合同；后续 CUDA/CPU 用户侧矩阵及 ONNX CUDA 数值偏差见 [M12 验证报告](variant-export-device-validation.md)。
+
 ## 结论
 
 **已验证**：R34 和 R50 均能从对应 640×640 COCO 配置导出 ONNX opset 17 与 traced TorchScript。两个 ONNX 均通过 checker，确认 batch 轴动态、空间轴固定为 640，并在 ONNX Runtime `CPUExecutionProvider` 下完成 batch 1/4/8 与真实 COCO 图片回归；两个 TorchScript 均完成保存、重载和相同输入矩阵回归。
 
 **验证合同**：`bbox` shape 和 `bbox_num` 必须一致，所有值必须有限；每张图的全部候选必须按类别、score 和 box 在一对一匹配中全部配对，不允许跨 image 匹配或忽略低分 tail。score 最大绝对误差不超过 `2e-5`，坐标最大绝对误差不超过 `0.02 px`。近似并列候选的行序不是跨后端语义保证，验证器单独报告 `order_equal/reordered_detections`。
 
-**不作声明**：这些结果只覆盖 CPU/FP32、固定 640×640、当前 opset 和当前依赖。它们不证明单产物动态高宽、ONNX Runtime CUDA provider、TensorRT、C++、FP16/BF16、量化或 Paddle 导出等价。
+**不作声明**：这些结果只覆盖 M8 时的 CPU/FP32、固定 640×640、当前 opset 和当前依赖。M8 本身不证明单产物动态高宽、ONNX Runtime CUDA provider、TensorRT、C++、FP16/BF16、量化或 Paddle 导出等价；后续 CUDA/CPU 功能证据以 M12 报告为准。
 
 ## 环境与输入
 

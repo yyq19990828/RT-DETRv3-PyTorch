@@ -10,7 +10,7 @@
 |---|---|---|---|
 | Train | `-c/--config` | `-o`、resume、seed、AMP、DDP；`--enable_ce` 只保留历史确定性兼容 | `--eval`、slim、TensorBoard、W&B、profiler、proposal/save-prediction 选项会在解析阶段失败；半监督 teacher/student 权重未迁移并会显式失败；训练后评估需单独运行 Eval |
 | Eval | config + checkpoint | annotation/image override、batch/worker、持久输出、EMA、device、轻量 override | batch 必须 `>=1`、worker 必须 `>=0`；只声明 COCO 当前数据 API |
-| Infer | config + checkpoint/ONNX/TorchScript 三选一 + 单图/目录之一 | 三后端共用 batch、阈值、可视化、JSON、类别映射和 TestReader；checkpoint/TorchScript 支持 PyTorch CUDA/CPU；ONNX 默认 CPU并支持显式 CUDA provider | ONNX CUDA 只验证 R18/FP32/固定 640/Python CLI；导出产物空间尺寸固定；不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
+| Infer | config + checkpoint/ONNX/TorchScript 三选一 + 单图/目录之一 | 三后端共用 batch、阈值、可视化、JSON、类别映射和 TestReader；checkpoint/TorchScript 支持 PyTorch CUDA/CPU；ONNX 默认 CPU并支持显式 CUDA provider | 三个公开变体的 CUDA 证据只覆盖 FP32/固定 640/Python CLI；R34/R50 ONNX CUDA 不满足 R18 的严格数值门槛；不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
 | Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |
 | Export | config + checkpoint | R18/R34/R50 的 ONNX opset 17、ONNX Runtime CPU 回归、traced TorchScript、动态 batch、固定高宽重新导出、EMA | Export 自带验证仍固定 CPU；不声明单个产物动态高宽、TensorRT、C++ 或 Paddle 导出参数兼容 |
 | Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | `v0.1.0` 只接受固定 tag 的 GitHub Release URL；三个检测权重均经 CLI 回读，backbone 由 11-asset 整体回读覆盖 |
@@ -43,6 +43,8 @@ M9 进一步把导出 tensor 合同接回同一 Infer 用户链路。官方 R18�
 M10 当时将 provider 与 device 合同拆开：ONNX Runtime 只走 CPU provider；TorchScript 使用 PyTorch runtime，在 CUDA 可用时默认 CUDA并接受显式 CPU。R18 四图 batch 4 的 TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`；两组同设备渲染均逐字节一致。跨 CPU/CUDA 有两条近似候选换序，因此同设备和跨设备证据必须分开记录。详见[TorchScript 设备验证报告](../reports/torchscript-device-validation.md)。
 
 M11 在不改变默认 CPU 的前提下补充显式 ONNX CUDA provider。R18 四图 batch 4 的 ONNX CUDA 相对 eager CUDA 最大 score/box 误差为 `6.06865e-4/0.0238647 px`，ONNX CPU 相对 eager CPU 为 `6.82473e-6/0.000183105 px`，两组均无候选重排。CUDA 使用独立的 `1e-3/0.03 px` 实测门槛；CPU 保持 M8 的 `2e-5/0.02 px`。完整 provider、TF32 A/B、依赖和可视化证据见[ONNX Runtime 设备验证报告](../reports/onnx-runtime-device-validation.md)。
+
+M12 把用户侧设备矩阵扩展到 R34/R50。两变体的 TorchScript CUDA/CPU 均与同设备 eager 逐值一致，ONNX CPU 最大误差分别为 `2.38419e-6/0.000183105 px` 和 `3.24845e-6/0.000213623 px`。ONNX CUDA 的功能、检测数和同图同类别一对一匹配成立，但 R34/R50 分别观测到 `0.00141865/0.0375671 px` 和 `0.000972390/0.0349426 px`，未通过 R18 的 `1e-3/0.03 px` 严格门槛。该失败是当前支持边界，不以 `2e-3/0.05 px` 观测包络改写全局合同。详见[多变体设备验证报告](../reports/variant-export-device-validation.md)。
 
 ### 为什么不能保留旧推理链
 
@@ -104,8 +106,8 @@ uv run --extra export rtdetrv3-export \
 
 | 格式 | 已验证行为 | 明确限制 |
 |---|---|---|
-| ONNX | opset 17；checker 通过；Export 使用 `CPUExecutionProvider` 回归；默认 batch 轴动态，batch 1/4/8 运行；R18 Infer 已验证显式 CUDA/CPU | 高宽固定为导出时数值；`--fixed-batch` 可关闭动态 batch；CUDA 证据不覆盖 R34/R50、外部客户端或性能 |
-| TorchScript | `torch.jit.trace` 保存、CPU/CUDA 重新加载与回归；同一固定高宽下 batch 1/4/8 运行；R18 Infer 四图 batch 4 已验证 CUDA/CPU；归档内嵌 schema v1 固定输入尺寸元数据供 Infer 预检 | 不是 `script`；高宽被 trace 固化；CUDA 证据仅覆盖 R18、FP32 和当前 Python/PyTorch runtime，未声明 C++/TensorRT 合同 |
+| ONNX | opset 17；checker 通过；Export 使用 `CPUExecutionProvider` 回归；默认 batch 轴动态，batch 1/4/8 运行；R18/R34/R50 Infer 已验证显式 CUDA/CPU | 高宽固定为导出时数值；`--fixed-batch` 可关闭动态 batch；R34/R50 CUDA 只声明功能矩阵，不满足 R18 严格门槛；不覆盖外部客户端或性能 |
+| TorchScript | `torch.jit.trace` 保存、CPU/CUDA 重新加载与回归；同一固定高宽下 batch 1/4/8 运行；R18/R34/R50 Infer 四图 batch 4 已验证 CUDA/CPU；归档内嵌 schema v1 固定输入尺寸元数据供 Infer 预检 | 不是 `script`；高宽被 trace 固化；CUDA 证据只覆盖 FP32 和当前 Python/PyTorch runtime，未声明 C++/TensorRT 合同 |
 
 **已验证（2026-07-19）**：Python `3.12.11`、PyTorch `2.5.1+cu121`、ONNX `1.22.0`、ONNX Runtime `1.27.0`、CPU/FP32 下，官方 R18/R34/R50 的 640 产物完成 batch 1/4/8 和真实 COCO 图片 `000000000139.jpg` 回归；R18 的 608 ONNX/TorchScript 也通过导出时回归。验收要求 `bbox_num` 和每图候选数严格一致，每图全部候选按类别、score 和 box 一对一匹配；score 最大绝对误差 `<=2e-5`，坐标最大绝对误差 `<=0.02 px`。近似并列的低分 top-k 可以交换非语义行序，但不能丢失、跨图匹配或超过数值门槛。
 
@@ -122,4 +124,4 @@ R34 ONNX 在全零 batch 1/4/8 上的最大 score/box 误差为 `2.37e-6/0.01178
 - CPU trace 的普通 Tensor 属性或显式 `device=src.device` factory 会把 CPU 写入 traced graph。固定位置编码、anchors 和 valid mask 应注册为 `persistent=False` buffer；临时 Tensor 应从活跃输入使用 `new_tensor`/`zeros_like`/`ones_like` 等派生。只验证 CPU reload 不能发现这类错误，必须至少做一次 CPU trace → CUDA load → 前向。
 - `--no-verify` 只适合缺少运行后端的受控场景；发布产物应保留默认回归。`--force` 才允许覆盖既有文件。
 
-这些证据覆盖官方 R18/R34/R50 的 CPU/FP32、R18 的 608/640 与 R34/R50 的 640，以及 R18 TorchScript 与 ONNX Runtime 640 的 CUDA/CPU Infer；不应外推为任意配置、动态高宽、R34/R50 导出后端 CUDA、TensorRT 或跨框架导出等价。
+这些证据覆盖官方 R18/R34/R50 的 CPU/FP32、R18 的 608/640 与 R34/R50 的 640，以及三个变体 TorchScript 与 ONNX Runtime 640 的 CUDA/CPU Infer；不应外推为任意配置、动态高宽、低精度、TensorRT 或跨框架导出等价。R34/R50 ONNX CUDA 的 provider 漂移必须与功能支持分开陈述。

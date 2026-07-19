@@ -5,11 +5,13 @@
 - 代码基线：`72fd9ef9844689e49d35949b9cc37ae5a4ae12f5`
 - 发布版本：[`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0)
 
+> 历史快照（2026-07-19，M7）：本文记录公开 checkpoint 的 eager CPU 验收；后续导出与设备矩阵见 [M8](variant-export-validation.md) 和 [M12](variant-export-device-validation.md) 报告。
+
 ## 结论
 
 **已验证**：`v0.1.0` 的 R18、R34、R50 三个检测权重都能通过 `rtdetrv3-models download` 从 manifest 固定 URL 下载并通过 size/SHA-256 校验。每个权重使用对应配置在 CPU/FP32 下严格加载，完成同一真实 COCO 图片的 Infer，以及同一四图 COCO 子集的 Eval。三个 Infer 都生成可解码可视化和非空 JSON，三个 Eval 都处理四张图并写出 1,200 条 raw top-k 候选。
 
-**不作声明**：四图子集只验证配置、checkpoint、预处理、前向、后处理和 COCO metric 链路，样本量不足以形成正式 AP。本文不证明 R34/R50 完整 val2017 AP、标准训练收敛、GPU eager、ONNX/TorchScript、TensorRT 或 LVIS 支持；跨框架数值证据仍以[预测可视化报告](prediction-visualization.md)和既有分层对齐报告为准。
+**不作声明**：四图子集只验证配置、checkpoint、预处理、前向、后处理和 COCO metric 链路，样本量不足以形成正式 AP。M7 本身不证明 R34/R50 完整 val2017 AP、标准训练收敛、GPU eager、ONNX/TorchScript、TensorRT 或 LVIS 支持；后续导出设备证据应以 M8/M12 报告为准，跨框架数值证据仍以[预测可视化报告](prediction-visualization.md)和既有分层对齐报告为准。
 
 ## 环境与输入
 
