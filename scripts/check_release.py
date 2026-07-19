@@ -7,7 +7,9 @@ import argparse
 import configparser
 import hashlib
 import json
+import os
 import tarfile
+import tempfile
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
@@ -41,6 +43,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--require-models",
         action="store_true",
         help="Fail unless every source, converted model, and mapping report exists",
+    )
+    parser.add_argument(
+        "--write-sha256sums",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Atomically write checksums for converted models, mapping reports, "
+            "wheel, and sdist"
+        ),
     )
     return parser
 
@@ -251,6 +262,68 @@ def validate_repository(*, require_models: bool) -> dict[str, int]:
     }
 
 
+def release_model_assets() -> list[Path]:
+    """Return converted weights and audit reports in deterministic release order."""
+    manifest = _mapping(
+        yaml.safe_load(MANIFEST_PATH.read_text(encoding="utf-8")),
+        "checkpoint manifest",
+    )
+    weights: list[Path] = []
+    reports: list[Path] = []
+    for section_name in ("models", "pretraining"):
+        section = _mapping(manifest.get(section_name), f"{section_name} manifest")
+        for name, value in section.items():
+            entry = _mapping(value, f"{name} manifest entry")
+            converted = _mapping(
+                entry.get("converted_artifact"), f"{name}.converted_artifact"
+            )
+            weights.append(_repository_path(converted.get("path"), f"{name} artifact"))
+            reports.append(
+                _repository_path(
+                    converted.get("mapping_report"), f"{name} mapping report"
+                )
+            )
+    return weights + reports
+
+
+def write_sha256sums(paths: Sequence[Path], output_path: Path) -> int:
+    """Write a flat, GitHub-Release-compatible checksum file atomically."""
+    resolved_paths = [path.resolve() for path in paths]
+    for path in resolved_paths:
+        _require(path.is_file(), f"release asset is missing: {path}")
+
+    names = [path.name for path in resolved_paths]
+    _require(len(names) == len(set(names)), "release asset basenames must be unique")
+
+    output_path = output_path.resolve()
+    _require(
+        output_path not in resolved_paths, "checksum output cannot replace an asset"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    temporary_path: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=output_path.parent,
+            prefix=f".{output_path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as output_file:
+            temporary_path = Path(output_file.name)
+            for path in resolved_paths:
+                output_file.write(f"{_sha256(path)}  {path.name}\n")
+            output_file.flush()
+            os.fsync(output_file.fileno())
+        os.replace(temporary_path, output_path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+    return len(resolved_paths)
+
+
 def _validate_archive_names(names: Sequence[str], label: str) -> None:
     for name in names:
         path = PurePosixPath(name)
@@ -358,17 +431,36 @@ def validate_sdist(path: Path) -> None:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = create_argument_parser().parse_args(argv)
+    if args.write_sha256sums is not None:
+        _require(
+            args.require_models,
+            "--write-sha256sums requires --require-models",
+        )
+        _require(args.wheel is not None, "--write-sha256sums requires --wheel")
+        _require(args.sdist is not None, "--write-sha256sums requires --sdist")
+
     summary = validate_repository(require_models=args.require_models)
     if args.wheel is not None:
         validate_wheel(args.wheel.resolve())
     if args.sdist is not None:
         validate_sdist(args.sdist.resolve())
+    checksum_count = 0
+    if args.write_sha256sums is not None:
+        checksum_count = write_sha256sums(
+            release_model_assets() + [args.wheel.resolve(), args.sdist.resolve()],
+            args.write_sha256sums,
+        )
     print(
         "release checks passed: "
         f"{summary['manifest_entries']} manifest entries, "
         f"{summary['distribution_artifacts']} distribution artifacts, "
         f"{summary['checked_model_files']} local model files/reports"
     )
+    if args.write_sha256sums is not None:
+        print(
+            f"wrote SHA256SUMS for {checksum_count} release assets: "
+            f"{args.write_sha256sums.resolve()}"
+        )
     return 0
 
 

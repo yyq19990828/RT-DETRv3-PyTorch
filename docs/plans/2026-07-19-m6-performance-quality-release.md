@@ -49,7 +49,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 生成发布清单和发布候选验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
 - [x] 为 R18/R34/R50 补充官方 Paddle 权重与转换后 PyTorch 权重的 COCO 同图统一渲染及机器可读差异证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
-- [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重和 `SHA256SUMS`，并从公开 URL 回读验收。
+- [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
 
@@ -172,3 +172,7 @@ GitHub Actions [run 29680140237](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 依赖源复验进一步定位了托管安装停滞：run `29681801681` 的六个 job 均已完成 NVIDIA CUDA 依赖和 torchvision 下载，只有南京 PyTorch 镜像的 `torch 2.5.1+cu121` 在 45 分钟后仍未完成，随后因新提交被取消。PyTorch 专用索引已切换为官方 `download.pytorch.org/whl/cu121`，重新锁定不改变包名或版本。独立空 UV 缓存、临时 Python `3.9.23` 环境从零准备 52 个包耗时 `2m21s`，版本/CUDA 检查通过，非 Paddle 回归为 `308 passed, 7 skipped, 17 deselected`；临时环境和缓存已清理。托管复验待本批提交后补录。
 
 GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在提交 `aa3ccac` 上通过全部 6 个 jobs。官方 Torch 冷下载与各环境准备均在约 21–28 秒完成；Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`，Python 3.12 全包/直接维护覆盖率为 `6,803/13,567`（`50.14%`）和 `1,720/2,021`（`85.11%`）。质量 job 为 Ruff 174 个文件、Mypy 107 个 source file；wheel/sdist 构建、4 条 manifest/4 个发布产物检查及 `47 passed` wheel smoke 均通过。该 run 同时关闭通用 PyPI 403、南京 PyTorch 大 wheel 停滞和四产物发布合同的托管复验缺口。
+
+权重发布末端将四份 conversion mapping report 提升为正式 Release asset，使参数名映射和 Linear 布局决策可与对应权重一起审计。`scripts/check_release.py --write-sha256sums` 只在四个源/转换/mapping 条目、wheel 和 sdist 全部通过后，才会在同目录临时文件中对 10 个上传文件生成扁平 checksum 清单并原子替换目标；同名 asset 会显式失败。Paddle 源权重保留在上游，不进入本项目 Release。
+
+本地实证从当前工作树构建临时 wheel/sdist，通过 `4` 个 manifest 条目、`4` 个发布产物和 `12` 个本地源/转换/mapping 文件校验；生成的 `SHA256SUMS` 恰有 10 行，在扁平资产目录下由系统 `sha256sum --check` 复核全部成功。定向回归 `7 passed`，Ruff `174` 个文件、Mypy `107` 个 source file 通过；隐藏 GPU 的非 Paddle 回归为 `312 passed, 5 skipped, 34 deselected`，全包/直接维护范围仍为 `50.14%/85.11%`。临时发布产物和链接目录均已清理。

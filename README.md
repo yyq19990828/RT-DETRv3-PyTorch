@@ -141,7 +141,16 @@ uv run python scripts/check_release.py \
 
 # 发布权重前还必须实际校验本地源权重、转换权重和 mapping report
 uv run python scripts/check_release.py --require-models
+
+# 对最终待上传的 10 个文件原子生成扁平 SHA256SUMS
+uv run python scripts/check_release.py \
+  --require-models \
+  --wheel dist/rtdetrv3_pytorch-0.1.0-py3-none-any.whl \
+  --sdist dist/rtdetrv3_pytorch-0.1.0.tar.gz \
+  --write-sha256sums dist/SHA256SUMS
 ```
+
+checksum 输入为四个转换后 `.pth`、四份 `.mapping.json`、wheel 和 sdist；再加上生成的 `SHA256SUMS`，GitHub Release 共有 11 个 asset。Paddle 源权重仍由上游托管，只在 manifest 中记录来源与 checksum，不作为本项目的发布资产。
 
 ## 仓库结构
 

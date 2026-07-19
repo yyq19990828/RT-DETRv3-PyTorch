@@ -22,7 +22,7 @@
 ## 框架与环境
 
 - Paddle 参考实现是 `third-party/RT-DETRv3-paddle` 子模块，不会打包进 PyTorch wheel。开发工具还依赖子模块已初始化。
-- wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256。
+- wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256；固定 tag 的 GitHub Release 会同时提供转换权重、mapping report 和覆盖所有资产的 `SHA256SUMS`。
 - Paddle 和相关对齐工具位于 `dev` 附加依赖；核心 PyTorch 运行时不应直接导入 Paddle。
 - ONNX 和 ONNX Runtime 位于 `export` 附加依赖，并因导出回归测试同时包含在 `dev` 中；核心训练/eager 运行时不要求安装或导入它们。
 - Paddle 扩展算子不会随 `uv sync --extra dev` 自动编译，使用旋转框等特定路径时需要额外构建。

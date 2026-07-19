@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import sys
 from pathlib import Path
@@ -24,6 +25,61 @@ def test_repository_release_metadata_and_manifest_are_valid(monkeypatch):
     assert summary["manifest_entries"] == 4
     assert summary["distribution_artifacts"] == 4
     assert summary["checked_model_files"] >= 0
+
+
+def test_release_model_assets_include_weights_and_mapping_reports(monkeypatch):
+    script = load_script(monkeypatch)
+
+    assets = [path.name for path in script.release_model_assets()]
+
+    assert assets == [
+        "rtdetrv3_r18vd_6x_coco.pth",
+        "rtdetrv3_r34vd_6x_coco.pth",
+        "rtdetrv3_r50vd_6x_coco.pth",
+        "ResNet18_vd_pretrained.pth",
+        "rtdetrv3_r18vd_6x_coco.mapping.json",
+        "rtdetrv3_r34vd_6x_coco.mapping.json",
+        "rtdetrv3_r50vd_6x_coco.mapping.json",
+        "ResNet18_vd_pretrained.mapping.json",
+    ]
+
+
+def test_write_sha256sums_is_atomic_and_uses_flat_asset_names(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    first = tmp_path / "first.bin"
+    second = tmp_path / "second.bin"
+    output = tmp_path / "SHA256SUMS"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+
+    count = script.write_sha256sums([first, second], output)
+
+    assert count == 2
+    assert output.read_text(encoding="utf-8") == (
+        f"{hashlib.sha256(b'first').hexdigest()}  first.bin\n"
+        f"{hashlib.sha256(b'second').hexdigest()}  second.bin\n"
+    )
+    assert not list(tmp_path.glob(".SHA256SUMS.*.tmp"))
+
+
+def test_write_sha256sums_rejects_duplicate_asset_names(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    first = tmp_path / "first" / "model.pth"
+    second = tmp_path / "second" / "model.pth"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+
+    with pytest.raises(ValueError, match="basenames must be unique"):
+        script.write_sha256sums([first, second], tmp_path / "SHA256SUMS")
+
+
+def test_checksum_generation_requires_models_and_archives(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+
+    with pytest.raises(ValueError, match="requires --require-models"):
+        script.main(["--write-sha256sums", str(tmp_path / "SHA256SUMS")])
 
 
 @pytest.mark.parametrize("name", ["../payload", "/absolute/payload"])

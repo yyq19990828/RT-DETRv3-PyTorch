@@ -119,7 +119,7 @@
 - [x] 生成模型清单、checksum、配置、许可说明和发布候选验证报告。
 - [x] 对 R18/R34/R50 转换权重生成同一 COCO 图片、统一渲染器和机器可读匹配证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态、本地 checksum 校验和发布后 HTTPS 原子下载。
-- [ ] 以固定 tag 公开发布三个检测权重、R18-vd backbone 初始化权重和 `SHA256SUMS`，并从公开 URL 回读验收。
+- [ ] 以固定 tag 公开发布三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。
 

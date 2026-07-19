@@ -19,6 +19,7 @@
 - GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29679546423) 在 `e1a306b` 上全部 `6` 个 jobs 通过：Ruff `172` 文件、Mypy `107` source file；Python 3.9–3.12 均为 `272 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `48.11%/71.85%`。wheel 从 sdist 重建后通过归档检查，安装后的六个 CLI（含 Models）和 `34 passed` smoke 均通过。
 - 四产物发布合同批次将 R18-vd backbone 初始化权重加入 Models CLI。`scripts/check_release.py --require-models` 和四次 `rtdetrv3-models verify` 均通过，确认 `4` 个 manifest 条目、`4` 个唯一发布 alias 和 `12` 个本地源/转换/mapping 文件；临时构建的 wheel/sdist 通过归档检查，从解包 wheel 在仓库外读取包内 manifest 后按顺序列出 `r18/r34/r50/r18-backbone`。Ruff `174` 个文件、Mypy `107` 个 source file、14 项发布定向回归和非 Paddle CPU `308 passed, 5 skipped, 34 deselected` 均通过；本段为本机证据，托管证据如下。
 - GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在 `aa3ccac` 上通过全部 6 个 jobs：Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `50.14%/85.11%`；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 成功构建，包内清单为 `4` 个 manifest 条目和 `4` 个发布产物，安装后六个 CLI 及 wheel smoke `47 passed`。官方 PyTorch 索引上的 Torch 冷下载与各环境准备均在约 21–28 秒完成。
+- checksum 生成器本地预检从当前工作树临时构建 wheel/sdist，先通过 `4` 个 manifest 条目和 `12` 个本地源/转换/mapping 文件检查，再对四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist 原子生成 `10` 行 `SHA256SUMS`。将这些文件以扁平 Release 名称链入临时目录后，系统 `sha256sum --check` 独立复核全部通过；临时构建和校验目录随后清理。定向回归为 `7 passed`，质量门禁为 Ruff `174` 个文件和 Mypy `107` 个 source file；隐藏 GPU 的非 Paddle 覆盖率回归为 `312 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.14%/85.11%`。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -47,7 +48,7 @@
 - Hugging Face Model Hub 针对模型二进制优化；官方对 Git-backed model repo 建议单文件小于 `200 GB`，硬上限为 `500 GB`。公开免费存储是 best-effort，但当前约 `435.5 MiB` 规模很小。见 [Hugging Face Hub 存储限制](https://huggingface.co/docs/hub/main/storage-limits)。
 - Hub 的 model card 可结构化记录 license、COCO 数据集、评估结果、预期用途和限制，对模型发现和长期文档更友好。见 [Hugging Face Model Cards](https://huggingface.co/docs/hub/en/model-cards)。
 
-建议的 Release assets 是三个检测 `.pth`、一个 R18-vd backbone 初始化 `.pth`、`SHA256SUMS`、wheel 和 sdist。资产一旦发布不应覆盖同名文件；内容变化则提升 tag，并使用固定 tag 的下载 URL。Hub 镜像同样固定 tag 或 commit revision，不把可变的 `main` URL 写入发布清单。
+建议的 Release assets 是三个检测 `.pth`、一个 R18-vd backbone 初始化 `.pth`、四份对应的 `.mapping.json`、wheel、sdist 和 `SHA256SUMS`，共 11 个 asset。checksum 清单覆盖除自身外的 10 个文件。资产一旦发布不应覆盖同名文件；内容变化则提升 tag，并使用固定 tag 的下载 URL。Hub 镜像同样固定 tag 或 commit revision，不把可变的 `main` URL 写入发布清单。
 
 不建议把权重放入普通 Git、Git LFS 或 PyPI wheel：普通 Git 会增大所有用户的 clone 历史，Git LFS 会让源码 checkout 与模型下载耦合，wheel 则会让只需要代码的安装承担约 `435.5 MiB` 模型体积。GitHub Release 作为唯一权威源，Hub 只作同 checksum 镜像，可以让版本归属和用户下载路径都保持简单。
 
@@ -57,7 +58,7 @@
 
 - [ ] 确认 `v0.1.0` 版本号和发布说明，创建签名或受保护 tag。
 - [ ] 从 tag 的干净工作树重建 wheel/sdist，运行 `scripts/check_release.py --require-models`。
-- [ ] 对实际上传的四个 `.pth`、wheel 和 sdist 生成 `SHA256SUMS`。
+- [ ] 对实际上传的四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist 运行 `scripts/check_release.py --write-sha256sums`，生成 `SHA256SUMS`。
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
 - [ ] 从公开 URL 在干净环境下下载，校验 checksum，完成 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
 
