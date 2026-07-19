@@ -57,4 +57,5 @@ def test_r18_pretraining_manifest_is_target_aware():
     assert len(pretraining["source_sha256"]) == 64
     int(pretraining["source_sha256"], 16)
     assert pretraining["converted_tensor_count"] == 115
+    assert pretraining["converted_artifact"]["alias"] == "r18-backbone"
     assert pretraining["converted_artifact"]["mapping_count"] == 115

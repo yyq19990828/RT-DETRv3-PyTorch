@@ -67,6 +67,19 @@ def _validate_digest(value: Any, label: str) -> str:
     return value
 
 
+def _validate_distribution_alias(value: Any, label: str) -> str:
+    _require(isinstance(value, str), f"{label} has an invalid distribution alias")
+    parts = value.split("-")
+    _require(
+        all(
+            part and part.isascii() and part.isalnum() and part == part.lower()
+            for part in parts
+        ),
+        f"{label} has an invalid distribution alias",
+    )
+    return value
+
+
 def _validate_revision(value: Any) -> str:
     _require(isinstance(value, str) and len(value) == 40, "invalid Git revision")
     try:
@@ -115,7 +128,7 @@ def _validate_manifest_entry(
     *,
     config_key: str,
     require_models: bool,
-) -> int:
+) -> tuple[int, str]:
     _require(entry.get("status") == "verified", f"{name} is not verified")
     config_path = _repository_path(entry.get(config_key), f"{name}.{config_key}")
     _require(config_path.is_file(), f"config is missing: {config_path}")
@@ -138,6 +151,7 @@ def _validate_manifest_entry(
     )
 
     converted = _mapping(entry.get("converted_artifact"), f"{name}.converted_artifact")
+    alias = _validate_distribution_alias(converted.get("alias"), name)
     artifact_path = _repository_path(converted.get("path"), f"{name} artifact")
     artifact_size = _positive_int(converted.get("size_bytes"), f"{name} artifact size")
     artifact_digest = _validate_digest(converted.get("sha256"), f"{name} artifact")
@@ -185,7 +199,7 @@ def _validate_manifest_entry(
         checked += 1
     else:
         _require(not require_models, f"mapping report is missing: {mapping_path}")
-    return checked
+    return checked, alias
 
 
 def validate_repository(*, require_models: bool) -> dict[str, int]:
@@ -216,14 +230,25 @@ def validate_repository(*, require_models: bool) -> dict[str, int]:
         entries.append((name, _mapping(entry, f"{name} manifest entry"), "config"))
 
     checked_files = 0
+    distribution_aliases: set[str] = set()
     for name, entry, config_key in entries:
-        checked_files += _validate_manifest_entry(
+        checked, alias = _validate_manifest_entry(
             name,
             entry,
             config_key=config_key,
             require_models=require_models,
         )
-    return {"manifest_entries": len(entries), "checked_model_files": checked_files}
+        _require(
+            alias not in distribution_aliases,
+            f"duplicate distribution alias: {alias}",
+        )
+        distribution_aliases.add(alias)
+        checked_files += checked
+    return {
+        "manifest_entries": len(entries),
+        "distribution_artifacts": len(distribution_aliases),
+        "checked_model_files": checked_files,
+    }
 
 
 def _validate_archive_names(names: Sequence[str], label: str) -> None:
@@ -341,6 +366,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     print(
         "release checks passed: "
         f"{summary['manifest_entries']} manifest entries, "
+        f"{summary['distribution_artifacts']} distribution artifacts, "
         f"{summary['checked_model_files']} local model files/reports"
     )
     return 0

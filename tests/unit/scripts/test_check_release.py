@@ -22,6 +22,7 @@ def test_repository_release_metadata_and_manifest_are_valid(monkeypatch):
     summary = script.validate_repository(require_models=False)
 
     assert summary["manifest_entries"] == 4
+    assert summary["distribution_artifacts"] == 4
     assert summary["checked_model_files"] >= 0
 
 

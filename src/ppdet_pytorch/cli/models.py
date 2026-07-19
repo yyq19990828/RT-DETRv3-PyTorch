@@ -16,11 +16,7 @@ from typing import Any, Optional, Sequence
 import yaml
 
 MANIFEST_RELATIVE_PATH = Path("configs/checkpoints/rtdetrv3_coco.yml")
-MODEL_ALIASES = {
-    "r18": "rtdetrv3_r18vd_6x_coco",
-    "r34": "rtdetrv3_r34vd_6x_coco",
-    "r50": "rtdetrv3_r50vd_6x_coco",
-}
+DISTRIBUTION_SECTIONS = (("models", "config"), ("pretraining", "target_config"))
 
 
 @dataclass(frozen=True)
@@ -52,7 +48,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     verify_parser = subparsers.add_parser(
         "verify", help="Verify a local model against the manifest"
     )
-    verify_parser.add_argument("model", help="Model alias: r18, r34, or r50")
+    verify_parser.add_argument(
+        "model", help="Artifact alias: r18, r34, r50, or r18-backbone"
+    )
     verify_parser.add_argument(
         "path",
         nargs="?",
@@ -63,7 +61,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     download_parser = subparsers.add_parser(
         "download", help="Download and verify a published model"
     )
-    download_parser.add_argument("model", help="Model alias: r18, r34, or r50")
+    download_parser.add_argument(
+        "model", help="Artifact alias: r18, r34, r50, or r18-backbone"
+    )
     download_parser.add_argument(
         "--output",
         type=Path,
@@ -103,57 +103,85 @@ def _validate_sha256(value: Any, label: str) -> str:
     return value
 
 
+def _validate_alias(value: Any, label: str) -> str:
+    _require(isinstance(value, str), f"invalid artifact alias: {label}")
+    parts = value.split("-")
+    _require(
+        all(
+            part and part.isascii() and part.isalnum() and part == part.lower()
+            for part in parts
+        ),
+        f"invalid artifact alias: {label}",
+    )
+    return value
+
+
+def _validate_artifact_path(value: Any, label: str) -> str:
+    _require(isinstance(value, str) and bool(value), f"invalid artifact path: {label}")
+    path = Path(value)
+    _require(
+        not path.is_absolute() and ".." not in path.parts,
+        f"artifact path must be repository-relative: {label}",
+    )
+    return value
+
+
 def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
     document = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
     _require(isinstance(document, dict), "checkpoint manifest must be a mapping")
-    models = document.get("models")
-    _require(isinstance(models, dict), "checkpoint manifest is missing models")
-
-    aliases_by_name = {name: alias for alias, name in MODEL_ALIASES.items()}
     artifacts: dict[str, ModelArtifact] = {}
-    for name, entry in models.items():
-        _require(isinstance(name, str), "model name must be a string")
-        _require(isinstance(entry, dict), f"invalid model entry: {name}")
-        alias = aliases_by_name.get(name)
-        if alias is None:
-            continue
-        converted = entry.get("converted_artifact")
-        _require(isinstance(converted, dict), f"missing converted artifact: {name}")
-        size_bytes = converted.get("size_bytes")
+    for section_name, config_key in DISTRIBUTION_SECTIONS:
+        section = document.get(section_name)
         _require(
-            isinstance(size_bytes, int) and size_bytes > 0,
-            f"invalid artifact size: {name}",
+            isinstance(section, dict),
+            f"checkpoint manifest is missing {section_name}",
         )
-        status = converted.get("distribution_status", "unpublished")
-        _require(
-            status in {"unpublished", "published"},
-            f"invalid distribution status: {name}",
-        )
-        download_url = converted.get("download_url")
-        _require(
-            download_url is None
-            or (isinstance(download_url, str) and download_url.startswith("https://")),
-            f"download URL must use HTTPS: {name}",
-        )
-        if status == "published":
-            _require(download_url is not None, f"published model has no URL: {name}")
-        else:
-            _require(download_url is None, f"unpublished model has a URL: {name}")
-        artifacts[alias] = ModelArtifact(
-            alias=alias,
-            name=name,
-            config=str(entry["config"]),
-            path=str(converted["path"]),
-            size_bytes=size_bytes,
-            sha256=_validate_sha256(converted.get("sha256"), name),
-            distribution_status=status,
-            download_url=download_url,
-        )
+        for name, entry in section.items():
+            _require(isinstance(name, str), "artifact name must be a string")
+            _require(isinstance(entry, dict), f"invalid model entry: {name}")
+            converted = entry.get("converted_artifact")
+            _require(isinstance(converted, dict), f"missing converted artifact: {name}")
+            alias = _validate_alias(converted.get("alias"), name)
+            _require(alias not in artifacts, f"duplicate artifact alias: {alias}")
+            config = entry.get(config_key)
+            _require(isinstance(config, str), f"missing config for artifact: {name}")
+            artifact_path = _validate_artifact_path(converted.get("path"), name)
+            size_bytes = converted.get("size_bytes")
+            _require(
+                isinstance(size_bytes, int) and size_bytes > 0,
+                f"invalid artifact size: {name}",
+            )
+            status = converted.get("distribution_status", "unpublished")
+            _require(
+                status in {"unpublished", "published"},
+                f"invalid distribution status: {name}",
+            )
+            download_url = converted.get("download_url")
+            _require(
+                download_url is None
+                or (
+                    isinstance(download_url, str)
+                    and download_url.startswith("https://")
+                ),
+                f"download URL must use HTTPS: {name}",
+            )
+            if status == "published":
+                _require(
+                    download_url is not None, f"published model has no URL: {name}"
+                )
+            else:
+                _require(download_url is None, f"unpublished model has a URL: {name}")
+            artifacts[alias] = ModelArtifact(
+                alias=alias,
+                name=name,
+                config=config,
+                path=artifact_path,
+                size_bytes=size_bytes,
+                sha256=_validate_sha256(converted.get("sha256"), name),
+                distribution_status=status,
+                download_url=download_url,
+            )
 
-    missing_aliases = set(MODEL_ALIASES) - set(artifacts)
-    _require(
-        not missing_aliases, f"manifest models are missing: {sorted(missing_aliases)}"
-    )
     return artifacts
 
 
@@ -246,14 +274,14 @@ def download_artifact(
 
 
 def _list_artifacts(artifacts: dict[str, ModelArtifact], as_json: bool) -> None:
-    ordered = [artifacts[alias] for alias in MODEL_ALIASES]
+    ordered = list(artifacts.values())
     if as_json:
         print(json.dumps([asdict(item) for item in ordered], indent=2))
         return
     print("MODEL  STATUS       SIZE (BYTES)  SHA-256")
     for artifact in ordered:
         print(
-            f"{artifact.alias:<6} {artifact.distribution_status:<12} "
+            f"{artifact.alias:<13} {artifact.distribution_status:<12} "
             f"{artifact.size_bytes:<13} {artifact.sha256}"
         )
 
@@ -272,7 +300,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         alias = args.model.lower()
         if alias not in artifacts:
             raise ValueError(
-                f"unknown model {args.model!r}; choose from {', '.join(artifacts)}"
+                f"unknown artifact {args.model!r}; choose from {', '.join(artifacts)}"
             )
         artifact = artifacts[alias]
         if args.command == "verify":

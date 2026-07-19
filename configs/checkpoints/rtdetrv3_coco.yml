@@ -17,6 +17,7 @@ pretraining:
     source_sha256: 68d7632cb67ad2c658fe67ab5837d8eb65466a7bc1574badc74860059ef5e7f0
     converted_tensor_count: 115
     converted_artifact:
+      alias: r18-backbone
       distribution_status: unpublished
       path: pretrained_models/pytorch/ResNet18_vd_pretrained.pth
       size_bytes: 44876108
@@ -34,6 +35,7 @@ models:
     source_size_bytes: 91945530
     source_sha256: f32dbd008bd7e5311c877d522f6d8c9e349795978c889f53823588b5e5d74a5f
     converted_artifact:
+      alias: r18
       distribution_status: unpublished
       path: pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth
       size_bytes: 92075629
@@ -49,6 +51,7 @@ models:
     source_size_bytes: 137016081
     source_sha256: 29b09c64d6c372cde46d94caee1b57a23cee0aae24bd7bd3e2937cf57e581a68
     converted_artifact:
+      alias: r34
       distribution_status: unpublished
       path: pretrained_models/pytorch/rtdetrv3_r34vd_6x_coco.pth
       size_bytes: 137170947
@@ -64,6 +67,7 @@ models:
     source_size_bytes: 182331170
     source_sha256: e8b1d5db3208ce0f9edba5a914f23c918141b608ab4cd409db9d9204f7ed4b08
     converted_artifact:
+      alias: r50
       distribution_status: unpublished
       path: pretrained_models/pytorch/rtdetrv3_r50vd_6x_coco.pth
       size_bytes: 182510207
