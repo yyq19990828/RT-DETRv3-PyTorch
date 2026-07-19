@@ -176,3 +176,5 @@ GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 权重发布末端将四份 conversion mapping report 提升为正式 Release asset，使参数名映射和 Linear 布局决策可与对应权重一起审计。`scripts/check_release.py --write-sha256sums` 只在四个源/转换/mapping 条目、wheel 和 sdist 全部通过后，才会在同目录临时文件中对 10 个上传文件生成扁平 checksum 清单并原子替换目标；同名 asset 会显式失败。Paddle 源权重保留在上游，不进入本项目 Release。
 
 本地实证从当前工作树构建临时 wheel/sdist，通过 `4` 个 manifest 条目、`4` 个发布产物和 `12` 个本地源/转换/mapping 文件校验；生成的 `SHA256SUMS` 恰有 10 行，在扁平资产目录下由系统 `sha256sum --check` 复核全部成功。定向回归 `7 passed`，Ruff `174` 个文件、Mypy `107` 个 source file 通过；隐藏 GPU 的非 Paddle 回归为 `312 passed, 5 skipped, 34 deselected`，全包/直接维护范围仍为 `50.14%/85.11%`。临时发布产物和链接目录均已清理。
+
+GitHub Actions [run 29683881309](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683881309) 在提交 `75d7bab` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `312 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,803/13,567`（`50.14%`）和 `1,720/2,021`（`85.11%`）；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `47 passed` wheel smoke 全部通过。
