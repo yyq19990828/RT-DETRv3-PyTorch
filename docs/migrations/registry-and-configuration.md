@@ -40,6 +40,8 @@
 - `get_registered_modules()` 包含该组件。
 - 从 YAML 合并后可通过 `create(name)` 构建。
 
+**已验证（2026-07-19）**：`Trainer` 必须显式导入 `ppdet_pytorch.data` 以触发 DataSet、Reader 和 transform 注册，不能依赖测试收集或其他入口的偶然导入。干净 Python 子进程现在只导入 `Trainer` 即可观察到 `COCODataSet`、`TrainReader` 和 `EvalReader` 已注册；训练集成测试文件也可独立连续运行。
+
 ## 全局配置状态
 
 `load_config()` 仍把当前结果放进模块级 `global_config`，但每次调用会先成功解析完整 `_BASE_` 树，然后保留注册 schema、清除上一份 YAML 的运行时值，再合并新配置。因此：

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from contextlib import contextmanager
 
 import pytest
@@ -8,6 +10,16 @@ from ppdet_pytorch.engine.callbacks import Checkpointer, LogPrinter
 from ppdet_pytorch.engine.trainer import Trainer
 
 
+def test_trainer_import_registers_data_components_in_clean_process():
+    code = (
+        "from ppdet_pytorch.core.workspace import global_config; "
+        "from ppdet_pytorch.engine.trainer import Trainer; "
+        "assert {'COCODataSet', 'TrainReader', 'EvalReader'} <= set(global_config)"
+    )
+
+    subprocess.run([sys.executable, "-c", code], check=True)
+
+
 class _LossModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -15,6 +27,16 @@ class _LossModel(nn.Module):
 
     def forward(self, batch):
         return {"loss": self.weight.square()}
+
+
+class _PrintableModel(nn.Linear):
+    def load_meanstd(self, sample_transforms):
+        self.sample_transforms = sample_transforms
+
+
+class _AttrConfig(dict):
+    def __getattr__(self, name):
+        return self[name]
 
 
 class _RecordingSGD(torch.optim.SGD):
@@ -162,6 +184,98 @@ def test_trainer_accepts_paddle_style_nested_base_lr():
     )
 
     assert trainer.optimizer.param_groups[0]["lr"] == pytest.approx(0.0004)
+
+
+def test_build_model_logs_python_parameter_count(monkeypatch):
+    model = _PrintableModel(2, 1)
+    cfg = _AttrConfig(
+        architecture="PrintableModel",
+        PrintableModel={},
+        TestReader={"sample_transforms": ["normalize"]},
+        print_params=True,
+    )
+    messages = []
+    monkeypatch.setattr(
+        "ppdet_pytorch.engine.trainer.create",
+        lambda config: model,
+    )
+    monkeypatch.setattr(
+        "ppdet_pytorch.engine.trainer.logger.info",
+        messages.append,
+    )
+    trainer = Trainer.__new__(Trainer)
+    trainer.cfg = cfg
+    trainer.mode = "train"
+    trainer.is_loaded_weights = False
+
+    trainer._build_model(cfg)
+
+    assert model.sample_transforms == ["normalize"]
+    assert "Model Params : 3e-06 M." in messages
+
+
+def test_trainer_collects_mot_images_in_deterministic_order(tmp_path):
+    data_root = tmp_path / "mot"
+    first_sequence = data_root / "sequence_a"
+    second_sequence = data_root / "sequence_b"
+    first_sequence.mkdir(parents=True)
+    second_sequence.mkdir()
+    (first_sequence / "0002.PNG").touch()
+    (first_sequence / "0001.jpg").touch()
+    (second_sequence / "0001.bmp").touch()
+
+    trainer = Trainer.__new__(Trainer)
+    images = trainer.parse_mot_images(
+        {
+            "EvalMOTDataset": {
+                "dataset_dir": str(tmp_path),
+                "data_root": "mot",
+            }
+        }
+    )
+
+    assert images == [
+        str(first_sequence / "0001.jpg"),
+        str(first_sequence / "0002.PNG"),
+        str(second_sequence / "0001.bmp"),
+    ]
+
+
+def test_reset_norm_param_attr_uses_pytorch_norm_apis_and_preserves_state():
+    module = nn.ModuleDict(
+        {
+            "batch": nn.BatchNorm2d(2, eps=1e-3),
+            "layer": nn.LayerNorm((2, 3), eps=2e-3),
+            "group": nn.GroupNorm(1, 2, eps=3e-3),
+        }
+    )
+    with torch.no_grad():
+        module["batch"].weight.fill_(1.5)
+        module["layer"].bias.fill_(2.5)
+        module["group"].weight.fill_(3.5)
+    module.eval()
+    original_layers = dict(module.items())
+    original_states = {
+        name: {key: value.clone() for key, value in layer.state_dict().items()}
+        for name, layer in module.items()
+    }
+
+    trainer = Trainer.__new__(Trainer)
+    result = trainer.reset_norm_param_attr(
+        module,
+        weight_attr=None,
+        bias_attr=None,
+    )
+
+    assert result is module
+    assert all(module[name] is not original_layers[name] for name in module)
+    assert module["batch"].eps == pytest.approx(1e-3)
+    assert module["layer"].eps == pytest.approx(2e-3)
+    assert module["group"].eps == pytest.approx(3e-3)
+    assert all(not layer.training for layer in module.values())
+    for name, layer in module.items():
+        for key, value in layer.state_dict().items():
+            assert torch.equal(value, original_states[name][key])
 
 
 def test_training_step_orders_clip_optimizer_scheduler_and_ema():

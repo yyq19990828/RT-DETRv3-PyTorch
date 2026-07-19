@@ -48,6 +48,7 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 - 目标检测样本的 bbox 数可变，需要自定义 `collate_fn`；不要依赖 PyTorch 默认 collate。
 - Paddle `use_shared_memory` 与 PyTorch `pin_memory` 不是完全相同的机制。兼容参数可以映射为性能提示，但不能在文档中宣称语义等价。
 - 多 worker 验证需要记录 `worker_init_fn`、sampler epoch、shuffle 和 drop-last 设置。
+- FairMOT eval 的序列目录和图像文件都应确定性排序，并显式限定支持的图片扩展名；不能把文件系统遍历顺序当作稳定输入顺序。当前回归覆盖多序列及大小写扩展名。
 
 ### 可复现随机性边界
 
@@ -71,6 +72,7 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 - 总 loss 的累加初值应从现有 loss tensor 创建标量零值，以保留 device/dtype 并避免把标量 loss 意外扩展为 shape `[1]`。
 - 在 CUDA 上训练时，matcher 返回的索引、动态 anchor/stride、assigner 的 batch index 和空标注输出都必须跟随被索引 tensor 或 feature 的 device。仅在最终算子前临时 `.to(device)` 会遗漏其他路径；应在 `arange/full/zeros/tensor` 的创建点指定 device。
 - PPYOLOE 辅助头输出 sigmoid probability 后再计算 BCE。PyTorch 禁止 `binary_cross_entropy` 在 CUDA autocast 区域中执行；在不改变 probability 接口的前提下，应将该 BCE 局部切换为 FP32，不能直接替换成接收 logits 的损失而不同步修改上游。
+- Paddle normalization 构造参数 `epsilon` 在 PyTorch 中对应 `eps`，状态恢复应使用 `load_state_dict()` 而不是 `set_state_dict()`。Paddle 的 `weight_attr`/`bias_attr` 没有可直接透传的 PyTorch 构造参数；当前 norm 重建会保留 eps、affine、running-state 配置和 state dict，并用活跃回归覆盖 BatchNorm2d、LayerNorm 与 GroupNorm。
 
 **已验证的 M1 边界**：CPU/float32、seed `2026`、两张合成 COCO 图像、固定 `96×96`、batch size 2、R18 缩减 query/decoder 配置。完整 loss 键、有限梯度、裁剪、一次参数更新和 5 step 训练均通过。未验证空 GT、AMP、EMA、DDP、checkpoint 恢复或 Paddle 对齐。
 

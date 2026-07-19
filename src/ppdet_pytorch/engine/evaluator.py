@@ -8,7 +8,7 @@ import json
 import logging
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
@@ -52,8 +52,8 @@ class COCOEvaluator:
         self.coco_gt = COCO(anno_file)
 
         # Storage for predictions
-        self.predictions = []
-        self.image_ids = []
+        self.predictions: List[Dict[str, Any]] = []
+        self.image_ids: List[int] = []
 
     def update(self, predictions: List[Dict], image_ids: List[int]):
         """

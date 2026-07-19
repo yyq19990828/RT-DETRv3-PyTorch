@@ -38,7 +38,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
   - [x] 将完整 `metrics` 目录加入门禁，累计 27 个 source file 通过。
   - [x] 将完整 `utils` 目录加入门禁，累计 36 个 source file 通过。
   - [x] 将完整 `core` 目录加入门禁，累计 41 个 source file 通过。
-  - [ ] 清理其余 185 项全包错误，当前分布为 `data` 87、`modeling` 73 和 `engine` 25。
+  - [x] 将完整 `engine` 目录加入门禁，累计 47 个 source file 通过。
+  - [ ] 清理其余 160 项全包错误，当前分布为 `data` 87 和 `modeling` 73。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -112,3 +113,5 @@ GitHub Actions [run 29673364179](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第六批清理 `core` 的 19 项类型错误，并修复 Typeguard 4 调用签名仍按旧版传入参数路径、导致合法带注解值也被误判的问题。新增活跃回归同时覆盖合法 `int` 通过和错误 `str` 被拒绝；完整 `core` 并入后，统一门禁为 41 个 source file，定向测试为 `12 passed`，默认全量为 `262 passed, 3 skipped`。全包 Mypy 待办降为 185 项、28 个文件，仅余 `data` 87、`modeling` 73 和 `engine` 25。显式隐藏 GPU 的本地非 Paddle CPU 覆盖率为全包 `5,882/13,212`（`44.52%`）和直接维护范围 `1,202/1,797`（`66.89%`），因此直接维护范围回退下限从 65% 提高到 66%。
 
 GitHub Actions [run 29673733080](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29673733080) 在提交 `230c6c3` 上通过全部 6 个 jobs：质量 job 为 162 个 Ruff 文件和 41 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `226 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `5,883/13,212`（`44.53%`），直接维护范围为 `1,202/1,797`（`66.89%`）；wheel smoke 为 `34 passed`。托管环境仍比本地多覆盖 1 条 `data` 语句，两个环境均通过新的 44%/66% 双门禁。
+
+Mypy 第七批清理 `engine` 的 25 项类型错误，并修复四条实际运行边界：Trainer 在干净进程未触发 DataSet/Reader 注册、norm 重建误用 Paddle 的 `epsilon`/`set_state_dict` API、参数量日志对 Python float 调用 NumPy 方法，以及缺失的 FairMOT eval 图片收集方法。4 个新增活跃回归覆盖干净子进程注册、参数量日志、确定性 MOT 图片排序和 BatchNorm2d/LayerNorm/GroupNorm 状态重建；完整 `engine` 并入后，统一门禁为 47 个 source file，engine 单测为 `20 passed`，训练集成测试为 `12 passed`，默认全量为 `266 passed, 3 skipped`。全包 Mypy 待办降为 160 项、26 个文件，仅余 `data` 87 和 `modeling` 73。显式隐藏 GPU 的本地非 Paddle CPU 覆盖率为全包 `5,945/13,264`（`44.82%`）和直接维护范围 `1,202/1,797`（`66.89%`）；现有 44%/66% 门禁通过，但证据不足以把全包下限提高到 45%。

@@ -29,6 +29,8 @@ import time
 from collections.abc import Mapping
 from contextlib import nullcontext
 from copy import deepcopy
+from glob import glob
+from typing import Any, ContextManager, List, Optional
 
 import numpy as np
 import torch
@@ -37,7 +39,9 @@ import torch.nn as nn
 import yaml
 from torch.cuda.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.optim import Optimizer
 
+from .. import data as _data  # noqa: F401 - trigger component registration
 from .. import modeling as _modeling  # noqa: F401 - trigger component registration
 from ..core.config.schema import SchemaDict
 from ..core.workspace import create
@@ -48,7 +52,7 @@ from ..utils.checkpoint import (
     load_pretrain_weight,
 )
 from ..utils.logger import setup_logger
-from .callbacks import Checkpointer, ComposeCallback, LogPrinter
+from .callbacks import Callback, Checkpointer, ComposeCallback, LogPrinter
 
 MOT_ARCH = ["JDE", "FairMOT", "DeepSORT", "ByteTrack", "CenterTrack"]
 logger = setup_logger("rtdetrv3.engine")
@@ -83,6 +87,14 @@ class Trainer:
             mode: 'train', 'eval', or 'test'
         """
         self.cfg = cfg.copy()
+        self.model: nn.Module
+        self.optimizer: Optional[Optimizer] = None
+        self.lr: Any = None
+        self.scaler: Optional[GradScaler] = None
+        self.ema: Optional[ModelEMA] = None
+        self._callbacks: List[Callback] = []
+        self._compose_callback: Optional[ComposeCallback] = None
+        self._metrics: List[Any] = []
         for key, value in cfg.items():
             if isinstance(value, SchemaDict):
                 self.cfg[key] = deepcopy(dict(value))
@@ -95,7 +107,6 @@ class Trainer:
         self.log_interval = cfg.get("log_iter", 50)
 
         # Training flags
-        self.optimizer = None
         self.is_loaded_weights = False
         self.accumulate_steps = int(self.cfg.get("accumulate_steps", 1))
         if self.accumulate_steps < 1:
@@ -162,7 +173,6 @@ class Trainer:
 
         # Setup EMA (Exponential Moving Average)
         self.use_ema = self.mode == "train" and cfg.get("use_ema", False)
-        self.ema = None
         if self.use_ema:
             ema_decay = cfg.get("ema_decay", 0.9998)
             ema_decay_type = cfg.get("ema_decay_type", "threshold")
@@ -331,7 +341,36 @@ class Trainer:
                     if all([x not in n for x in ["_mean", "_variance", "aux_"]])
                 ]
             )  # exclude BatchNorm running status
-            logger.info("Model Params : {} M.".format((params / 1e6).numpy()[0]))
+            logger.info("Model Params : {} M.".format(params / 1e6))
+
+    def parse_mot_images(self, cfg) -> List[str]:
+        """Collect FairMOT evaluation images in deterministic sequence order."""
+        dataset_config = cfg["EvalMOTDataset"]
+        if isinstance(dataset_config, Mapping):
+            dataset_dir = dataset_config["dataset_dir"]
+            relative_root = dataset_config["data_root"]
+        else:
+            dataset_dir = dataset_config.dataset_dir
+            relative_root = dataset_config.data_root
+
+        data_root = os.path.join(dataset_dir, relative_root)
+        all_images: List[str] = []
+        extensions = ["jpg", "jpeg", "png", "bmp"]
+        extensions += [extension.upper() for extension in extensions]
+        for sequence in sorted(os.listdir(data_root)):
+            infer_dir = os.path.join(data_root, sequence)
+            if not os.path.isdir(infer_dir):
+                raise AssertionError("{} is not a directory".format(infer_dir))
+            images = sorted(
+                image
+                for extension in extensions
+                for image in glob(os.path.join(infer_dir, "*.{}".format(extension)))
+            )
+            if not images:
+                raise AssertionError("no image found in {}".format(infer_dir))
+            all_images.extend(images)
+            logger.info("Found {} inference images in total.".format(len(images)))
+        return all_images
 
     def _build_optimizer(self, cfg):
         """Build optimizer and LR scheduler using create() factory (Paddle pattern)"""
@@ -453,6 +492,13 @@ class Trainer:
 
     def _train_epoch(self, epoch_id: int):
         """Train for one epoch"""
+        optimizer = self.optimizer
+        if optimizer is None:
+            raise RuntimeError("Training requires an initialized optimizer")
+        scaler = getattr(self, "scaler", None)
+        if self.use_amp and scaler is None:
+            raise RuntimeError("AMP training requires an initialized GradScaler")
+
         self.model.train()
 
         steps_per_epoch = len(self.loader)
@@ -465,7 +511,7 @@ class Trainer:
         data_time_meter = AverageMeter()
 
         end = time.time()
-        self.optimizer.zero_grad()
+        optimizer.zero_grad()
 
         for step_id, batch in enumerate(self.loader):
             # Measure data loading time
@@ -493,7 +539,7 @@ class Trainer:
             accumulation_step = step_id - accumulation_start + 1
             should_step_optimizer = accumulation_step == accumulation_size
 
-            sync_context = nullcontext()
+            sync_context: ContextManager[Any] = nullcontext()
             if not should_step_optimizer and isinstance(self.model, DDP):
                 # DDP requires forward and backward to both be inside
                 # no_sync() for gradient synchronization to be skipped.
@@ -515,21 +561,23 @@ class Trainer:
 
                 normalized_loss = loss / accumulation_size
                 if self.use_amp:
-                    self.scaler.scale(normalized_loss).backward()
+                    assert scaler is not None
+                    scaler.scale(normalized_loss).backward()
                 else:
                     normalized_loss.backward()
 
             if should_step_optimizer and self.use_amp:
-                scale_before_step = self.scaler.get_scale()
-                self.scaler.unscale_(self.optimizer)
+                assert scaler is not None
+                scale_before_step = scaler.get_scale()
+                scaler.unscale_(optimizer)
                 gradient_norm = self._clip_gradients()
 
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-                optimizer_step_skipped = self.scaler.get_scale() < scale_before_step
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer_step_skipped = scaler.get_scale() < scale_before_step
             elif should_step_optimizer:
                 gradient_norm = self._clip_gradients()
-                self.optimizer.step()
+                optimizer.step()
 
             if should_step_optimizer:
                 gradient_is_finite = torch.isfinite(
@@ -543,13 +591,14 @@ class Trainer:
                     )
 
                 if optimizer_step_skipped:
+                    assert scaler is not None
                     logger.warning(
                         "AMP skipped optimizer step at epoch {}, step {}; "
                         "loss scale reduced from {} to {}".format(
                             epoch_id,
                             step_id,
                             scale_before_step,
-                            self.scaler.get_scale(),
+                            scaler.get_scale(),
                         )
                     )
                 else:
@@ -568,7 +617,7 @@ class Trainer:
                         )
                         self.ema.update(base_model)
 
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
 
             reported_loss = self._reduce_loss_for_logging(loss)
 
@@ -590,7 +639,7 @@ class Trainer:
             self.status["optimizer_step_skipped"] = optimizer_step_skipped
             self.status["accumulation_step"] = accumulation_step
             self.status["accumulation_steps"] = accumulation_size
-            self.status["learning_rate"] = self.optimizer.param_groups[0]["lr"]
+            self.status["learning_rate"] = optimizer.param_groups[0]["lr"]
             self.status["batch_time"] = batch_time
             self.status["batch_size"] = self._get_batch_size(batch)
             self.status["training_staus"] = {
@@ -614,11 +663,13 @@ class Trainer:
 
     def _clip_gradients(self):
         """Apply the clipping policy produced by ``OptimizerBuilder``."""
-        parameters = [
-            parameter
-            for parameter in self.model.parameters()
-            if parameter.requires_grad and parameter.grad is not None
-        ]
+        parameters = []
+        gradients = []
+        for parameter in self.model.parameters():
+            gradient = parameter.grad
+            if parameter.requires_grad and gradient is not None:
+                parameters.append(parameter)
+                gradients.append(gradient)
         if not parameters:
             return torch.tensor(0.0)
 
@@ -628,9 +679,7 @@ class Trainer:
 
         if clip_config is None:
             return torch.linalg.vector_norm(
-                torch.stack(
-                    [parameter.grad.detach().norm(2) for parameter in parameters]
-                ),
+                torch.stack([gradient.detach().norm(2) for gradient in gradients]),
                 2,
             )
 
@@ -639,9 +688,7 @@ class Trainer:
             return torch.nn.utils.clip_grad_norm_(parameters, clip_value)
         if clip_type == "value":
             total_norm = torch.linalg.vector_norm(
-                torch.stack(
-                    [parameter.grad.detach().norm(2) for parameter in parameters]
-                ),
+                torch.stack([gradient.detach().norm(2) for gradient in gradients]),
                 2,
             )
             torch.nn.utils.clip_grad_value_(parameters, clip_value)
@@ -734,27 +781,47 @@ class Trainer:
         logger.debug(f"Resume weights of epoch {self.start_epoch}")
 
     def reset_norm_param_attr(self, layer, **kwargs):
+        # Paddle's weight_attr/bias_attr have no constructor equivalent in
+        # PyTorch; rebuilding the layer resets those parameter attributes.
         if isinstance(layer, (nn.BatchNorm2d, nn.LayerNorm, nn.GroupNorm)):
+            was_training = layer.training
             src_state_dict = layer.state_dict()
+            reference_tensor = next(
+                iter(list(layer.parameters()) + list(layer.buffers())), None
+            )
+            factory_kwargs = {}
+            if reference_tensor is not None:
+                factory_kwargs = {
+                    "device": reference_tensor.device,
+                    "dtype": reference_tensor.dtype,
+                }
             if isinstance(layer, nn.BatchNorm2d):
                 layer = nn.BatchNorm2d(
                     num_features=layer.num_features,
                     momentum=layer.momentum,
-                    epsilon=layer.eps,
-                    **kwargs,
+                    eps=layer.eps,
+                    affine=layer.affine,
+                    track_running_stats=layer.track_running_stats,
+                    **factory_kwargs,
                 )
             elif isinstance(layer, nn.LayerNorm):
                 layer = nn.LayerNorm(
-                    normalized_shape=layer.normalized_shape, epsilon=layer.eps, **kwargs
+                    normalized_shape=list(layer.normalized_shape),
+                    eps=layer.eps,
+                    elementwise_affine=layer.elementwise_affine,
+                    bias=layer.bias is not None,
+                    **factory_kwargs,
                 )
             else:
                 layer = nn.GroupNorm(
                     num_groups=layer.num_groups,
                     num_channels=layer.num_channels,
-                    epsilon=layer.eps,
-                    **kwargs,
+                    eps=layer.eps,
+                    affine=layer.affine,
+                    **factory_kwargs,
                 )
-            layer.set_state_dict(src_state_dict)
+            layer.load_state_dict(src_state_dict)
+            layer.train(was_training)
         else:
             for name, sublayer in layer.named_children():
                 new_sublayer = self.reset_norm_param_attr(sublayer, **kwargs)
@@ -771,13 +838,13 @@ class AverageMeter:
         self.reset()
 
     def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
+        self.val = 0.0
+        self.avg = 0.0
+        self.sum = 0.0
         self.count = 0
-        self.global_avg = 0
+        self.global_avg = 0.0
 
-    def update(self, val, n=1):
+    def update(self, val: float, n: int = 1):
         self.val = val
         self.sum += val * n
         self.count += n

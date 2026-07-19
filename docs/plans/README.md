@@ -13,7 +13,7 @@
 
 ## 当前文档
 
-- [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：进行中；Ruff 已覆盖全部活跃 Python 文件，Mypy 已扩展到 41 个 source file，Python 3.9–3.12 托管 CPU CI、wheel smoke 和 44%/66% 覆盖率回退门禁已建立；完整 Mypy、CUDA、90% 覆盖率目标、性能和发布清单待推进。
+- [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：进行中；Ruff 已覆盖全部活跃 Python 文件，Mypy 已扩展到 47 个 source file，Python 3.9–3.12 托管 CPU CI、wheel smoke 和 44%/66% 覆盖率回退门禁已建立；完整 Mypy、CUDA、90% 覆盖率目标、性能和发布清单待推进。
 - [M5——配置、CLI 与导出边界计划](2026-07-19-m5-cli-export-boundaries.md)：已完成；覆盖 workspace/config、五个 CLI 合同、官方 R18 eager 推理，以及 ONNX/TorchScript 固定高宽和动态 batch 边界。
 - [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：同权重完整 val2017 gate 已通过；本机长训于 2026-07-19 暂缓，已提供 GitHub 社区分片执行脚本。
 - [M3——训练、评估与恢复验收计划](2026-07-18-m3-training-evaluation-recovery.md)：已完成，覆盖 optimizer/LR、完整 COCO epoch/val、恢复、AMP/EMA、DDP、loss reduce 与梯度累积。
