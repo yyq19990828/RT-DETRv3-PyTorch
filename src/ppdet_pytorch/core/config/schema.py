@@ -17,6 +17,8 @@ from __future__ import absolute_import, division, print_function
 import importlib
 import inspect
 import re
+from types import ModuleType
+from typing import Any, Callable, Dict, Optional, Sequence
 
 try:
     from docstring_parser import parse as doc_parse
@@ -26,18 +28,21 @@ except Exception:
         pass
 
 
+type_check: Optional[Callable[[Any, Any], Any]]
 try:
-    from typeguard import check_type
+    from typeguard import check_type as imported_type_check
 except Exception:
-
-    def check_type(*args):
-        pass
+    type_check = None
+else:
+    type_check = imported_type_check
 
 
 __all__ = ["SchemaValue", "SchemaDict", "SharedConfig", "extract_schema"]
 
 
 class SchemaValue(object):
+    default: Any
+
     def __init__(self, name, doc="", type=None):
         super(SchemaValue, self).__init__()
         self.name = name
@@ -54,9 +59,15 @@ class SchemaValue(object):
 class SchemaDict(dict):
     def __init__(self, **kwargs):
         super(SchemaDict, self).__init__()
-        self.schema = {}
+        self.schema: Dict[str, SchemaValue] = {}
         self.strict = False
         self.doc = ""
+        self.name = ""
+        self.category = "module"
+        self.cls: Optional[type] = None
+        self.pymodule: Optional[ModuleType] = None
+        self.inject: Sequence[str] = ()
+        self.shared: Sequence[str] = ()
         self.update(kwargs)
 
     def __setitem__(self, key, value):
@@ -125,11 +136,9 @@ class SchemaDict(dict):
     def find_mismatch_keys(self):
         mismatch_keys = []
         for arg in self.schema.values():
-            if arg.type is not None:
+            if arg.type is not None and type_check is not None:
                 try:
-                    check_type(
-                        "{}.{}".format(self.name, arg.name), self[arg.name], arg.type
-                    )
+                    type_check(self[arg.name], arg.type)
                 except Exception:
                     mismatch_keys.append(arg.name)
         return mismatch_keys
@@ -204,8 +213,8 @@ def extract_schema(cls):
         has_kwargs = argspec.varkw is not None
 
     names = [arg for arg in argspec.args if arg != "self"]
-    defaults = argspec.defaults
-    num_defaults = argspec.defaults is not None and len(argspec.defaults) or 0
+    defaults = argspec.defaults or ()
+    num_defaults = len(defaults)
     num_required = len(names) - num_defaults
 
     docs = cls.__doc__
@@ -216,10 +225,8 @@ def extract_schema(cls):
     except Exception:
         docstring = None
 
-    if docstring is None:
-        comments = {}
-    else:
-        comments = {}
+    comments: Dict[str, str] = {}
+    if docstring is not None:
         for p in docstring.params:
             match_obj = re.match("^([a-zA-Z_]+[a-zA-Z_0-9]*).*", p.arg_name)
             if match_obj is not None:

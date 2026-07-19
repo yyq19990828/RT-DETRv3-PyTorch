@@ -37,7 +37,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
   - [x] 将完整 `optimizer` 目录加入门禁，累计 22 个 source file 通过。
   - [x] 将完整 `metrics` 目录加入门禁，累计 27 个 source file 通过。
   - [x] 将完整 `utils` 目录加入门禁，累计 36 个 source file 通过。
-  - [ ] 清理其余 204 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 25 和 `core` 19。
+  - [x] 将完整 `core` 目录加入门禁，累计 41 个 source file 通过。
+  - [ ] 清理其余 185 项全包错误，当前分布为 `data` 87、`modeling` 73 和 `engine` 25。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -74,6 +75,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 同时执行全包 42% 和直接维护范围 65% 的回退下限 | 干净 `test` extra 实测分别为 42.48% 和 65.56%；双范围能防止用排除低覆盖模块的方式制造虚假达标 |
 | 2026-07-19 | 新增 metrics 活跃测试后将全包下限提高到 43% | 新测试使隐藏 GPU 的本地全包实测达到 43.94%，应将真实新增覆盖转换为回退约束 |
 | 2026-07-19 | 新增 utils 活跃测试后将全包下限提高到 44% | 显式隐藏 GPU 的本地 CPU 实测达到 44.33%，新增覆盖应继续转成可执行回退约束 |
+| 2026-07-19 | 新增 core schema 活跃测试后将直接维护范围下限提高到 66% | 显式隐藏 GPU 的本地 CPU 实测达到 66.89%；Typeguard 4 合法值/错误值路径已成为可执行回退证据 |
 | 2026-07-19 | PyYAML stub 只进入 `quality`/`dev`，Paddle nightly 固定为已验证的 3.3.0.dev20251015 | 类型 stub 不属于核心运行时；宽松 Paddle nightly 约束曾解析到只有 aarch64 wheel 的版本，固定已验证版本并要求 Linux x86_64 可安装轮子可恢复干净 `dev` 同步 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
 | 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
@@ -106,3 +108,5 @@ GitHub Actions [run 29672789563](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第五批清理 `utils` 的 21 项类型错误，并新增 4 个活跃回归，覆盖 Paddle 风格嵌套 CLI override、自定义 argparse namespace、配置文件父目录创建、Pillow 默认字体回退和 checkpoint 目录路径。字体回归实际发现并修复了 NumPy `float32` RGB 传入 Pillow 会抛 `TypeError` 的问题。完整 `utils` 并入后，统一门禁为 36 个 source file，定向测试为 `25 passed`，默认全量为 `261 passed, 3 skipped`；全包 Mypy 待办降为 204 项、30 个文件。显式隐藏 GPU 的本地非 Paddle CPU 覆盖率为 `44.33%`，因此回退下限从 43% 提高到 44%。同批增加 `types-PyYAML` 质量 stub，并把 Paddle nightly 固定为已有迁移证据使用的 `3.3.0.dev20251015`；UV 0.11.29 的 `uv sync --extra dev --locked` 已在 Linux x86_64 重新通过。
 
 GitHub Actions [run 29673364179](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29673364179) 在提交 `7ee602b` 上通过全部 6 个 jobs：质量 job 为 162 个 Ruff 文件和 36 个 Mypy source file 通过；Python 3.12 CPU 为 `225 passed, 7 skipped, 17 deselected`，全包覆盖率 `44.34%`、直接维护范围 `65.60%`，其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。该 run 同时证明 required-environment 与固定 Paddle nightly 没有破坏不含 Paddle 的跨版本锁解析。
+
+Mypy 第六批清理 `core` 的 19 项类型错误，并修复 Typeguard 4 调用签名仍按旧版传入参数路径、导致合法带注解值也被误判的问题。新增活跃回归同时覆盖合法 `int` 通过和错误 `str` 被拒绝；完整 `core` 并入后，统一门禁为 41 个 source file，定向测试为 `12 passed`，默认全量为 `262 passed, 3 skipped`。全包 Mypy 待办降为 185 项、28 个文件，仅余 `data` 87、`modeling` 73 和 `engine` 25。显式隐藏 GPU 的本地非 Paddle CPU 覆盖率为全包 `5,882/13,212`（`44.52%`）和直接维护范围 `1,202/1,797`（`66.89%`），因此直接维护范围回退下限从 65% 提高到 66%；托管复验待当前提交的 CI 完成。

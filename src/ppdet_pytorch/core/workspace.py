@@ -14,17 +14,12 @@
 
 from __future__ import absolute_import, division, print_function
 
-import collections
 import importlib
 import os
 import sys
+from collections.abc import Mapping
 
 import yaml
-
-try:
-    collectionsAbc = collections.abc
-except AttributeError:
-    collectionsAbc = collections
 
 from .config.schema import SchemaDict, SharedConfig, extract_schema
 from .config.yaml_helpers import serializable
@@ -154,11 +149,7 @@ def dict_merge(dct, merge_dct):
     Returns: dct
     """
     for k, v in merge_dct.items():
-        if (
-            k in dct
-            and isinstance(dct[k], dict)
-            and isinstance(merge_dct[k], collectionsAbc.Mapping)
-        ):
+        if k in dct and isinstance(dct[k], dict) and isinstance(merge_dct[k], Mapping):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
@@ -236,7 +227,7 @@ def create(cls_or_name, **kwargs):
     Returns: instance of type `cls_or_name`
     """
     component_config = {}
-    if isinstance(cls_or_name, collectionsAbc.Mapping):
+    if isinstance(cls_or_name, Mapping):
         component_config = dict(cls_or_name)
         name = component_config.pop("name", None)
         if name is None:
@@ -259,7 +250,7 @@ def create(cls_or_name, **kwargs):
 
     registered = global_config[name]
     if not isinstance(registered, SchemaDict):
-        if isinstance(registered, collectionsAbc.Mapping):
+        if isinstance(registered, Mapping):
             return create(registered, **kwargs)
         if hasattr(registered, "__dict__"):
             return registered
@@ -269,7 +260,11 @@ def create(cls_or_name, **kwargs):
     # registered configuration shared by later tests or commands.
     config = registered.copy()
     config.update(component_config)
-    cls = getattr(config, "cls", None) or getattr(config.pymodule, name)
+    cls = config.cls
+    if cls is None:
+        if config.pymodule is None:
+            raise ValueError("The module {} has no registered class".format(name))
+        cls = getattr(config.pymodule, name)
     cls_kwargs = {}
     cls_kwargs.update(config)
 
@@ -308,7 +303,7 @@ def create(cls_or_name, **kwargs):
                     cls_kwargs[k] = None
                 continue
 
-            if isinstance(target_key, collectionsAbc.Mapping):
+            if isinstance(target_key, Mapping):
                 if "name" in target_key or "type" in target_key:
                     cls_kwargs[k] = create(target_key)
                 else:

@@ -1,6 +1,7 @@
 import pytest
 import yaml
 
+from ppdet_pytorch.core.config.schema import extract_schema
 from ppdet_pytorch.core.workspace import (
     create,
     global_config,
@@ -8,6 +9,28 @@ from ppdet_pytorch.core.workspace import (
     merge_config,
     register,
 )
+
+
+def test_schema_type_validation_supports_typeguard_four_signature():
+    class WorkspaceTyped:
+        def __init__(self, width: int, label: str = "default"):
+            self.width = width
+            self.label = label
+
+    schema = extract_schema(WorkspaceTyped)
+
+    assert schema.name == "WorkspaceTyped"
+    assert schema.cls is WorkspaceTyped
+    assert schema["label"] == "default"
+
+    schema["width"] = 3
+    assert schema.find_mismatch_keys() == []
+    schema.validate()
+
+    schema["width"] = "3"
+    assert schema.find_mismatch_keys() == ["width"]
+    with pytest.raises(TypeError, match="Wrong param type.*width"):
+        schema.validate()
 
 
 @pytest.fixture

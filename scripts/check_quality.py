@@ -19,6 +19,7 @@ MYPY_TARGETS = (
     "scripts/run_stability_experiment.py",
     "src/ppdet_pytorch/cli",
     "src/ppdet_pytorch/conversion",
+    "src/ppdet_pytorch/core",
     "src/ppdet_pytorch/deploy",
     "src/ppdet_pytorch/metrics",
     "src/ppdet_pytorch/optimizer",
