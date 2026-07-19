@@ -86,3 +86,5 @@ GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29671674073) 在提交 `19bcb60` 上通过全部 6 个 jobs。其中 Python 3.12 CPU coverage job 为 `216 passed, 7 skipped, 17 deselected`，全包 `5,606/13,195`（`42.49%`）和直接维护范围 `1,169/1,783`（`65.56%`）均通过门禁；其余 Python 3.9–3.11 CPU、Ruff/Mypy 质量和 wheel smoke jobs 也均通过。
 
 Mypy 第二批将完整 `cli`、`conversion` 目录并入既有 `deploy` 和脚本门禁，共 17 个 source file 通过。清理的 4 项包含两个实际边界：训练 CLI 对未实现的半监督 teacher/student 权重显式失败，转换验证器对 Paddle/PyTorch 输出结构不一致显式失败；定向测试为 `112 passed`。同日全包重新审计为 235 项、39 个文件，历史 123 项仅保留为初始快照，不代表当前待办数量。
+
+GitHub Actions [run 29672051076](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672051076) 在提交 `6750f62` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 17 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率为全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。

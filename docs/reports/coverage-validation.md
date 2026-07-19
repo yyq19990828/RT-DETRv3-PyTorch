@@ -19,30 +19,32 @@ pytest -p no:cacheprovider -q -m "not paddle" \
   --cov=ppdet_pytorch --cov-report=term --cov-report=json:<temporary-path>
 ```
 
-`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。干净 `test` extra 的结果为 `216 passed, 7 skipped, 17 deselected, 6 warnings in 11.68s`；17 项因 `paddle` marker 被排除，7 项因当前环境缺少所需的 Paddle/CUDA 能力跳过。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
+`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前托管 `test` extra 的结果为 `217 passed, 7 skipped, 17 deselected, 6 warnings in 12.91s`；17 项因 `paddle` marker 被排除，7 项因当前环境缺少所需的 Paddle/CUDA 能力跳过。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
 
-已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的干净 `test` extra 为准。
+在提交 `19bcb60` 上，已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的托管 `test` extra 为准。
 
 GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29671674073) 在提交 `19bcb60` 上完成托管复验：Python 3.12 CPU job 为 `216 passed, 7 skipped, 17 deselected`，全包 `5,606/13,195`（`42.49%`），直接维护范围 `1,169/1,783`（`65.56%`），双门禁通过。托管环境比本地隔离环境多覆盖 1 条全包语句；该差异已观测但不影响当前回退下限。
+
+Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672051076) 在提交 `6750f62` 上再次通过双门禁：全包 `5,610/13,200`（`42.50%`），直接维护范围 `1,173/1,788`（`65.60%`）。下表已更新为该次托管结果。
 
 ## 当前结果
 
 | 模块 | 语句数 | 覆盖语句 | 覆盖率 |
 |---|---:|---:|---:|
 | package root | 4 | 4 | 100.0% |
-| `cli` | 676 | 482 | 71.3% |
-| `conversion` | 647 | 352 | 54.4% |
+| `cli` | 679 | 486 | 71.6% |
+| `conversion` | 649 | 352 | 54.2% |
 | `core` | 375 | 254 | 67.7% |
-| `data` | 5,584 | 1,463 | 26.2% |
+| `data` | 5,584 | 1,464 | 26.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 705 | 389 | 55.2% |
 | `metrics` | 576 | 74 | 12.8% |
 | `modeling` | 3,386 | 2,012 | 59.4% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 748 | 270 | 36.1% |
-| **全包** | **13,195** | **5,605** | **42.48%** |
+| **全包** | **13,200** | **5,610** | **42.50%** |
 
-直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,783` 条语句，覆盖 `1,169` 条，覆盖率为 **65.56%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
+直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,788` 条语句，覆盖 `1,173` 条，覆盖率为 **65.60%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
 ## 门禁与限制
 
