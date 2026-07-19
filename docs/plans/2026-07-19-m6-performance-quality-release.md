@@ -33,7 +33,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 建立 Ruff/Mypy 统一质量命令；第一批覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测，并记录未覆盖范围。
 - [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
 - [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
-- [ ] 生成模块级覆盖率报告，区分已迁移核心合同与尚未支持的继承代码，逐步建立可执行阈值。
+- [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
 - [ ] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
@@ -53,7 +53,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] `uv run --extra quality python scripts/check_quality.py` 通过，并明确输出 Ruff format、Ruff lint 和 Mypy 三个步骤。
 - [x] 第一批范围经 Ruff 实际格式化后，定向测试与默认全量测试通过。
 - [x] Ruff 全活跃范围经格式化、lint 和默认全量测试验证通过。
-- [ ] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
+- [x] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
 - [x] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
 - [ ] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
 - [x] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
@@ -65,7 +65,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | Ruff 同时负责格式化和基础 lint，移除 Black | 维护者明确指定 Ruff；单一工具减少格式规则分叉 |
 | 2026-07-19 | 第一批质量门禁只覆盖 M1–M5 直接维护面 | 全仓当前有 128 个格式文件和 293 个 lint 项，一次性机械改写不利于审计 |
 | 2026-07-19 | Mypy 与 Ruff 分工，不把类型检查并入 lint | Ruff 不替代静态类型语义；当前全包 123 项需要渐进清理 |
-| 2026-07-19 | 全包 45% 只作为覆盖率基线 | 大量继承但未支持模块拉低数字，后续必须同时报告全包和已迁移核心范围 |
+| 2026-07-19 | 同时执行全包 42% 和直接维护范围 65% 的回退下限 | 干净 `test` extra 实测分别为 42.48% 和 65.56%；双范围能防止用排除低覆盖模块的方式制造虚假达标 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
 | 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
 | 2026-07-19 | 锁文件与 CI 统一使用 UV 0.11.29.x | UV 0.7 与 0.11 的锁文件修订语义不同；固定版本范围避免本地通过而托管 `--locked` 拒绝 |
@@ -76,4 +76,6 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。
 
-GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29670978523) 在提交 `b2ffcff` 上完成托管验收：Python 3.9/3.10/3.11/3.12 四个 CPU jobs 均为 `211 passed, 7 skipped, 17 deselected`；质量 job 为 158 个 Ruff 文件和 6 个 Mypy source 通过；wheel job 成功构建并完成 `34 passed` smoke。首次 run 在测试前因 UV 0.7/0.11 锁文件修订差异失败，统一 `required-version` 并用 UV `0.11.29` 重建锁文件后关闭。覆盖率阈值、完整 Mypy、CUDA CI、性能和发布候选仍未完成。
+GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29670978523) 在提交 `b2ffcff` 上完成托管验收：Python 3.9/3.10/3.11/3.12 四个 CPU jobs 均为 `211 passed, 7 skipped, 17 deselected`；质量 job 为 158 个 Ruff 文件和 6 个 Mypy source 通过；wheel job 成功构建并完成 `34 passed` smoke。首次 run 在测试前因 UV 0.7/0.11 锁文件修订差异失败，统一 `required-version` 并用 UV `0.11.29` 重建锁文件后关闭。该次 run 尚未包含后续的覆盖率门禁。
+
+2026-07-19 覆盖率阶段以 Python `3.12.11` 和不含 Paddle 的独立 `test` extra 执行活跃测试，结果为 `216 passed, 7 skipped, 17 deselected, 6 warnings in 11.68s`。全包为 `5,605/13,195` 语句（`42.48%`），`cli/conversion/core/deploy` 为 `1,169/1,783`（`65.56%`）；`scripts/check_coverage.py` 强制 42%/65% 双下限，Python 3.12 CPU job 执行该门禁，临时 coverage 产物会自动清理。已安装 `dev` extra 的本机 `.venv` 观测为 `43.11%`，不作为 CI 下限。逐模块结果和限制见 [`docs/reports/coverage-validation.md`](../reports/coverage-validation.md)。90% 提升目标、完整 Mypy、CUDA CI、性能和发布候选仍未完成。

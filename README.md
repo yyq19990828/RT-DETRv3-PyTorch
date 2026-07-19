@@ -90,7 +90,12 @@ uv run --extra test pytest -m "not paddle"
 
 # 包含 Paddle 对齐测试
 uv run --extra dev pytest
+
+# 非 Paddle 全包覆盖率与直接维护范围门禁
+uv run --extra test python scripts/check_coverage.py
 ```
+
+当前覆盖率范围、排除规则和逐模块结果见 [M6 覆盖率验证报告](docs/reports/coverage-validation.md)。
 
 ## 代码质量
 

@@ -14,6 +14,7 @@ from typing import Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUFF_TARGETS = (".",)
 MYPY_TARGETS = (
+    "scripts/check_coverage.py",
     "scripts/check_quality.py",
     "scripts/run_stability_experiment.py",
     "src/ppdet_pytorch/conversion/models.py",

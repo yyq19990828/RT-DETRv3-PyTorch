@@ -60,7 +60,12 @@ jobs:
         run: uv run --no-sync python -c "import torch; assert not torch.cuda.is_available()"
 
       - name: Run non-Paddle tests
+        if: matrix.python-version != '3.12'
         run: uv run --no-sync pytest -p no:cacheprovider -q -m "not paddle"
+
+      - name: Run non-Paddle tests with coverage gate
+        if: matrix.python-version == '3.12'
+        run: uv run --no-sync python scripts/check_coverage.py
 
   wheel-smoke:
     name: Wheel smoke / Python 3.12
