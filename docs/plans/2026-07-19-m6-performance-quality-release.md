@@ -149,4 +149,6 @@ R18 可视化阶段用官方 Paddle 权重、转换后 PyTorch 权重和 COCO `0
 
 GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上通过全部 6 个 jobs：质量 job 为 169 个 Ruff 文件和 106 个 Mypy source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
 
-Models CLI 加固阶段新增 manifest 驱动的 `list/verify/download`：未发布状态没有 URL 时显式失败，发布状态只接受 HTTPS，下载写入目标同目录临时文件并在 size/SHA-256 通过后原子替换，不匹配的既有文件默认保留。纯 CPU 转换验证核心测试同时修复 PyTorch 额外输出字段未被比较、任一侧 NaN/Inf 可能被错误接受的边界。本机隐藏 GPU 的非 Paddle测试为 `272 passed, 5 skipped, 34 deselected`，全包覆盖率 `6,511/13,535`（`48.10%`），直接维护范围 `1,429/1,989`（`71.85%`），双门禁提高到 48%/71%；托管 CI 证据待本轮提交后补录。
+Models CLI 加固阶段新增 manifest 驱动的 `list/verify/download`：未发布状态没有 URL 时显式失败，发布状态只接受 HTTPS，下载写入目标同目录临时文件并在 size/SHA-256 通过后原子替换，不匹配的既有文件默认保留。纯 CPU 转换验证核心测试同时修复 PyTorch 额外输出字段未被比较、任一侧 NaN/Inf 可能被错误接受的边界。本机隐藏 GPU 的非 Paddle 测试为 `272 passed, 5 skipped, 34 deselected`，全包覆盖率 `6,511/13,535`（`48.10%`），直接维护范围 `1,429/1,989`（`71.85%`），双门禁提高到 48%/71%。
+
+GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29679546423) 在提交 `e1a306b` 上通过全部 6 个 jobs：质量 job 为 Ruff 172 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `272 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,512/13,535`（`48.11%`）和直接维护范围 `1,429/1,989`（`71.85%`）；wheel 安装后六个 CLI、包内配置和 `34 passed` smoke 均通过。

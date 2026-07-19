@@ -15,7 +15,8 @@
 - GitHub Actions [run 29678063506](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678063506) 在 `dc09cd8` 上全部 `6` 个 job 通过：Ruff `167` 文件、Mypy `105` source file；Python 3.9–3.12 均为 `254 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `47.14%` 和直接维护范围 `67.00%`；wheel smoke 为 `34 passed`。
 - 本轮加入可视化脚本后，本地质量门禁为 Ruff `169` 文件、Mypy `106` source file；隐藏 GPU 的默认回归为 `286 passed, 8 skipped`；本地模型清单仍为 `4` 个条目、`12` 个文件/报告全部通过。
 - GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上再次通过全部 `6` 个 job：Ruff `169` 文件、Mypy `106` source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
-- Models CLI 加固后的本机工作树通过 Ruff `172` 文件、Mypy `107` source file、默认回归 `303 passed, 8 skipped` 和非 Paddle CPU 回归 `272 passed, 5 skipped, 34 deselected`；覆盖率为全包 `48.10%`、直接维护范围 `71.85%`。新 wheel/sdist 通过 `4` 个 manifest 条目和 `12` 个本地文件/报告校验；wheel 在仓库外的全新 UV 环境安装后，`rtdetrv3-models list --json` 从包内 manifest 正确列出 R18/R34/R50。托管复验待本轮提交。
+- Models CLI 加固后的本机工作树通过 Ruff `172` 文件、Mypy `107` source file、默认回归 `303 passed, 8 skipped` 和非 Paddle CPU 回归 `272 passed, 5 skipped, 34 deselected`；覆盖率为全包 `48.10%`、直接维护范围 `71.85%`。新 wheel/sdist 通过 `4` 个 manifest 条目和 `12` 个本地文件/报告校验；wheel 在仓库外的全新 UV 环境安装后，`rtdetrv3-models list --json` 从包内 manifest 正确列出 R18/R34/R50。
+- GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29679546423) 在 `e1a306b` 上全部 `6` 个 jobs 通过：Ruff `172` 文件、Mypy `107` source file；Python 3.9–3.12 均为 `272 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `48.11%/71.85%`。wheel 从 sdist 重建后通过归档检查，安装后的六个 CLI（含 Models）和 `34 passed` smoke 均通过。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
