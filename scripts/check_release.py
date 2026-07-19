@@ -8,6 +8,7 @@ import configparser
 import hashlib
 import json
 import os
+import shutil
 import tarfile
 import tempfile
 from email import policy
@@ -58,6 +59,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="PATH",
         help="Strictly verify a flat directory downloaded from a GitHub Release",
+    )
+    parser.add_argument(
+        "--stage-release-dir",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "Atomically stage converted models, mapping reports, wheel, sdist, "
+            "and SHA256SUMS in a new directory"
+        ),
     )
     return parser
 
@@ -457,6 +467,49 @@ def validate_release_directory(directory: Path) -> dict[str, int]:
     }
 
 
+def stage_release_directory(
+    wheel: Path,
+    sdist: Path,
+    destination: Path,
+) -> dict[str, int]:
+    """Stage and verify a complete release directory without exposing partial output."""
+    sources = [
+        path.resolve()
+        for path in release_model_assets() + [wheel.resolve(), sdist.resolve()]
+    ]
+    for source in sources:
+        _require(source.is_file(), f"release asset is missing: {source}")
+    names = [source.name for source in sources]
+    _require(len(names) == len(set(names)), "release asset basenames must be unique")
+
+    destination = destination.absolute()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    _require(
+        not os.path.lexists(destination),
+        f"release staging destination already exists: {destination}",
+    )
+
+    staging_directory = Path(
+        tempfile.mkdtemp(
+            prefix=f".{destination.name}.",
+            dir=destination.parent,
+        )
+    )
+    try:
+        staged_assets: list[Path] = []
+        for source in sources:
+            staged_path = staging_directory / source.name
+            shutil.copy2(source, staged_path)
+            staged_assets.append(staged_path)
+        write_sha256sums(staged_assets, staging_directory / "SHA256SUMS")
+        summary = validate_release_directory(staging_directory)
+        os.replace(staging_directory, destination)
+    finally:
+        if staging_directory.exists():
+            shutil.rmtree(staging_directory)
+    return summary
+
+
 def _validate_archive_names(names: Sequence[str], label: str) -> None:
     for name in names:
         path = PurePosixPath(name)
@@ -569,24 +622,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             args.wheel is None
             and args.sdist is None
             and not args.require_models
-            and args.write_sha256sums is None,
+            and args.write_sha256sums is None
+            and args.stage_release_dir is None,
             "--verify-release-dir must be used on its own",
         )
-        release_summary = validate_release_directory(args.verify_release_dir)
+        verified_summary = validate_release_directory(args.verify_release_dir)
         print(
             "release directory checks passed: "
-            f"{release_summary['release_assets']} release assets, "
-            f"{release_summary['checksummed_assets']} checksummed assets"
+            f"{verified_summary['release_assets']} release assets, "
+            f"{verified_summary['checksummed_assets']} checksummed assets"
         )
         return 0
 
+    _require(
+        args.write_sha256sums is None or args.stage_release_dir is None,
+        "--write-sha256sums and --stage-release-dir are mutually exclusive",
+    )
+    output_option = None
     if args.write_sha256sums is not None:
+        output_option = "--write-sha256sums"
+    elif args.stage_release_dir is not None:
+        output_option = "--stage-release-dir"
+    if output_option is not None:
         _require(
             args.require_models,
-            "--write-sha256sums requires --require-models",
+            f"{output_option} requires --require-models",
         )
-        _require(args.wheel is not None, "--write-sha256sums requires --wheel")
-        _require(args.sdist is not None, "--write-sha256sums requires --sdist")
+        _require(args.wheel is not None, f"{output_option} requires --wheel")
+        _require(args.sdist is not None, f"{output_option} requires --sdist")
 
     summary = validate_repository(require_models=args.require_models)
     if args.wheel is not None:
@@ -594,10 +657,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.sdist is not None:
         validate_sdist(args.sdist.resolve())
     checksum_count = 0
+    release_summary: Optional[dict[str, int]] = None
     if args.write_sha256sums is not None:
         checksum_count = write_sha256sums(
             release_model_assets() + [args.wheel.resolve(), args.sdist.resolve()],
             args.write_sha256sums,
+        )
+    elif args.stage_release_dir is not None:
+        release_summary = stage_release_directory(
+            args.wheel.resolve(),
+            args.sdist.resolve(),
+            args.stage_release_dir,
         )
     print(
         "release checks passed: "
@@ -609,6 +679,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print(
             f"wrote SHA256SUMS for {checksum_count} release assets: "
             f"{args.write_sha256sums.resolve()}"
+        )
+    elif args.stage_release_dir is not None:
+        assert release_summary is not None
+        print(
+            "staged release directory: "
+            f"{release_summary['release_assets']} release assets, "
+            f"{release_summary['checksummed_assets']} checksummed assets: "
+            f"{args.stage_release_dir.absolute()}"
         )
     return 0
 

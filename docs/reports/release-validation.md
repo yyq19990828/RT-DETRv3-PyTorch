@@ -25,6 +25,7 @@
 - GitHub Actions [run 29684281347](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684281347) 在公开回读预演提交 `ecabe32` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `317 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,803/13,567`（`50.14%`）和直接维护范围 `1,720/2,021`（`85.11%`）；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 发布检查通过，wheel smoke 为 `47 passed`。
 - GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在覆盖率收口提交 `48cc134` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 发布检查通过，wheel smoke 为 `49 passed`。
 - GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在端到端 runner 提交 `d823edf` 上继续通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`，覆盖率仍为 `50.99%/90.80%`；Ruff/Mypy、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+- 原子暂存批次增加 `--stage-release-dir`：在同一父目录的隐藏临时目录复制 10 个输入、生成 checksum 并严格校验，通过后才原子更名；目标已存在时拒绝覆盖，校验失败时清理半成品。当前工作树临时构建的 wheel/sdist 与真实四权重/四报告一次暂存为 `11 release assets, 10 checksummed assets`，随后的独立 `--verify-release-dir` 再次通过；`438 MiB` 临时目录已清理。定向回归为 `16 passed`；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.98%/90.80%`。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -63,10 +64,9 @@
 
 2026-07-19 实际查询时，远程仓库尚无 tag 和 GitHub Release；因此本地扁平目录预演不能替代真实公开 URL 证据。
 
-- [ ] 确认 `v0.1.0` 版本号和发布说明，创建签名或受保护 tag。
-- [ ] 从 tag 的干净工作树重建 wheel/sdist，运行 `scripts/check_release.py --require-models`。
-- [ ] 对实际上传的四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist 运行 `scripts/check_release.py --write-sha256sums`，生成 `SHA256SUMS`。
+- [ ] 确认 `v0.1.0` 版本号、发布说明和 asset 文件名，在 tag 所指提交中将四个产物改为 `published` 并写入该 tag 的固定 HTTPS URL。
+- [ ] 创建签名或受保护 tag，从 tag 的干净工作树重建 wheel/sdist，用 `scripts/check_release.py --stage-release-dir` 生成并验证完整 11-asset 目录。
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
-- [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
+- [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再将公开回读证据写入本报告。
 
 直接维护范围的 90% 覆盖率目标已有托管证据，R18 CUDA/COCO 端到端 DataLoader/profile 已有本机证据；M4 完整长训仍按维护者决策 deferred。本报告不会把未验证项改写为已验证。

@@ -54,6 +54,42 @@ def create_release_directory(script, monkeypatch, tmp_path):
     return release_directory
 
 
+def create_staging_sources(script, monkeypatch, tmp_path):
+    source_directory = tmp_path / "sources"
+    source_directory.mkdir()
+    contents = {
+        "model.pth": b"model",
+        "model.mapping.json": b"mapping",
+        "rtdetrv3_pytorch-0.1.0-py3-none-any.whl": b"wheel",
+        "rtdetrv3_pytorch-0.1.0.tar.gz": b"sdist",
+    }
+    for filename, content in contents.items():
+        (source_directory / filename).write_bytes(content)
+
+    monkeypatch.setattr(
+        script,
+        "release_model_asset_specs",
+        lambda: [
+            (
+                source_directory / "model.pth",
+                len(contents["model.pth"]),
+                hashlib.sha256(contents["model.pth"]).hexdigest(),
+            ),
+            (
+                source_directory / "model.mapping.json",
+                len(contents["model.mapping.json"]),
+                hashlib.sha256(contents["model.mapping.json"]).hexdigest(),
+            ),
+        ],
+    )
+    monkeypatch.setattr(script, "validate_wheel", lambda path: None)
+    monkeypatch.setattr(script, "validate_sdist", lambda path: None)
+    return (
+        source_directory / "rtdetrv3_pytorch-0.1.0-py3-none-any.whl",
+        source_directory / "rtdetrv3_pytorch-0.1.0.tar.gz",
+    )
+
+
 def test_repository_release_metadata_and_manifest_are_valid(monkeypatch):
     script = load_script(monkeypatch)
 
@@ -148,6 +184,56 @@ def test_release_directory_rejects_unexpected_asset(monkeypatch, tmp_path):
         script.validate_release_directory(release_directory)
 
 
+def test_stage_release_directory_creates_verified_inventory(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    wheel, sdist = create_staging_sources(script, monkeypatch, tmp_path)
+    destination = tmp_path / "staged"
+
+    summary = script.stage_release_directory(wheel, sdist, destination)
+
+    assert summary == {"release_assets": 5, "checksummed_assets": 4}
+    assert {path.name for path in destination.iterdir()} == {
+        "model.pth",
+        "model.mapping.json",
+        wheel.name,
+        sdist.name,
+        "SHA256SUMS",
+    }
+    assert not list(tmp_path.glob(".staged.*"))
+
+
+def test_stage_release_directory_refuses_existing_destination(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    wheel, sdist = create_staging_sources(script, monkeypatch, tmp_path)
+    destination = tmp_path / "staged"
+    destination.mkdir()
+    sentinel = destination / "keep.txt"
+    sentinel.write_text("keep", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="staging destination already exists"):
+        script.stage_release_directory(wheel, sdist, destination)
+
+    assert sentinel.read_text(encoding="utf-8") == "keep"
+    assert not list(tmp_path.glob(".staged.*"))
+
+
+def test_stage_release_directory_cleans_partial_output(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    wheel, sdist = create_staging_sources(script, monkeypatch, tmp_path)
+    destination = tmp_path / "staged"
+
+    def fail_validation(path):
+        raise ValueError("validation failed")
+
+    monkeypatch.setattr(script, "validate_release_directory", fail_validation)
+
+    with pytest.raises(ValueError, match="validation failed"):
+        script.stage_release_directory(wheel, sdist, destination)
+
+    assert not destination.exists()
+    assert not list(tmp_path.glob(".staged.*"))
+
+
 def test_verify_release_directory_cli_must_be_used_alone(monkeypatch, tmp_path):
     script = load_script(monkeypatch)
 
@@ -160,6 +246,13 @@ def test_verify_release_directory_cli_must_be_used_alone(monkeypatch, tmp_path):
                 str(tmp_path / "package.whl"),
             ]
         )
+
+
+def test_release_staging_requires_models_and_archives(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+
+    with pytest.raises(ValueError, match="requires --require-models"):
+        script.main(["--stage-release-dir", str(tmp_path / "staged")])
 
 
 def test_read_sha256sums_rejects_unsafe_asset_name(monkeypatch, tmp_path):

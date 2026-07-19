@@ -52,6 +52,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 为 R18/R34/R50 补充官方 Paddle 权重与转换后 PyTorch 权重的 COCO 同图统一渲染及机器可读差异证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
 - [x] 将 mapping report 的 size/SHA-256 纳入 manifest，并完成 11-asset 扁平 Release 目录、严格 checksum 清单和归档内容的回读预演。
+- [x] 增加单命令原子发布暂存：拒绝覆盖已有目录，失败清理半成品，并用真实四权重完成 11-asset 严格回读。
 - [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
@@ -102,6 +103,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 用户可见边界补测后将覆盖率下限提高到 50%/84% | 17 个纯 CPU 回归使本地全包达到 50.08%、直接维护范围达到 84.93%，并拒绝布局误判、Infer 静默漏图和非法 Export 输入 shape |
 | 2026-07-19 | 通用 Python 依赖锁定到官方 PyPI，保留 PyTorch/Paddle 专用索引 | 清华镜像对 Python 3.9 的 `zipp==3.23.0` artifact 返回 HTTP 403；重建锁文件没有改变包名或版本，干净 3.9 安装和回归通过 |
 | 2026-07-19 | R18-vd backbone 与三个检测权重共用发布合同 | 官方训练复现依赖该初始化权重；manifest 现在为四个产物声明唯一 CLI alias，Models CLI 和发布检查共同覆盖 list/verify/download |
+| 2026-07-19 | 最终上传目录由单命令原子组装和自校验 | 将 10 个输入、checksum 生成和 11-asset 严格回读收敛为同一不可覆盖操作，避免手工复制遗漏或暴露半成品 |
 | 2026-07-19 | 四产物下载补测后将直接维护范围下限提高到 85% | 重复 alias、路径逃逸和 backbone 下载回归使本地直接维护范围达到 85.11%；新增发布边界应转化为回退约束 |
 | 2026-07-19 | Convert/Export/转换适配补测后完成 90% 直接维护目标 | 11 项纯 CPU 行为回归使本地直接范围达到 90.80%；门禁提高为全包 50.5%/直接 90% |
 | 2026-07-19 | PyTorch 2.5.1/cu121 改用官方专用索引 | 南京镜像在 GitHub 六个 job 中均超过 45 分钟未完成 744 MiB Torch wheel；官方源空缓存完整安装为 2m21s，包版本不变 |
@@ -196,3 +198,5 @@ GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 端到端性能批次在提交 `d823edf` 上使用同一 COCO val2017 annotation、R18 官方 Paddle/转换 PyTorch checkpoint、CUDA/FP32、batch 1、`640×640`、4 workers、10 warmup 和 50 measured batches。两边 annotation SHA-256、5,000 条数据规模和 50 个 measured image ID 完全一致，采样记录 `git_dirty=false`。PyTorch/Paddle 总体吞吐为 `48.349/30.616 image/s`（`1.579×`）；PyTorch 模型前向均值 `14.544 ms`，但可见 input-pipeline stall 均值 `6.139 ms`、占总体 `29.68%`，因此数据管线是已记录的次级瓶颈。定时后额外一次 profile 显示两边首要热点均为卷积；不同 profiler taxonomy 不作逐项时长对比。机器可读结果见[`docs/reports/data/r18-cuda-e2e-inference.json`](../reports/data/r18-cuda-e2e-inference.json)。
 
 GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在提交 `d823edf` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率仍为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+
+发布暂存批次将原有分立的资产复制、checksum 生成和严格回读收敛到 `--stage-release-dir`。目标目录不存在时，命令只在同父目录隐藏临时目录完成全部校验后才原子更名；已有目标被拒绝，中途失败会清理半成品。使用真实四权重/四 mapping report 和临时构建的 wheel/sdist 完成 `11 release assets, 10 checksummed assets` 暂存，随后独立严格回读再次通过；`438 MiB` 临时产物已清理。定向回归为 `16 passed`，全仓 Ruff `174` 文件和 Mypy `107` source file 通过，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，覆盖率仍为 `50.98%/90.80%`。对外 tag、Release 和公开 URL 回读仍未执行，M6 继续保持进行中。

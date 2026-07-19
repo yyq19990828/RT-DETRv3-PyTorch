@@ -51,6 +51,8 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 端到端 benchmark runner 增加 8 项脚本合同测试后，GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在提交 `d823edf` 上再次通过：Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`；runner 不属于 `src/ppdet_pytorch`，因此 Python 3.12 全包/直接维护覆盖语句仍为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。
 
+原子发布暂存批次增加 4 项脚本合同测试，覆盖完整目录组装与自校验、拒绝覆盖已有目录、失败清理和 CLI 前置条件。显式隐藏 GPU 的本机非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`；脚本不属于 `src/ppdet_pytorch`，因此全包/直接维护覆盖语句仍为 `6,917/13,567`（`50.98%`）和 `1,835/2,021`（`90.80%`）。该结果为本机证据，托管 CI 待本批提交后补录。
+
 ## 当前结果
 
 | 模块 | 语句数 | 覆盖语句 | 覆盖率 |

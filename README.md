@@ -128,35 +128,29 @@ wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模�
 
 当前发布候选已通过本地和托管 CI 验证，但权重还没有对外发布。计划以 GitHub Releases 作版本绑定的主下载源，可选同步 Hugging Face Model Hub；具体限制、checksum 规则和剩余发布步骤见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
 
-`rtdetrv3-models list` 会明确显示当前 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重均为 `unpublished`；未发布时 `download` 会显式失败，不猜测 URL。`verify` 可立即用于校验本地权重的大小和 SHA-256。发布后 manifest 必须同时改为 `published` 并写入固定 tag 的 HTTPS URL，下载命令才会启用。
+`rtdetrv3-models list` 会明确显示当前 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重均为 `unpublished`；未发布时 `download` 会显式失败，不猜测 URL。`verify` 可立即用于校验本地权重的大小和 SHA-256。确定版本和 asset 文件名后，应在创建 tag 前将 manifest 改为 `published` 并写入该固定 tag 的 HTTPS URL，使 tag 构建的 wheel 与公开下载状态一致。
 
 ```bash
 # 构建 wheel 与 sdist
 uv build
 
-# 检查许可元数据、包内配置和发布归档内容
-uv run python scripts/check_release.py \
-  --wheel dist/rtdetrv3_pytorch-0.1.0-py3-none-any.whl \
-  --sdist dist/rtdetrv3_pytorch-0.1.0.tar.gz
-
-# 发布权重前还必须实际校验本地源权重、转换权重和 mapping report
-uv run python scripts/check_release.py --require-models
-
-# 对最终待上传的 10 个文件原子生成扁平 SHA256SUMS
+# 在不存在的目标目录中原子组装并严格验证 11 个 Release assets
+release_workspace="$(mktemp -d)"
+trap 'find "$release_workspace" -depth -delete' EXIT
 uv run python scripts/check_release.py \
   --require-models \
   --wheel dist/rtdetrv3_pytorch-0.1.0-py3-none-any.whl \
   --sdist dist/rtdetrv3_pytorch-0.1.0.tar.gz \
-  --write-sha256sums dist/SHA256SUMS
+  --stage-release-dir "$release_workspace/v0.1.0"
 ```
 
-checksum 输入为四个转换后 `.pth`、四份 `.mapping.json`、wheel 和 sdist；再加上生成的 `SHA256SUMS`，GitHub Release 共有 11 个 asset。Paddle 源权重仍由上游托管，只在 manifest 中记录来源与 checksum，不作为本项目的发布资产。
+`--stage-release-dir` 会先校验本地 Paddle 源权重、转换权重、mapping report、wheel 和 sdist，再在同一父目录的隐藏临时目录中复制资产、生成 `SHA256SUMS` 并执行严格回读。全部通过后才原子更名为目标目录；目标已存在或任意校验失败都不会留下半成品。checksum 覆盖四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist；再加上 `SHA256SUMS`，GitHub Release 共有 11 个 asset。Paddle 源权重仍由上游托管，不作为本项目的发布资产。
 
 发布后先把固定 tag 的全部 asset 下载到一个空目录，再执行严格回读。校验器要求目录恰好包含 11 个普通文件，拒绝缺失/额外资产、路径型 checksum 名称、重复条目和摘要不匹配，并将四个权重与四份 mapping report 再对照 manifest：
 
 ```bash
 release_dir="$(mktemp -d)"
-trap 'rm -rf "$release_dir"' EXIT
+trap 'find "$release_dir" -depth -delete' EXIT
 gh release download v0.1.0 --dir "$release_dir"
 uv run python scripts/check_release.py --verify-release-dir "$release_dir"
 ```
