@@ -53,6 +53,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
             "wheel, and sdist"
         ),
     )
+    parser.add_argument(
+        "--verify-release-dir",
+        type=Path,
+        metavar="PATH",
+        help="Strictly verify a flat directory downloaded from a GitHub Release",
+    )
     return parser
 
 
@@ -191,10 +197,22 @@ def _validate_manifest_entry(
     mapping_path = _repository_path(
         converted.get("mapping_report"), f"{name} mapping report"
     )
+    mapping_size = _positive_int(
+        converted.get("mapping_size_bytes"), f"{name} mapping report size"
+    )
+    mapping_digest = _validate_digest(
+        converted.get("mapping_sha256"), f"{name} mapping report"
+    )
     mapping_count = _positive_int(
         converted.get("mapping_count"), f"{name} mapping count"
     )
-    if mapping_path.is_file():
+    mapping_exists = _validate_local_file(
+        mapping_path,
+        expected_size=mapping_size,
+        expected_sha256=mapping_digest,
+        required=require_models,
+    )
+    if mapping_exists:
         mapping = _mapping(
             json.loads(mapping_path.read_text(encoding="utf-8")),
             f"mapping report {mapping_path}",
@@ -208,8 +226,6 @@ def _validate_manifest_entry(
             f"mapping count mismatch: {mapping_path}",
         )
         checked += 1
-    else:
-        _require(not require_models, f"mapping report is missing: {mapping_path}")
     return checked, alias
 
 
@@ -262,14 +278,15 @@ def validate_repository(*, require_models: bool) -> dict[str, int]:
     }
 
 
-def release_model_assets() -> list[Path]:
-    """Return converted weights and audit reports in deterministic release order."""
+def release_model_asset_specs() -> list[tuple[Path, int, str]]:
+    """Return release model paths, sizes, and digests in deterministic order."""
     manifest = _mapping(
         yaml.safe_load(MANIFEST_PATH.read_text(encoding="utf-8")),
         "checkpoint manifest",
     )
-    weights: list[Path] = []
-    reports: list[Path] = []
+    _require(manifest.get("schema_version") == 1, "unsupported manifest schema")
+    weights: list[tuple[Path, int, str]] = []
+    reports: list[tuple[Path, int, str]] = []
     for section_name in ("models", "pretraining"):
         section = _mapping(manifest.get(section_name), f"{section_name} manifest")
         for name, value in section.items():
@@ -277,13 +294,33 @@ def release_model_assets() -> list[Path]:
             converted = _mapping(
                 entry.get("converted_artifact"), f"{name}.converted_artifact"
             )
-            weights.append(_repository_path(converted.get("path"), f"{name} artifact"))
+            weights.append(
+                (
+                    _repository_path(converted.get("path"), f"{name} artifact"),
+                    _positive_int(converted.get("size_bytes"), f"{name} artifact size"),
+                    _validate_digest(converted.get("sha256"), f"{name} artifact"),
+                )
+            )
             reports.append(
-                _repository_path(
-                    converted.get("mapping_report"), f"{name} mapping report"
+                (
+                    _repository_path(
+                        converted.get("mapping_report"), f"{name} mapping report"
+                    ),
+                    _positive_int(
+                        converted.get("mapping_size_bytes"),
+                        f"{name} mapping report size",
+                    ),
+                    _validate_digest(
+                        converted.get("mapping_sha256"), f"{name} mapping report"
+                    ),
                 )
             )
     return weights + reports
+
+
+def release_model_assets() -> list[Path]:
+    """Return converted weights and audit reports in deterministic release order."""
+    return [path for path, _, _ in release_model_asset_specs()]
 
 
 def write_sha256sums(paths: Sequence[Path], output_path: Path) -> int:
@@ -322,6 +359,102 @@ def write_sha256sums(paths: Sequence[Path], output_path: Path) -> int:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
     return len(resolved_paths)
+
+
+def _read_sha256sums(path: Path) -> dict[str, str]:
+    _require(path.is_file(), f"SHA256SUMS is missing: {path}")
+    checksums: dict[str, str] = {}
+    for line_number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        digest, separator, filename = line.partition("  ")
+        _require(bool(separator), f"invalid SHA256SUMS line {line_number}")
+        digest = _validate_digest(digest, f"SHA256SUMS line {line_number}")
+        _require(
+            digest == digest.lower(),
+            f"SHA256SUMS line {line_number} must use lowercase hexadecimal",
+        )
+        release_name = PurePosixPath(filename)
+        _require(
+            bool(filename)
+            and filename == release_name.name
+            and "\\" not in filename
+            and filename != "SHA256SUMS",
+            f"SHA256SUMS line {line_number} has an unsafe asset name",
+        )
+        _require(filename not in checksums, f"duplicate checksum entry: {filename}")
+        checksums[filename] = digest
+    _require(bool(checksums), "SHA256SUMS is empty")
+    return checksums
+
+
+def validate_release_directory(directory: Path) -> dict[str, int]:
+    """Verify an exact, flat set of downloaded release assets."""
+    _require(not directory.is_symlink(), "release directory cannot be a symlink")
+    directory = directory.resolve()
+    _require(directory.is_dir(), f"release directory is missing: {directory}")
+
+    entries = list(directory.iterdir())
+    _require(
+        all(path.is_file() and not path.is_symlink() for path in entries),
+        "release directory must contain only regular files",
+    )
+    actual_names = {path.name for path in entries}
+
+    model_specs = release_model_asset_specs()
+    model_names = [path.name for path, _, _ in model_specs]
+    _require(
+        len(model_names) == len(set(model_names)),
+        "manifest release asset basenames must be unique",
+    )
+    wheels = [path for path in entries if path.name.endswith(".whl")]
+    sdists = [path for path in entries if path.name.endswith(".tar.gz")]
+    _require(len(wheels) == 1, "release directory must contain exactly one wheel")
+    _require(len(sdists) == 1, "release directory must contain exactly one sdist")
+
+    expected_names = set(model_names) | {
+        wheels[0].name,
+        sdists[0].name,
+        "SHA256SUMS",
+    }
+    _require(
+        actual_names == expected_names,
+        "release directory inventory mismatch: "
+        f"missing={sorted(expected_names - actual_names)}, "
+        f"unexpected={sorted(actual_names - expected_names)}",
+    )
+
+    checksums = _read_sha256sums(directory / "SHA256SUMS")
+    checksummed_names = expected_names - {"SHA256SUMS"}
+    _require(
+        set(checksums) == checksummed_names,
+        "SHA256SUMS inventory mismatch: "
+        f"missing={sorted(checksummed_names - set(checksums))}, "
+        f"unexpected={sorted(set(checksums) - checksummed_names)}",
+    )
+    for filename, expected_digest in checksums.items():
+        _require(
+            _sha256(directory / filename) == expected_digest,
+            f"release checksum mismatch: {filename}",
+        )
+
+    for path, expected_size, expected_digest in model_specs:
+        downloaded_path = directory / path.name
+        _require(
+            downloaded_path.stat().st_size == expected_size,
+            f"release asset size does not match manifest: {path.name}",
+        )
+        _require(
+            checksums[path.name] == expected_digest,
+            f"release asset digest does not match manifest: {path.name}",
+        )
+
+    validate_wheel(wheels[0])
+    validate_sdist(sdists[0])
+    return {
+        "release_assets": len(expected_names),
+        "checksummed_assets": len(checksummed_names),
+    }
 
 
 def _validate_archive_names(names: Sequence[str], label: str) -> None:
@@ -431,6 +564,22 @@ def validate_sdist(path: Path) -> None:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = create_argument_parser().parse_args(argv)
+    if args.verify_release_dir is not None:
+        _require(
+            args.wheel is None
+            and args.sdist is None
+            and not args.require_models
+            and args.write_sha256sums is None,
+            "--verify-release-dir must be used on its own",
+        )
+        release_summary = validate_release_directory(args.verify_release_dir)
+        print(
+            "release directory checks passed: "
+            f"{release_summary['release_assets']} release assets, "
+            f"{release_summary['checksummed_assets']} checksummed assets"
+        )
+        return 0
+
     if args.write_sha256sums is not None:
         _require(
             args.require_models,

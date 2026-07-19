@@ -23,6 +23,8 @@ pretraining:
       size_bytes: 44876108
       sha256: 2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2
       mapping_report: pretrained_models/reports/ResNet18_vd_pretrained.mapping.json
+      mapping_size_bytes: 55344
+      mapping_sha256: 95aa7db0b19a74e5ea9639f78e5badb973623badd4834e68bb96714071b4fd63
       mapping_count: 115
 
 models:
@@ -41,6 +43,8 @@ models:
       size_bytes: 92075629
       sha256: cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547
       mapping_report: pretrained_models/reports/rtdetrv3_r18vd_6x_coco.mapping.json
+      mapping_size_bytes: 142968
+      mapping_sha256: 81f9cc9de59d302cc9db9ed28554c3501051120b39f80a5886f8de6ee412c911
       mapping_count: 571
   rtdetrv3_r34vd_6x_coco:
     status: verified
@@ -57,6 +61,8 @@ models:
       size_bytes: 137170947
       sha256: e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272
       mapping_report: pretrained_models/reports/rtdetrv3_r34vd_6x_coco.mapping.json
+      mapping_size_bytes: 170902
+      mapping_sha256: a43815269d499b858a84ad836e102a0a5ea4ab91305c44b2f1cc4c0872d4653f
       mapping_count: 681
   rtdetrv3_r50vd_6x_coco:
     status: verified
@@ -73,4 +79,6 @@ models:
       size_bytes: 182510207
       sha256: 5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7
       mapping_report: pretrained_models/reports/rtdetrv3_r50vd_6x_coco.mapping.json
+      mapping_size_bytes: 198839
+      mapping_sha256: 9bf9df5e0169b3675ea58ba198ebee3d13cffc1f716fa3566dbbb21a3dd7cc27
       mapping_count: 789

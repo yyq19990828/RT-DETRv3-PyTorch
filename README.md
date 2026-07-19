@@ -152,6 +152,15 @@ uv run python scripts/check_release.py \
 
 checksum 输入为四个转换后 `.pth`、四份 `.mapping.json`、wheel 和 sdist；再加上生成的 `SHA256SUMS`，GitHub Release 共有 11 个 asset。Paddle 源权重仍由上游托管，只在 manifest 中记录来源与 checksum，不作为本项目的发布资产。
 
+发布后先把固定 tag 的全部 asset 下载到一个空目录，再执行严格回读。校验器要求目录恰好包含 11 个普通文件，拒绝缺失/额外资产、路径型 checksum 名称、重复条目和摘要不匹配，并将四个权重与四份 mapping report 再对照 manifest：
+
+```bash
+release_dir="$(mktemp -d)"
+trap 'rm -rf "$release_dir"' EXIT
+gh release download v0.1.0 --dir "$release_dir"
+uv run python scripts/check_release.py --verify-release-dir "$release_dir"
+```
+
 ## 仓库结构
 
 ```text

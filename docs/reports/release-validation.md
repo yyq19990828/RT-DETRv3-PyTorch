@@ -21,6 +21,7 @@
 - GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在 `aa3ccac` 上通过全部 6 个 jobs：Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `50.14%/85.11%`；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 成功构建，包内清单为 `4` 个 manifest 条目和 `4` 个发布产物，安装后六个 CLI 及 wheel smoke `47 passed`。官方 PyTorch 索引上的 Torch 冷下载与各环境准备均在约 21–28 秒完成。
 - checksum 生成器本地预检从当前工作树临时构建 wheel/sdist，先通过 `4` 个 manifest 条目和 `12` 个本地源/转换/mapping 文件检查，再对四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist 原子生成 `10` 行 `SHA256SUMS`。将这些文件以扁平 Release 名称链入临时目录后，系统 `sha256sum --check` 独立复核全部通过；临时构建和校验目录随后清理。定向回归为 `7 passed`，质量门禁为 Ruff `174` 个文件和 Mypy `107` 个 source file；隐藏 GPU 的非 Paddle 覆盖率回归为 `312 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.14%/85.11%`。
 - GitHub Actions [run 29683881309](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683881309) 在 checksum 生成器提交 `75d7bab` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `312 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,803/13,567`（`50.14%`）和直接维护范围 `1,720/2,021`（`85.11%`）；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 构建与发布检查通过，wheel smoke 为 `47 passed`。
+- 公开回读预演将四份 mapping report 的 size/SHA-256 加入 manifest，再从当前工作树构建 wheel/sdist，与真实四权重/四报告组成 11 个普通文件的扁平目录。新的 `--verify-release-dir` 对完整资产集、10 行 checksum 清单、实际文件摘要、manifest 独立摘要与 wheel/sdist 内容全部校验通过，输出 `11 release assets, 10 checksummed assets`；临时产物已清理。发布定向回归为 `12 passed`，质量门禁为 Ruff `174` 个文件和 Mypy `107` 个 source file；隐藏 GPU 的非 Paddle 覆盖率回归为 `317 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.14%/85.11%`。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -38,7 +39,7 @@
 | R50 | `182,510,207` | `5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7` |
 | R18-vd backbone 初始化权重 | `44,876,108` | `2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2` |
 
-三个检测权重合计 `411,756,783` 字节（约 `392.7 MiB`）；加上 R18-vd 训练初始化权重后，四个 Release 权重合计 `456,632,891` 字节（约 `435.5 MiB`）。来源 URL、上游 revision、源权重 checksum、转换后 checksum、CLI alias 和 mapping 数以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。三变体同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁目前只覆盖 R18，见[精度报告](accuracy-validation.md)。
+三个检测权重合计 `411,756,783` 字节（约 `392.7 MiB`）；加上 R18-vd 训练初始化权重后，四个 Release 权重合计 `456,632,891` 字节（约 `435.5 MiB`）。来源 URL、上游 revision、源/转换权重 checksum、mapping report 的 size/checksum/映射数和 CLI alias 以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。三变体同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁目前只覆盖 R18，见[精度报告](accuracy-validation.md)。
 
 ## 权重托管决策
 
@@ -57,10 +58,12 @@
 
 ## 尚未完成的发布动作
 
+2026-07-19 实际查询时，远程仓库尚无 tag 和 GitHub Release；因此本地扁平目录预演不能替代真实公开 URL 证据。
+
 - [ ] 确认 `v0.1.0` 版本号和发布说明，创建签名或受保护 tag。
 - [ ] 从 tag 的干净工作树重建 wheel/sdist，运行 `scripts/check_release.py --require-models`。
 - [ ] 对实际上传的四个 `.pth`、四份 `.mapping.json`、wheel 和 sdist 运行 `scripts/check_release.py --write-sha256sums`，生成 `SHA256SUMS`。
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
-- [ ] 从公开 URL 在干净环境下下载，校验 checksum，完成 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
+- [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
 
 90% 覆盖率目标、end-to-end DataLoader/profile 和 M4 完整长训仍未完成或已按决策 deferred；本报告不会把它们改写为已验证。

@@ -17,6 +17,43 @@ def load_script(monkeypatch):
     return module
 
 
+def create_release_directory(script, monkeypatch, tmp_path):
+    release_directory = tmp_path / "release"
+    release_directory.mkdir()
+    contents = {
+        "model.pth": b"model",
+        "model.mapping.json": b"mapping",
+        "rtdetrv3_pytorch-0.1.0-py3-none-any.whl": b"wheel",
+        "rtdetrv3_pytorch-0.1.0.tar.gz": b"sdist",
+    }
+    for filename, content in contents.items():
+        (release_directory / filename).write_bytes(content)
+
+    monkeypatch.setattr(
+        script,
+        "release_model_asset_specs",
+        lambda: [
+            (
+                tmp_path / "manifest" / "model.pth",
+                len(contents["model.pth"]),
+                hashlib.sha256(contents["model.pth"]).hexdigest(),
+            ),
+            (
+                tmp_path / "manifest" / "model.mapping.json",
+                len(contents["model.mapping.json"]),
+                hashlib.sha256(contents["model.mapping.json"]).hexdigest(),
+            ),
+        ],
+    )
+    monkeypatch.setattr(script, "validate_wheel", lambda path: None)
+    monkeypatch.setattr(script, "validate_sdist", lambda path: None)
+    script.write_sha256sums(
+        [release_directory / filename for filename in contents],
+        release_directory / "SHA256SUMS",
+    )
+    return release_directory
+
+
 def test_repository_release_metadata_and_manifest_are_valid(monkeypatch):
     script = load_script(monkeypatch)
 
@@ -80,6 +117,58 @@ def test_checksum_generation_requires_models_and_archives(monkeypatch, tmp_path)
 
     with pytest.raises(ValueError, match="requires --require-models"):
         script.main(["--write-sha256sums", str(tmp_path / "SHA256SUMS")])
+
+
+def test_release_directory_verifies_exact_inventory_and_checksums(
+    monkeypatch, tmp_path
+):
+    script = load_script(monkeypatch)
+    release_directory = create_release_directory(script, monkeypatch, tmp_path)
+
+    summary = script.validate_release_directory(release_directory)
+
+    assert summary == {"release_assets": 5, "checksummed_assets": 4}
+
+
+def test_release_directory_rejects_tampered_asset(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    release_directory = create_release_directory(script, monkeypatch, tmp_path)
+    (release_directory / "model.pth").write_bytes(b"tampered")
+
+    with pytest.raises(ValueError, match="release checksum mismatch: model.pth"):
+        script.validate_release_directory(release_directory)
+
+
+def test_release_directory_rejects_unexpected_asset(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    release_directory = create_release_directory(script, monkeypatch, tmp_path)
+    (release_directory / "unexpected.txt").write_text("unexpected", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="release directory inventory mismatch"):
+        script.validate_release_directory(release_directory)
+
+
+def test_verify_release_directory_cli_must_be_used_alone(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+
+    with pytest.raises(ValueError, match="must be used on its own"):
+        script.main(
+            [
+                "--verify-release-dir",
+                str(tmp_path),
+                "--wheel",
+                str(tmp_path / "package.whl"),
+            ]
+        )
+
+
+def test_read_sha256sums_rejects_unsafe_asset_name(monkeypatch, tmp_path):
+    script = load_script(monkeypatch)
+    checksums = tmp_path / "SHA256SUMS"
+    checksums.write_text(f"{'0' * 64}  ../payload\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="unsafe asset name"):
+        script._read_sha256sums(checksums)
 
 
 @pytest.mark.parametrize("name", ["../payload", "/absolute/payload"])

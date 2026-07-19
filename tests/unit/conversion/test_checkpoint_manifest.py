@@ -43,6 +43,9 @@ def test_verified_checkpoint_has_sha256_and_size():
         assert len(converted["sha256"]) == 64
         int(converted["sha256"], 16)
         assert converted["mapping_report"].startswith("pretrained_models/reports/")
+        assert converted["mapping_size_bytes"] > 0
+        assert len(converted["mapping_sha256"]) == 64
+        int(converted["mapping_sha256"], 16)
         assert converted["mapping_count"] > 0
 
 
@@ -58,4 +61,7 @@ def test_r18_pretraining_manifest_is_target_aware():
     int(pretraining["source_sha256"], 16)
     assert pretraining["converted_tensor_count"] == 115
     assert pretraining["converted_artifact"]["alias"] == "r18-backbone"
+    assert pretraining["converted_artifact"]["mapping_size_bytes"] == 55344
+    assert len(pretraining["converted_artifact"]["mapping_sha256"]) == 64
+    int(pretraining["converted_artifact"]["mapping_sha256"], 16)
     assert pretraining["converted_artifact"]["mapping_count"] == 115

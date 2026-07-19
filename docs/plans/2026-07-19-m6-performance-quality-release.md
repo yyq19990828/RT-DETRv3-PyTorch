@@ -49,6 +49,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 生成发布清单和发布候选验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
 - [x] 为 R18/R34/R50 补充官方 Paddle 权重与转换后 PyTorch 权重的 COCO 同图统一渲染及机器可读差异证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
+- [x] 将 mapping report 的 size/SHA-256 纳入 manifest，并完成 11-asset 扁平 Release 目录、严格 checksum 清单和归档内容的回读预演。
 - [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
@@ -178,3 +179,5 @@ GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 本地实证从当前工作树构建临时 wheel/sdist，通过 `4` 个 manifest 条目、`4` 个发布产物和 `12` 个本地源/转换/mapping 文件校验；生成的 `SHA256SUMS` 恰有 10 行，在扁平资产目录下由系统 `sha256sum --check` 复核全部成功。定向回归 `7 passed`，Ruff `174` 个文件、Mypy `107` 个 source file 通过；隐藏 GPU 的非 Paddle 回归为 `312 passed, 5 skipped, 34 deselected`，全包/直接维护范围仍为 `50.14%/85.11%`。临时发布产物和链接目录均已清理。
 
 GitHub Actions [run 29683881309](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683881309) 在提交 `75d7bab` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `312 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,803/13,567`（`50.14%`）和 `1,720/2,021`（`85.11%`）；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `47 passed` wheel smoke 全部通过。
+
+公开回读预演把四份 mapping report 的 size/SHA-256 加入 checkpoint manifest，避免只依赖与下载文件同源的 `SHA256SUMS`。`--verify-release-dir` 只接受恰好 11 个普通文件的扁平目录，对 checksum 格式、路径、唯一性、完整资产集、实际文件摘要、manifest 独立摘要以及 wheel/sdist 内容逐层校验。本地从当前工作树重建归档，用真实四权重/四报告构造扁平下载目录，生成 10 行 checksum 后回读结果为 `11 release assets, 10 checksummed assets`；发布定向回归 `12 passed`，Ruff `174` 个文件、Mypy `107` 个 source file 通过，隐藏 GPU 的非 Paddle 回归为 `317 passed, 5 skipped, 34 deselected`，覆盖率仍为 `50.14%/85.11%`。临时硬链接、归档和清单均已清理。

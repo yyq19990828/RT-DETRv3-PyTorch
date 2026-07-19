@@ -116,7 +116,7 @@ uv run rtdetrv3-convert --strict \
 
 ## 发布审计产物
 
-每个对外发布的 `.pth` 都必须携带同次转换产生的 `.mapping.json`。mapping report 记录源/目标 key、shape 和 transpose 决策，使用户可以审计权重是如何得到的；它不能替代中间激活、最终预测或 COCO 指标对齐证据。
+每个对外发布的 `.pth` 都必须携带同次转换产生的 `.mapping.json`。mapping report 记录源/目标 key、shape 和 transpose 决策，使用户可以审计权重是如何得到的；它不能替代中间激活、最终预测或 COCO 指标对齐证据。checkpoint manifest 必须同时记录 mapping report 的大小、SHA-256 和映射数，这样公开回读时才有别于同源 `SHA256SUMS` 的仓库内独立真值。
 
 本项目的固定 tag Release 合同包含四个 `.pth`、四份 `.mapping.json`、wheel、sdist 和由这 10 个文件生成的 `SHA256SUMS`。Paddle 源权重仍从 manifest 记录的上游 URL 获取，不重复发布。生成命令在校验任一文件失败时不会改写旧 checksum 清单：
 
