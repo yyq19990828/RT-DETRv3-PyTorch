@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/rtdetrv3_coco.yml"
 
@@ -45,9 +44,7 @@ def test_r18_pretraining_manifest_is_target_aware():
 
     assert pretraining["used_by"] == "rtdetrv3_r18vd_6x_coco"
     assert (ROOT / pretraining["target_config"]).is_file()
-    assert pretraining["source_url"].endswith(
-        "/ResNet18_vd_pretrained.pdparams"
-    )
+    assert pretraining["source_url"].endswith("/ResNet18_vd_pretrained.pdparams")
     assert pretraining["source_size_bytes"] == 44850756
     assert len(pretraining["source_sha256"]) == 64
     int(pretraining["source_sha256"], 16)

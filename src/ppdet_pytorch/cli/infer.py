@@ -18,7 +18,6 @@ from ppdet_pytorch.data.source.category import get_categories
 from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
 
-
 logger = setup_logger("infer")
 
 _IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}

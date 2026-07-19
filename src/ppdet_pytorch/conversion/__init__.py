@@ -8,13 +8,13 @@ from .models import (
     BatchConversionResult,
     BatchConversionSummary,
     CheckpointFile,
+    ConversionConfig,
+    ConversionSession,
+    ConversionStatistics,
+    DtypeConversion,
     Parameter,
     ParameterMapping,
-    ConversionSession,
-    ConversionConfig,
-    ConversionStatistics,
     ShapeMismatch,
-    DtypeConversion,
 )
 
 __all__ = [
@@ -43,7 +43,7 @@ def configure_logging(level="INFO"):
     logging.basicConfig(
         level=getattr(logging, level),
         format="[%(asctime)s] %(levelname)s: %(message)s",
-        datefmt="%m/%d %H:%M:%S"
+        datefmt="%m/%d %H:%M:%S",
     )
 
 
@@ -57,4 +57,5 @@ def get_logger(name):
         logging.Logger instance
     """
     import logging
+
     return logging.getLogger(name)

@@ -19,7 +19,6 @@ from ppdet_pytorch.deploy import (
 from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
 
-
 logger = setup_logger("export")
 
 

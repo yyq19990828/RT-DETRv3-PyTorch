@@ -4,7 +4,7 @@
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)
-**Current execution plan**: 尚未建立；下一候选为 M6 性能、质量与发布
+**Current execution plan**: [`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -91,10 +91,14 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 基线为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。第一批先为 M1–M5 直接维护面建立 Ruff/Mypy 渐进门禁；这些审计数字和局部门禁都不代表整仓质量目标已完成。
+
 - [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
 - [ ] 目标训练吞吐不低于 Paddle 的 95%，峰值显存不超过 110%；无法达成时记录可定位瓶颈。
 - [ ] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
+  - [x] 首批 Ruff format/lint 覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测；Mypy 首批 6 个 source file/目录通过。
+  - [ ] 将 Ruff/Mypy 门禁扩展到其余活跃模块并移除临时范围清单。
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
 - [ ] 发布模型库、checksum、配置、许可说明和最终验证报告。

@@ -4,12 +4,12 @@ This module provides the main WeightConverter class for converting model weights
 between PaddlePaddle and PyTorch formats.
 """
 
-from dataclasses import replace
 import gc
 import hashlib
 import logging
-from pathlib import Path
 import tempfile
+from dataclasses import replace
+from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from .models import (
@@ -50,7 +50,9 @@ class WeightConverter:
         self.name_mapper = NameMapper()
         self.session: Optional[ConversionSession] = None
 
-    def load_paddle_checkpoint(self, checkpoint_path: str) -> Tuple[Dict[str, Any], CheckpointFile]:
+    def load_paddle_checkpoint(
+        self, checkpoint_path: str
+    ) -> Tuple[Dict[str, Any], CheckpointFile]:
         """Load PaddlePaddle checkpoint file
 
         Args:
@@ -91,15 +93,15 @@ class WeightConverter:
                 checksum=checksum,
             )
 
-            logger.info(f"Loaded {len(state_dict)} parameters from PaddlePaddle checkpoint")
-            logger.info(f"Checkpoint size: {file_size / (1024*1024):.2f} MB")
+            logger.info(
+                f"Loaded {len(state_dict)} parameters from PaddlePaddle checkpoint"
+            )
+            logger.info(f"Checkpoint size: {file_size / (1024 * 1024):.2f} MB")
 
             return state_dict, checkpoint_file
 
         except ImportError:
-            raise ValueError(
-                "PaddlePaddle is not installed. Run: uv sync --extra dev"
-            )
+            raise ValueError("PaddlePaddle is not installed. Run: uv sync --extra dev")
         except Exception as e:
             raise ValueError(f"Failed to load PaddlePaddle checkpoint: {e}")
 
@@ -107,7 +109,7 @@ class WeightConverter:
         self,
         state_dict: Dict[str, Any],
         output_path: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> CheckpointFile:
         """Save PyTorch checkpoint file
 
@@ -164,7 +166,7 @@ class WeightConverter:
                 metadata=metadata,
             )
 
-            logger.info(f"Saved checkpoint: {file_size / (1024*1024):.2f} MB")
+            logger.info(f"Saved checkpoint: {file_size / (1024 * 1024):.2f} MB")
             return checkpoint_file
 
         except Exception as e:
@@ -207,7 +209,7 @@ class WeightConverter:
                     torch_tensor.shape,
                     expected_shape,
                     param_name,
-                    strict=self.config.strict_mode
+                    strict=self.config.strict_mode,
                 )
 
                 # In permissive mode, return None if shape doesn't match
@@ -306,9 +308,13 @@ class WeightConverter:
 
             # Progress logging (every 100 parameters)
             if (i + 1) % 100 == 0:
-                logger.info(f"Progress: {i+1}/{len(mappings)} ({100*(i+1)/len(mappings):.1f}%)")
+                logger.info(
+                    f"Progress: {i + 1}/{len(mappings)} ({100 * (i + 1) / len(mappings):.1f}%)"
+                )
 
-        logger.info(f"Conversion complete: {stats.converted_count}/{stats.total_parameters} parameters")
+        logger.info(
+            f"Conversion complete: {stats.converted_count}/{stats.total_parameters} parameters"
+        )
         return torch_state_dict, stats
 
     def convert(
@@ -349,7 +355,9 @@ class WeightConverter:
         try:
             # Step 1: Load source checkpoint
             logger.info("=== Step 1: Load source checkpoint ===")
-            paddle_state_dict, source_checkpoint = self.load_paddle_checkpoint(input_path)
+            paddle_state_dict, source_checkpoint = self.load_paddle_checkpoint(
+                input_path
+            )
             self.session.source_checkpoint = source_checkpoint
 
             # Step 2: Generate parameter name mappings
@@ -362,7 +370,9 @@ class WeightConverter:
 
             # Generate mappings
             source_keys = list(paddle_state_dict.keys())
-            target_keys = set(target_model_state_dict.keys()) if target_model_state_dict else None
+            target_keys = (
+                set(target_model_state_dict.keys()) if target_model_state_dict else None
+            )
             mappings = self.name_mapper.apply_naming_rules(source_keys, target_keys)
 
             # Find unmapped keys
@@ -419,7 +429,9 @@ class WeightConverter:
             if self.config.output_metadata:
                 metadata.update(self.config.output_metadata)
 
-            target_checkpoint = self.save_torch_checkpoint(torch_state_dict, output_path, metadata)
+            target_checkpoint = self.save_torch_checkpoint(
+                torch_state_dict, output_path, metadata
+            )
             self.session.target_checkpoint = target_checkpoint
 
             # Step 5: Export mapping if configured
@@ -431,7 +443,7 @@ class WeightConverter:
                     str(input_path),
                     str(output_path),
                     unmapped_source,
-                    unmapped_target
+                    unmapped_target,
                 )
 
             # Mark as completed
@@ -470,9 +482,7 @@ class WeightConverter:
         if mapping_directory_path is not None:
             mapping_directory_path.mkdir(parents=True, exist_ok=True)
 
-        summary = BatchConversionSummary(
-            output_directory=str(output_directory_path)
-        )
+        summary = BatchConversionSummary(output_directory=str(output_directory_path))
         for input_value in input_paths:
             input_path = Path(input_value)
             output_path = output_directory_path / f"{input_path.stem}.pth"

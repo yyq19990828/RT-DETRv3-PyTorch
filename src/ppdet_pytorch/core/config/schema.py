@@ -12,12 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
+from __future__ import absolute_import, division, print_function
 
-import inspect
 import importlib
+import inspect
 import re
 
 try:
@@ -36,11 +34,11 @@ except Exception:
         pass
 
 
-__all__ = ['SchemaValue', 'SchemaDict', 'SharedConfig', 'extract_schema']
+__all__ = ["SchemaValue", "SchemaDict", "SharedConfig", "extract_schema"]
 
 
 class SchemaValue(object):
-    def __init__(self, name, doc='', type=None):
+    def __init__(self, name, doc="", type=None):
         super(SchemaValue, self).__init__()
         self.name = name
         self.doc = doc
@@ -50,7 +48,7 @@ class SchemaValue(object):
         self.default = value
 
     def has_default(self):
-        return hasattr(self, 'default')
+        return hasattr(self, "default")
 
 
 class SchemaDict(dict):
@@ -63,8 +61,11 @@ class SchemaDict(dict):
 
     def __setitem__(self, key, value):
         # XXX also update regular dict to SchemaDict??
-        if isinstance(value, dict) and key in self and isinstance(self[key],
-                                                                  SchemaDict):
+        if (
+            isinstance(value, dict)
+            and key in self
+            and isinstance(self[key], SchemaDict)
+        ):
             self[key].update(value)
         else:
             super(SchemaDict, self).__setitem__(key, value)
@@ -96,14 +97,15 @@ class SchemaDict(dict):
     def is_default(self, key):
         if not self.has_default(key):
             return False
-        if hasattr(self[key], '__dict__'):
+        if hasattr(self[key], "__dict__"):
             return True
         else:
             return key not in self or self[key] == self.schema[key].default
 
     def find_default_keys(self):
         return [
-            k for k in list(self.keys()) + list(self.schema.keys())
+            k
+            for k in list(self.keys()) + list(self.schema.keys())
             if self.is_default(k)
         ]
 
@@ -112,10 +114,9 @@ class SchemaDict(dict):
 
     def find_missing_keys(self):
         missing = [
-            k for k in self.schema.keys()
-            if k not in self and not self.has_default(k)
+            k for k in self.schema.keys() if k not in self and not self.has_default(k)
         ]
-        placeholders = [k for k in self if self[k] in ('<missing>', '<value>')]
+        placeholders = [k for k in self if self[k] in ("<missing>", "<value>")]
         return missing + placeholders
 
     def find_extra_keys(self):
@@ -126,8 +127,9 @@ class SchemaDict(dict):
         for arg in self.schema.values():
             if arg.type is not None:
                 try:
-                    check_type("{}.{}".format(self.name, arg.name),
-                               self[arg.name], arg.type)
+                    check_type(
+                        "{}.{}".format(self.name, arg.name), self[arg.name], arg.type
+                    )
                 except Exception:
                     mismatch_keys.append(arg.name)
         return mismatch_keys
@@ -135,16 +137,25 @@ class SchemaDict(dict):
     def validate(self):
         missing_keys = self.find_missing_keys()
         if missing_keys:
-            raise ValueError("Missing param for class<{}>: {}".format(
-                self.name, ", ".join(missing_keys)))
+            raise ValueError(
+                "Missing param for class<{}>: {}".format(
+                    self.name, ", ".join(missing_keys)
+                )
+            )
         extra_keys = self.find_extra_keys()
         if extra_keys and self.strict:
-            raise ValueError("Extraneous param for class<{}>: {}".format(
-                self.name, ", ".join(extra_keys)))
+            raise ValueError(
+                "Extraneous param for class<{}>: {}".format(
+                    self.name, ", ".join(extra_keys)
+                )
+            )
         mismatch_keys = self.find_mismatch_keys()
         if mismatch_keys:
-            raise TypeError("Wrong param type for class<{}>: {}".format(
-                self.name, ", ".join(mismatch_keys)))
+            raise TypeError(
+                "Wrong param type for class<{}>: {}".format(
+                    self.name, ", ".join(mismatch_keys)
+                )
+            )
 
 
 class SharedConfig(object):
@@ -180,7 +191,7 @@ def extract_schema(cls):
     """
     ctor = cls.__init__
     # python 2 compatibility
-    if hasattr(inspect, 'getfullargspec'):
+    if hasattr(inspect, "getfullargspec"):
         argspec = inspect.getfullargspec(ctor)
         annotations = argspec.annotations
         has_kwargs = argspec.varkw is not None
@@ -189,16 +200,16 @@ def extract_schema(cls):
         # python 2 type hinting workaround, see pep-3107
         # however, since `typeguard` does not support python 2, type checking
         # is still python 3 only for now
-        annotations = getattr(ctor, '__annotations__', {})
+        annotations = getattr(ctor, "__annotations__", {})
         has_kwargs = argspec.varkw is not None
 
-    names = [arg for arg in argspec.args if arg != 'self']
+    names = [arg for arg in argspec.args if arg != "self"]
     defaults = argspec.defaults
     num_defaults = argspec.defaults is not None and len(argspec.defaults) or 0
     num_required = len(names) - num_defaults
 
     docs = cls.__doc__
-    if docs is None and getattr(cls, '__category__', None) == 'op':
+    if docs is None and getattr(cls, "__category__", None) == "op":
         docs = cls.__call__.__doc__
     try:
         docstring = doc_parse(docs)
@@ -210,7 +221,7 @@ def extract_schema(cls):
     else:
         comments = {}
         for p in docstring.params:
-            match_obj = re.match('^([a-zA-Z_]+[a-zA-Z_0-9]*).*', p.arg_name)
+            match_obj = re.match("^([a-zA-Z_]+[a-zA-Z_0-9]*).*", p.arg_name)
             if match_obj is not None:
                 comments[match_obj.group(1)] = p.description
 
@@ -218,18 +229,19 @@ def extract_schema(cls):
     schema.name = cls.__name__
     schema.doc = ""
     if docs is not None:
-        start_pos = docs[0] == '\n' and 1 or 0
+        start_pos = docs[0] == "\n" and 1 or 0
         schema.doc = docs[start_pos:].split("\n")[0].strip()
     # XXX handle paddle's weird doc convention
-    if '**' == schema.doc[:2] and '**' == schema.doc[-2:]:
+    if "**" == schema.doc[:2] and "**" == schema.doc[-2:]:
         schema.doc = schema.doc[2:-2].strip()
-    schema.category = hasattr(cls, '__category__') and getattr(
-        cls, '__category__') or 'module'
+    schema.category = (
+        hasattr(cls, "__category__") and getattr(cls, "__category__") or "module"
+    )
     schema.strict = not has_kwargs
     schema.cls = cls
     schema.pymodule = importlib.import_module(cls.__module__)
-    schema.inject = getattr(cls, '__inject__', [])
-    schema.shared = getattr(cls, '__shared__', [])
+    schema.inject = getattr(cls, "__inject__", [])
+    schema.shared = getattr(cls, "__shared__", [])
     for idx, name in enumerate(names):
         comment = name in comments and comments[name] or name
         if name in schema.inject:

@@ -3,9 +3,10 @@
 Tests for WeightConverter class in ppdet_pytorch.conversion.converter.
 """
 
+from pathlib import Path
+
 import pytest
 import torch
-from pathlib import Path
 
 from ppdet_pytorch.conversion.converter import WeightConverter
 from ppdet_pytorch.conversion.models import (
@@ -35,11 +36,7 @@ class TestWeightConverter:
     @pytest.fixture
     def sample_checkpoint_path(self):
         """Get path to sample paddle checkpoint"""
-        return (
-            Path(__file__).resolve().parent
-            / "fixtures"
-            / "sample_paddle.pdparams"
-        )
+        return Path(__file__).resolve().parent / "fixtures" / "sample_paddle.pdparams"
 
     @pytest.mark.paddle
     def test_load_paddle_checkpoint(
@@ -54,7 +51,9 @@ class TestWeightConverter:
         - CheckpointFile metadata is created correctly
         """
         # Load checkpoint
-        paddle_state, checkpoint_file = converter.load_paddle_checkpoint(sample_checkpoint_path)
+        paddle_state, checkpoint_file = converter.load_paddle_checkpoint(
+            sample_checkpoint_path
+        )
 
         # Verify state dict is loaded
         assert isinstance(paddle_state, dict)
@@ -91,15 +90,10 @@ class TestWeightConverter:
 
         # Save checkpoint
         output_path = tmp_path / "test_output.pth"
-        metadata = {
-            "test_key": "test_value",
-            "source": "test"
-        }
+        metadata = {"test_key": "test_value", "source": "test"}
 
         checkpoint_file = converter.save_torch_checkpoint(
-            state_dict,
-            str(output_path),
-            metadata
+            state_dict, str(output_path), metadata
         )
 
         # Verify file was created
@@ -128,9 +122,7 @@ class TestWeightConverter:
         monkeypatch.setattr(torch, "save", fail_after_partial_write)
 
         with pytest.raises(ValueError, match="save failed"):
-            converter.save_torch_checkpoint(
-                {"weight": torch.ones(1)}, str(output_path)
-            )
+            converter.save_torch_checkpoint({"weight": torch.ones(1)}, str(output_path))
 
         assert output_path.read_bytes() == b"existing"
         assert not list(tmp_path.glob(".existing.pth.*.tmp"))
@@ -163,9 +155,7 @@ class TestWeightConverter:
 
         # Should succeed with correct shape
         torch_tensor = converter.convert_tensor(
-            paddle_tensor,
-            "test_param",
-            expected_shape
+            paddle_tensor, "test_param", expected_shape
         )
         assert torch_tensor.shape == expected_shape
 
@@ -173,9 +163,7 @@ class TestWeightConverter:
     def test_convert_tensor_honors_target_aware_square_linear_transpose(
         self, converter, paddle_module
     ):
-        paddle_tensor = paddle_module.to_tensor(
-            [[1.0, 2.0], [3.0, 4.0]]
-        )
+        paddle_tensor = paddle_module.to_tensor([[1.0, 2.0], [3.0, 4.0]])
 
         torch_tensor = converter.convert_tensor(
             paddle_tensor,
@@ -216,9 +204,7 @@ class TestWeightConverter:
         assert result is None
 
     @pytest.mark.paddle
-    def test_memory_efficient_conversion_releases_source_tensors(
-        self, paddle_module
-    ):
+    def test_memory_efficient_conversion_releases_source_tensors(self, paddle_module):
         source_state = {
             "first": paddle_module.to_tensor([1.0, 2.0]),
             "second": paddle_module.to_tensor([3.0, 4.0]),
@@ -250,14 +236,13 @@ class TestWeightConverter:
 
         # Generate mappings
         from ppdet_pytorch.conversion.name_mapping import NameMapper
+
         mapper = NameMapper()
         mappings = mapper.apply_naming_rules(list(paddle_state.keys()))
 
         # Convert state dict
         torch_state, stats = converter.convert_state_dict(
-            paddle_state,
-            target_state_dict=None,
-            mappings=mappings
+            paddle_state, target_state_dict=None, mappings=mappings
         )
 
         # Verify conversion

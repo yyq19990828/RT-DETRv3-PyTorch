@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = ROOT / "scripts/run_stability_experiment.py"
 

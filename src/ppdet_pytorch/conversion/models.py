@@ -7,25 +7,27 @@ including checkpoint files, parameters, mappings, and conversion statistics.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import uuid4
 
 
 class CheckpointFormat(Enum):
     """Checkpoint file format enumeration"""
+
     PDPARAMS = "pdparams"
     PTH = "pth"
 
 
 class Framework(Enum):
     """Deep learning framework enumeration"""
+
     PADDLEPADDLE = "PaddlePaddle"
     PYTORCH = "PyTorch"
 
 
 class MappingType(Enum):
     """Parameter name mapping type"""
+
     MANUAL = "MANUAL"
     RULE_BASED = "RULE_BASED"
     FUZZY_MATCH = "FUZZY_MATCH"
@@ -34,6 +36,7 @@ class MappingType(Enum):
 
 class ConversionStatus(Enum):
     """Conversion session status"""
+
     INITIALIZING = "INITIALIZING"
     LOADING_SOURCE = "LOADING_SOURCE"
     GENERATING_MAPPING = "GENERATING_MAPPING"
@@ -46,6 +49,7 @@ class ConversionStatus(Enum):
 
 class ShapeMismatchSeverity(Enum):
     """Shape mismatch severity level"""
+
     ERROR = "ERROR"
     WARNING = "WARNING"
 
@@ -63,6 +67,7 @@ class CheckpointFile:
         checksum_algorithm: Algorithm used for ``checksum``
         metadata: Embedded metadata from checkpoint (optional)
     """
+
     file_path: str
     format: CheckpointFormat
     file_size_bytes: int
@@ -85,6 +90,7 @@ class Parameter:
         requires_grad: Whether parameter requires gradient computation
         is_buffer: Whether parameter is a buffer vs trainable weight
     """
+
     name: str
     tensor: Any  # Framework-specific tensor type
     shape: Tuple[int, ...]
@@ -107,6 +113,7 @@ class ParameterMapping:
         shape_compatible: Whether source and target shapes match
         notes: Additional information or warnings (optional)
     """
+
     source_name: str
     target_name: str
     mapping_type: MappingType
@@ -118,7 +125,9 @@ class ParameterMapping:
     def __post_init__(self):
         """Validate confidence score range"""
         if not 0.0 <= self.confidence_score <= 1.0:
-            raise ValueError(f"Confidence score must be between 0.0 and 1.0, got {self.confidence_score}")
+            raise ValueError(
+                f"Confidence score must be between 0.0 and 1.0, got {self.confidence_score}"
+            )
 
 
 @dataclass
@@ -132,6 +141,7 @@ class ShapeMismatch:
         severity: Impact level (ERROR or WARNING)
         suggested_fix: Recommended action to resolve mismatch
     """
+
     parameter_name: str
     source_shape: Tuple[int, ...]
     target_shape: Tuple[int, ...]
@@ -150,6 +160,7 @@ class DtypeConversion:
         precision_loss: Whether conversion loses precision
         justification: Reason for dtype conversion
     """
+
     parameter_name: str
     source_dtype: str
     target_dtype: str
@@ -174,6 +185,7 @@ class ConversionStatistics:
         total_target_size_bytes: Total size of target parameters in bytes
         peak_memory_usage_bytes: Maximum memory used during conversion
     """
+
     total_parameters: int = 0
     converted_count: int = 0
     skipped_count: int = 0
@@ -225,6 +237,7 @@ class ConversionConfig:
         log_level: Logging verbosity
         output_metadata: Additional metadata to embed in output
     """
+
     strict_mode: bool = False
     validate_values: bool = False
     validation_tolerance: float = 1e-5
@@ -239,9 +252,13 @@ class ConversionConfig:
     def __post_init__(self):
         """Validate configuration"""
         if self.validation_tolerance <= 0:
-            raise ValueError(f"Validation tolerance must be positive, got {self.validation_tolerance}")
+            raise ValueError(
+                f"Validation tolerance must be positive, got {self.validation_tolerance}"
+            )
         if self.export_mapping and not self.export_mapping_path:
-            raise ValueError("export_mapping_path must be specified when export_mapping is True")
+            raise ValueError(
+                "export_mapping_path must be specified when export_mapping is True"
+            )
         if self.batch_size is not None and self.batch_size <= 0:
             raise ValueError(f"batch_size must be positive, got {self.batch_size}")
 
@@ -262,6 +279,7 @@ class ConversionSession:
         errors: List of errors encountered
         warnings: List of warnings generated
     """
+
     session_id: str = field(default_factory=lambda: str(uuid4()))
     source_checkpoint: Optional[CheckpointFile] = None
     target_checkpoint: Optional[CheckpointFile] = None

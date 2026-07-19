@@ -19,21 +19,23 @@ def create_sample_paddle_checkpoint():
         # Create sample state dict with typical parameter naming conventions
         state_dict = {
             # Conv2D layer
-            "backbone.conv1.w_0": paddle.randn([64, 3, 7, 7], dtype='float32'),
-
+            "backbone.conv1.w_0": paddle.randn([64, 3, 7, 7], dtype="float32"),
             # BatchNorm layer
-            "backbone.bn1._mean": paddle.randn([64], dtype='float32'),
-            "backbone.bn1._variance": paddle.abs(paddle.randn([64], dtype='float32')) + 0.1,  # Must be positive
-            "backbone.bn1._scale": paddle.randn([64], dtype='float32'),
-            "backbone.bn1._offset": paddle.randn([64], dtype='float32'),
-
+            "backbone.bn1._mean": paddle.randn([64], dtype="float32"),
+            "backbone.bn1._variance": paddle.abs(paddle.randn([64], dtype="float32"))
+            + 0.1,  # Must be positive
+            "backbone.bn1._scale": paddle.randn([64], dtype="float32"),
+            "backbone.bn1._offset": paddle.randn([64], dtype="float32"),
             # Linear layer
-            "encoder.layer.0.self_attn.q_proj.w_0": paddle.randn([256, 128], dtype='float32'),
-            "encoder.layer.0.self_attn.q_proj.b_0": paddle.randn([256], dtype='float32'),
-
+            "encoder.layer.0.self_attn.q_proj.w_0": paddle.randn(
+                [256, 128], dtype="float32"
+            ),
+            "encoder.layer.0.self_attn.q_proj.b_0": paddle.randn(
+                [256], dtype="float32"
+            ),
             # Output layer
-            "decoder.output.w_0": paddle.randn([10, 256], dtype='float32'),
-            "decoder.output.b_0": paddle.randn([10], dtype='float32'),
+            "decoder.output.w_0": paddle.randn([10, 256], dtype="float32"),
+            "decoder.output.b_0": paddle.randn([10], dtype="float32"),
         }
 
         # Save checkpoint
@@ -45,10 +47,7 @@ def create_sample_paddle_checkpoint():
 
         return True
     except ImportError:
-        print(
-            "ERROR: PaddlePaddle is not installed. "
-            "Run: uv sync --extra dev"
-        )
+        print("ERROR: PaddlePaddle is not installed. Run: uv sync --extra dev")
         return False
     except Exception as e:
         print(f"ERROR: Failed to create sample checkpoint: {e}")

@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
+from __future__ import absolute_import, division, print_function
 
+import collections
 import importlib
 import os
 import sys
 
 import yaml
-import collections
 
 try:
     collectionsAbc = collections.abc
@@ -32,23 +30,23 @@ from .config.schema import SchemaDict, SharedConfig, extract_schema
 from .config.yaml_helpers import serializable
 
 __all__ = [
-    'global_config',
-    'load_config',
-    'merge_config',
-    'get_registered_modules',
-    'create',
-    'register',
-    'serializable',
-    'dump_value',
+    "global_config",
+    "load_config",
+    "merge_config",
+    "get_registered_modules",
+    "create",
+    "register",
+    "serializable",
+    "dump_value",
 ]
 
 
 def dump_value(value):
     # XXX this is hackish, but collections.abc is not available in python 2
-    if hasattr(value, '__dict__') or isinstance(value, (dict, tuple, list)):
+    if hasattr(value, "__dict__") or isinstance(value, (dict, tuple, list)):
         value = yaml.dump(value, default_flow_style=True)
-        value = value.replace('\n', '')
-        value = value.replace('...', '')
+        value = value.replace("\n", "")
+        value = value.replace("...", "")
         return "'{}'".format(value)
     else:
         # primitive types
@@ -79,7 +77,7 @@ class AttrDict(dict):
 
 global_config = AttrDict()
 
-BASE_KEY = '_BASE_'
+BASE_KEY = "_BASE_"
 
 
 # parse and load _BASE_ recursively
@@ -94,7 +92,7 @@ def _load_config_with_base(file_path):
         for base_yml in base_ymls:
             if base_yml.startswith("~"):
                 base_yml = os.path.expanduser(base_yml)
-            if not base_yml.startswith('/'):
+            if not base_yml.startswith("/"):
                 base_yml = os.path.join(os.path.dirname(file_path), base_yml)
 
             with open(base_yml) as f:
@@ -121,11 +119,11 @@ def load_config(file_path):
     Returns: global config
     """
     _, ext = os.path.splitext(file_path)
-    assert ext in ['.yml', '.yaml'], "only support yaml files for now"
+    assert ext in [".yml", ".yaml"], "only support yaml files for now"
 
     # Parse first so a malformed file does not destroy the active workspace.
     cfg = _load_config_with_base(file_path)
-    cfg['filename'] = os.path.splitext(os.path.split(file_path)[-1])[0]
+    cfg["filename"] = os.path.splitext(os.path.split(file_path)[-1])[0]
     _reset_runtime_config()
     merge_config(cfg)
 
@@ -144,7 +142,7 @@ def _reset_runtime_config():
 
 
 def dict_merge(dct, merge_dct):
-    """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
+    """Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
     updating only top-level keys, dict_merge recurses down into dicts nested
     to an arbitrary depth, updating keys. The ``merge_dct`` is merged into
     ``dct``.
@@ -156,8 +154,11 @@ def dict_merge(dct, merge_dct):
     Returns: dct
     """
     for k, v in merge_dct.items():
-        if (k in dct and isinstance(dct[k], dict) and
-                isinstance(merge_dct[k], collectionsAbc.Mapping)):
+        if (
+            k in dct
+            and isinstance(dct[k], dict)
+            and isinstance(merge_dct[k], collectionsAbc.Mapping)
+        ):
             dict_merge(dct[k], merge_dct[k])
         else:
             dct[k] = merge_dct[k]
@@ -185,14 +186,14 @@ def get_registered_modules():
 def make_partial(cls):
     op_module = importlib.import_module(cls.__op__.__module__)
     op = getattr(op_module, cls.__op__.__name__)
-    cls.__category__ = getattr(cls, '__category__', None) or 'op'
+    cls.__category__ = getattr(cls, "__category__", None) or "op"
 
     def partial_apply(self, *args, **kwargs):
         kwargs_ = self.__dict__.copy()
         kwargs_.update(kwargs)
         return op(*args, **kwargs_)
 
-    if getattr(cls, '__append_doc__', True):  # XXX should default to True?
+    if getattr(cls, "__append_doc__", True):  # XXX should default to True?
         if sys.version_info[0] > 2:
             cls.__doc__ = "Wrapper for `{}` OP".format(op.__name__)
             cls.__init__.__doc__ = op.__doc__
@@ -215,9 +216,8 @@ def register(cls):
     Returns: cls
     """
     if cls.__name__ in global_config:
-        raise ValueError("Module class already registered: {}".format(
-            cls.__name__))
-    if hasattr(cls, '__op__'):
+        raise ValueError("Module class already registered: {}".format(cls.__name__))
+    if hasattr(cls, "__op__"):
         cls = make_partial(cls)
     global_config[cls.__name__] = extract_schema(cls)
     return cls
@@ -238,21 +238,21 @@ def create(cls_or_name, **kwargs):
     component_config = {}
     if isinstance(cls_or_name, collectionsAbc.Mapping):
         component_config = dict(cls_or_name)
-        name = component_config.pop('name', None)
+        name = component_config.pop("name", None)
         if name is None:
-            name = component_config.pop('type', None)
+            name = component_config.pop("type", None)
         else:
-            component_config.pop('type', None)
+            component_config.pop("type", None)
         if name is None:
-            raise ValueError(
-                "Component config must contain a 'name' or 'type' field")
+            raise ValueError("Component config must contain a 'name' or 'type' field")
     elif isinstance(cls_or_name, str):
         name = cls_or_name
     elif isinstance(cls_or_name, type):
         name = cls_or_name.__name__
     else:
         raise TypeError(
-            "cls_or_name must be a class, registered name, or config mapping")
+            "cls_or_name must be a class, registered name, or config mapping"
+        )
 
     if name not in global_config:
         raise ValueError("The module {} is not registered".format(name))
@@ -269,7 +269,7 @@ def create(cls_or_name, **kwargs):
     # registered configuration shared by later tests or commands.
     config = registered.copy()
     config.update(component_config)
-    cls = getattr(config, 'cls', None) or getattr(config.pymodule, name)
+    cls = getattr(config, "cls", None) or getattr(config.pymodule, name)
     cls_kwargs = {}
     cls_kwargs.update(config)
 
@@ -281,13 +281,12 @@ def create(cls_or_name, **kwargs):
     }
 
     # parse `shared` annoation of registered modules
-    if getattr(config, 'shared', None):
+    if getattr(config, "shared", None):
         for k in config.shared:
             target_key = config[k]
             shared_conf = config.schema[k].default
             assert isinstance(shared_conf, SharedConfig)
-            if target_key is not None and not isinstance(target_key,
-                                                         SharedConfig):
+            if target_key is not None and not isinstance(target_key, SharedConfig):
                 continue  # value is given for the module
             elif shared_conf.key in global_config:
                 # `key` is present in config
@@ -296,10 +295,10 @@ def create(cls_or_name, **kwargs):
                 cls_kwargs[k] = shared_conf.default_value
 
     # parse `inject` annoation of registered modules
-    if getattr(cls, 'from_config', None):
+    if getattr(cls, "from_config", None):
         cls_kwargs.update(cls.from_config(config, **from_config_context))
 
-    inject_fields = set(getattr(config, 'inject', None) or [])
+    inject_fields = set(getattr(config, "inject", None) or [])
     if inject_fields:
         for k in config.inject:
             target_key = explicit_constructor_kwargs.get(k, config[k])
@@ -310,14 +309,13 @@ def create(cls_or_name, **kwargs):
                 continue
 
             if isinstance(target_key, collectionsAbc.Mapping):
-                if 'name' in target_key or 'type' in target_key:
+                if "name" in target_key or "type" in target_key:
                     cls_kwargs[k] = create(target_key)
                 else:
                     cls_kwargs[k] = target_key
             elif isinstance(target_key, str):
                 if target_key not in global_config:
-                    raise ValueError(
-                        "Missing injection config: {}".format(target_key))
+                    raise ValueError("Missing injection config: {}".format(target_key))
                 cls_kwargs[k] = create(target_key)
             else:
                 cls_kwargs[k] = target_key
@@ -329,5 +327,5 @@ def create(cls_or_name, **kwargs):
             cls_kwargs[key] = value
     # prevent modification of global config values of reference types
     # (e.g., list, dict) from within the created module instances
-    #kwargs = copy.deepcopy(kwargs)
+    # kwargs = copy.deepcopy(kwargs)
     return cls(**cls_kwargs)

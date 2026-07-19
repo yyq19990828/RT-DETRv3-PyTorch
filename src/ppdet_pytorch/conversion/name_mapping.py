@@ -28,11 +28,9 @@ class NameMapper:
         ("._variance", ".running_var"),
         ("._scale", ".weight"),
         ("._offset", ".bias"),
-
         # Layer weights and biases
         (".w_0", ".weight"),
         (".b_0", ".bias"),
-
         # Additional PaddlePaddle conventions
         (".w_", ".weight_"),
         (".b_", ".bias_"),
@@ -61,7 +59,7 @@ class NameMapper:
             raise FileNotFoundError(f"Manual mapping file not found: {mapping_file}")
 
         try:
-            with open(mapping_path, 'r') as f:
+            with open(mapping_path, "r") as f:
                 data = json.load(f)
 
             # Validate schema
@@ -69,7 +67,9 @@ class NameMapper:
                 raise ValueError("Manual mapping file must contain 'mappings' key")
 
             self.manual_mappings = data["mappings"]
-            logger.info(f"Loaded {len(self.manual_mappings)} manual mappings from {mapping_file}")
+            logger.info(
+                f"Loaded {len(self.manual_mappings)} manual mappings from {mapping_file}"
+            )
             return len(self.manual_mappings)
 
         except json.JSONDecodeError as e:
@@ -91,15 +91,15 @@ class NameMapper:
         for paddle_pattern, torch_pattern in self.NAMING_RULES:
             if paddle_pattern in torch_name:
                 torch_name = torch_name.replace(paddle_pattern, torch_pattern)
-                transformation = f"Applied rule: '{paddle_pattern}' -> '{torch_pattern}'"
+                transformation = (
+                    f"Applied rule: '{paddle_pattern}' -> '{torch_pattern}'"
+                )
                 break  # Apply first matching rule only
 
         return torch_name, transformation
 
     def apply_naming_rules(
-        self,
-        source_keys: List[str],
-        target_keys: Optional[Set[str]] = None
+        self, source_keys: List[str], target_keys: Optional[Set[str]] = None
     ) -> List[ParameterMapping]:
         """Generate parameter name mappings using naming convention rules
 
@@ -145,7 +145,9 @@ class NameMapper:
             # Check if target name exists in target keys (if provided)
             shape_compatible = True
             if target_keys is not None and target_name not in target_keys:
-                logger.warning(f"Mapped target name '{target_name}' not found in target model")
+                logger.warning(
+                    f"Mapped target name '{target_name}' not found in target model"
+                )
                 shape_compatible = False
                 confidence *= 0.8  # Lower confidence if target doesn't exist
 
@@ -166,7 +168,7 @@ class NameMapper:
         self,
         source_keys: List[str],
         target_keys: List[str],
-        mappings: List[ParameterMapping]
+        mappings: List[ParameterMapping],
     ) -> Tuple[List[str], List[str]]:
         """Identify unmapped parameters in source and target
 
@@ -200,7 +202,7 @@ class NameMapper:
         source_checkpoint: str,
         target_checkpoint: str,
         unmapped_source: List[str],
-        unmapped_target: List[str]
+        unmapped_target: List[str],
     ) -> None:
         """Export generated parameter name mapping to JSON file
 
@@ -236,13 +238,13 @@ class NameMapper:
                 "mapped_count": len(self.generated_mappings),
                 "unmapped_source_count": len(unmapped_source),
                 "unmapped_target_count": len(unmapped_target),
-            }
+            },
         }
 
         output_path_obj = Path(output_path)
         output_path_obj.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(mapping_data, f, indent=2)
 
         logger.info(f"Exported parameter name mapping to: {output_path}")

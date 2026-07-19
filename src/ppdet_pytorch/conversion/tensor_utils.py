@@ -29,7 +29,7 @@ def paddle_to_numpy(paddle_tensor) -> np.ndarray:
         numpy_array = paddle_tensor.numpy()
 
         # Ensure contiguous memory layout
-        if not numpy_array.flags['C_CONTIGUOUS']:
+        if not numpy_array.flags["C_CONTIGUOUS"]:
             numpy_array = np.ascontiguousarray(numpy_array)
 
         return numpy_array
@@ -53,7 +53,7 @@ def numpy_to_torch(numpy_array: np.ndarray):
         import torch
 
         # Ensure contiguous memory layout
-        if not numpy_array.flags['C_CONTIGUOUS']:
+        if not numpy_array.flags["C_CONTIGUOUS"]:
             numpy_array = np.ascontiguousarray(numpy_array)
 
         # Convert to torch tensor (shares memory)
@@ -68,7 +68,7 @@ def validate_tensor_shape(
     tensor_shape: Tuple[int, ...],
     expected_shape: Tuple[int, ...],
     param_name: str,
-    strict: bool = False
+    strict: bool = False,
 ) -> bool:
     """Validate tensor shape against expected shape
 
@@ -114,8 +114,8 @@ def detect_dtype(tensor) -> str:
     """
     try:
         # Try PaddlePaddle tensor
-        if hasattr(tensor, 'dtype'):
-            dtype_str = str(tensor.dtype).split('.')[-1]  # Extract dtype name
+        if hasattr(tensor, "dtype"):
+            dtype_str = str(tensor.dtype).split(".")[-1]  # Extract dtype name
             return dtype_str
 
         # Try NumPy array
@@ -128,8 +128,7 @@ def detect_dtype(tensor) -> str:
 
 
 def check_shape_compatibility(
-    source_shape: Tuple[int, ...],
-    target_shape: Tuple[int, ...]
+    source_shape: Tuple[int, ...], target_shape: Tuple[int, ...]
 ) -> Tuple[bool, str]:
     """Check if source and target shapes are compatible
 
@@ -154,13 +153,16 @@ def check_shape_compatibility(
         # Same total elements, different layout
         if len(source_shape) == len(target_shape):
             # Same rank, possibly transposed
-            return True, f"Shapes can be reshaped: transpose or permute axes"
+            return True, "Shapes can be reshaped: transpose or permute axes"
         else:
             # Different rank, can reshape
             return True, f"Shapes can be reshaped: {source_shape} -> {target_shape}"
 
     # Incompatible shapes
-    return False, f"Shapes are incompatible: {source_elements} != {target_elements} elements"
+    return (
+        False,
+        f"Shapes are incompatible: {source_elements} != {target_elements} elements",
+    )
 
 
 def should_transpose_weight(param_name: str) -> bool:
@@ -182,18 +184,18 @@ def should_transpose_weight(param_name: str) -> bool:
 
     # Known Linear layer patterns in RT-DETRv3
     linear_patterns = [
-        '.linear1.weight',  # FFN first linear
-        '.linear2.weight',  # FFN second linear
-        '.fc.weight',  # Fully connected layers (MLPs in heads)
-        '_head.weight',  # Classification/regression heads (ends with _head.weight)
-        'enc_score_head',  # Encoder score head
-        'dec_score_head',  # Decoder score head
-        'enc_bbox_head',  # Encoder bbox head (MLP last layer)
-        'dec_bbox_head',  # Decoder bbox head (MLP last layer)
-        'query_pos_head',  # Query position head
-        'sampling_offsets.weight',  # Deformable attention
-        'attention_weights.weight',  # Deformable attention
-        'out_proj.weight',  # MultiHeadAttention output projection
+        ".linear1.weight",  # FFN first linear
+        ".linear2.weight",  # FFN second linear
+        ".fc.weight",  # Fully connected layers (MLPs in heads)
+        "_head.weight",  # Classification/regression heads (ends with _head.weight)
+        "enc_score_head",  # Encoder score head
+        "dec_score_head",  # Decoder score head
+        "enc_bbox_head",  # Encoder bbox head (MLP last layer)
+        "dec_bbox_head",  # Decoder bbox head (MLP last layer)
+        "query_pos_head",  # Query position head
+        "sampling_offsets.weight",  # Deformable attention
+        "attention_weights.weight",  # Deformable attention
+        "out_proj.weight",  # MultiHeadAttention output projection
         # NOTE: in_proj_weight should NOT be transposed - Paddle and PyTorch use same format [embed_dim, 3*embed_dim]
     ]
 
@@ -229,7 +231,9 @@ def convert_paddle_to_torch_tensor(
     try:
         # Step 1: PaddlePaddle -> NumPy
         numpy_array = paddle_to_numpy(paddle_tensor)
-        logger.debug(f"Converted {param_name} to NumPy: shape={numpy_array.shape}, dtype={numpy_array.dtype}")
+        logger.debug(
+            f"Converted {param_name} to NumPy: shape={numpy_array.shape}, dtype={numpy_array.dtype}"
+        )
 
         # Step 2: Check if this is a Linear layer weight that needs transposition
         transpose_weight = (
@@ -238,12 +242,16 @@ def convert_paddle_to_torch_tensor(
             else auto_transpose and should_transpose_weight(param_name)
         )
         if transpose_weight and numpy_array.ndim == 2:
-            logger.debug(f"Transposing Linear layer weight: {param_name} from {numpy_array.shape} to {numpy_array.T.shape}")
+            logger.debug(
+                f"Transposing Linear layer weight: {param_name} from {numpy_array.shape} to {numpy_array.T.shape}"
+            )
             numpy_array = numpy_array.T  # Transpose from (in, out) to (out, in)
 
         # Step 3: NumPy -> PyTorch
         torch_tensor = numpy_to_torch(numpy_array)
-        logger.debug(f"Converted {param_name} to PyTorch: shape={torch_tensor.shape}, dtype={torch_tensor.dtype}")
+        logger.debug(
+            f"Converted {param_name} to PyTorch: shape={torch_tensor.shape}, dtype={torch_tensor.dtype}"
+        )
 
         return torch_tensor
     except Exception as e:

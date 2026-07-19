@@ -53,49 +53,54 @@ Examples:
   python -m ppdet_pytorch.cli.convert --batch --input 'checkpoints/*.pdparams' --output converted --config configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml --summary converted/summary.json
 
 For more information, see: docs/migrations/weight-conversion.md
-        """
+        """,
     )
 
     # Required arguments
     parser.add_argument(
-        "--input", "-i",
+        "--input",
+        "-i",
         type=str,
         required=True,
         help=(
             "Source PaddlePaddle checkpoint, or a directory/glob when --batch is set"
-        )
+        ),
     )
 
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=str,
         required=True,
-        help="Output .pth file, or output directory when --batch is set"
+        help="Output .pth file, or output directory when --batch is set",
     )
 
     # Optional arguments
     parser.add_argument(
-        "--config", "-c",
+        "--config",
+        "-c",
         type=str,
         default=None,
         help=(
             "PyTorch model config used to build the target state_dict "
             "(required unless --no-validate is set)"
-        )
+        ),
     )
 
     parser.add_argument(
-        "--manual-mapping", "-m",
+        "--manual-mapping",
+        "-m",
         type=str,
         default=None,
-        help="Path to JSON file with manual parameter name mapping overrides"
+        help="Path to JSON file with manual parameter name mapping overrides",
     )
 
     parser.add_argument(
-        "--save-mapping", "-s",
+        "--save-mapping",
+        "-s",
         type=str,
         default=None,
-        help="Export generated parameter name mapping to JSON file"
+        help="Export generated parameter name mapping to JSON file",
     )
 
     # Mode arguments
@@ -110,19 +115,20 @@ For more information, see: docs/migrations/weight-conversion.md
         "--permissive",
         action="store_true",
         default=True,
-        help="Enable permissive mode (skip mismatched parameters, continue conversion) [default]"
+        help="Enable permissive mode (skip mismatched parameters, continue conversion) [default]",
     )
 
     parser.add_argument(
         "--no-validate",
         action="store_true",
-        help="Skip shape validation against target model"
+        help="Skip shape validation against target model",
     )
 
     parser.add_argument(
-        "--force", "-f",
+        "--force",
+        "-f",
         action="store_true",
-        help="Overwrite existing output files without confirmation"
+        help="Overwrite existing output files without confirmation",
     )
 
     parser.add_argument(
@@ -157,20 +163,16 @@ For more information, see: docs/migrations/weight-conversion.md
         type=str,
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
-        help="Set logging verbosity level"
+        help="Set logging verbosity level",
     )
 
     parser.add_argument(
-        "--quiet", "-q",
-        action="store_true",
-        help="Suppress all output except errors"
+        "--quiet", "-q", action="store_true", help="Suppress all output except errors"
     )
 
     # Version
     parser.add_argument(
-        "--version",
-        action="version",
-        version=f"Weight Conversion Tool v{__version__}"
+        "--version", action="version", version=f"Weight Conversion Tool v{__version__}"
     )
 
     return parser
@@ -239,7 +241,9 @@ def validate_arguments(args: argparse.Namespace) -> None:
             )
         if Path(args.output).exists() and not args.force:
             logger.warning(f"Output file already exists: {args.output}")
-            logger.error("Refusing to overwrite existing file (use --force to override)")
+            logger.error(
+                "Refusing to overwrite existing file (use --force to override)"
+            )
             sys.exit(1)
         if args.summary:
             logger.error("--summary is only valid with --batch")
@@ -264,9 +268,7 @@ def validate_arguments(args: argparse.Namespace) -> None:
             logger.error(f"Target model config not found: {args.config}")
             sys.exit(1)
         if config_path.suffix not in {".yml", ".yaml"}:
-            logger.error(
-                f"Target model config must be YAML, got: {args.config}"
-            )
+            logger.error(f"Target model config must be YAML, got: {args.config}")
             sys.exit(1)
 
 
@@ -342,9 +344,7 @@ def main(argv=None):
             export_mapping=args.save_mapping is not None,
             export_mapping_path=args.save_mapping,
             memory_efficient_mode=args.memory_efficient,
-            batch_size=(
-                args.parameter_batch_size if args.memory_efficient else None
-            ),
+            batch_size=(args.parameter_batch_size if args.memory_efficient else None),
             log_level=log_level,
             output_metadata=output_metadata,
         )
@@ -388,9 +388,13 @@ def main(argv=None):
         logger.info(f"Skipped: {session.statistics.skipped_count}")
 
         if session.statistics.unmapped_source_keys:
-            logger.warning(f"Unmapped source parameters: {len(session.statistics.unmapped_source_keys)}")
+            logger.warning(
+                f"Unmapped source parameters: {len(session.statistics.unmapped_source_keys)}"
+            )
         if session.statistics.unmapped_target_keys:
-            logger.warning(f"Unmapped target parameters: {len(session.statistics.unmapped_target_keys)}")
+            logger.warning(
+                f"Unmapped target parameters: {len(session.statistics.unmapped_target_keys)}"
+            )
 
         if session.warnings:
             logger.warning(f"Warnings: {len(session.warnings)}")

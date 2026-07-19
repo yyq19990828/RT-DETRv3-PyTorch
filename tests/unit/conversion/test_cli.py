@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+
 import pytest
 
 from ppdet_pytorch.cli.convert import (
@@ -14,7 +15,6 @@ from ppdet_pytorch.conversion.models import (
     BatchConversionSummary,
     ConversionStatus,
 )
-
 
 ROOT = Path(__file__).resolve().parents[3]
 R18_CONFIG = ROOT / "configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"

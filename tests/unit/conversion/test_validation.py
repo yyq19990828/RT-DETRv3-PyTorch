@@ -20,16 +20,18 @@ paddle = pytest.importorskip(
 
 class DummyPaddleModel(paddle.nn.Layer):
     """Dummy Paddle model for testing"""
+
     def forward(self, x):
         # Simple computation: y = x + 1
-        return {'pred_boxes': x + 1.0, 'pred_logits': x * 2.0}
+        return {"pred_boxes": x + 1.0, "pred_logits": x * 2.0}
 
 
 class DummyTorchModel(torch.nn.Module):
     """Dummy PyTorch model for testing"""
+
     def forward(self, x):
         # Same computation as Paddle model
-        return {'pred_boxes': x + 1.0, 'pred_logits': x * 2.0}
+        return {"pred_boxes": x + 1.0, "pred_logits": x * 2.0}
 
 
 class TestModelOutputValidator:
@@ -61,7 +63,7 @@ class TestModelOutputValidator:
             mean_abs_diff=1e-7,
             max_rel_diff=1e-5,
             output_shape=(1, 300, 4),
-            details="Test details"
+            details="Test details",
         )
 
         assert result.passed is True
@@ -77,9 +79,7 @@ class TestModelOutputValidator:
 
         # Run validation
         result = validator.validate_forward_pass(
-            paddle_model,
-            torch_model,
-            sample_input
+            paddle_model, torch_model, sample_input
         )
 
         assert result.passed is True
@@ -93,14 +93,12 @@ class TestModelOutputValidator:
         sample_input = np.random.randn(2, 3, 32, 32).astype(np.float32)
 
         result = validator.validate_forward_pass(
-            paddle_model,
-            torch_model,
-            sample_input
+            paddle_model, torch_model, sample_input
         )
 
         assert result.passed is True
-        assert 'pred_boxes' in result.details
-        assert 'pred_logits' in result.details
+        assert "pred_boxes" in result.details
+        assert "pred_logits" in result.details
 
     def test_print_validation_report(self, validator, capsys):
         """Test validation report printing"""
@@ -110,7 +108,7 @@ class TestModelOutputValidator:
             mean_abs_diff=1e-7,
             max_rel_diff=1e-5,
             output_shape=(1, 300, 4),
-            details="Sample validation details"
+            details="Sample validation details",
         )
 
         validator.print_validation_report(result)

@@ -4,11 +4,11 @@ Tests for NameMapper class in ppdet_pytorch.conversion.name_mapping
 """
 
 import json
-import pytest
-from pathlib import Path
 
-from ppdet_pytorch.conversion.name_mapping import NameMapper
+import pytest
+
 from ppdet_pytorch.conversion.models import MappingType
+from ppdet_pytorch.conversion.name_mapping import NameMapper
 
 
 class TestNameMapper:
@@ -45,7 +45,9 @@ class TestNameMapper:
             "encoder.layer.0.self_attn.q_proj.bias",
         ]
 
-    def test_generate_name_mapping(self, mapper, sample_paddle_keys, expected_torch_keys):
+    def test_generate_name_mapping(
+        self, mapper, sample_paddle_keys, expected_torch_keys
+    ):
         """Test automatic parameter name mapping generation
 
         T014: Unit test for parameter name mapping generation
@@ -100,11 +102,11 @@ class TestNameMapper:
             "version": "1.0",
             "mappings": {
                 "custom.param.w_0": "custom.param.custom_weight",
-                "special.layer._mean": "special.layer.special_mean"
-            }
+                "special.layer._mean": "special.layer.special_mean",
+            },
         }
 
-        with open(manual_mapping_file, 'w') as f:
+        with open(manual_mapping_file, "w") as f:
             json.dump(manual_mappings, f)
 
         # Load manual mappings
@@ -116,12 +118,16 @@ class TestNameMapper:
         mappings = mapper.apply_naming_rules(source_keys)
 
         # Verify manual mappings are applied
-        manual_mapping1 = next(m for m in mappings if m.source_name == "custom.param.w_0")
+        manual_mapping1 = next(
+            m for m in mappings if m.source_name == "custom.param.w_0"
+        )
         assert manual_mapping1.target_name == "custom.param.custom_weight"
         assert manual_mapping1.mapping_type == MappingType.MANUAL
         assert manual_mapping1.confidence_score == 1.0
 
-        manual_mapping2 = next(m for m in mappings if m.source_name == "special.layer._mean")
+        manual_mapping2 = next(
+            m for m in mappings if m.source_name == "special.layer._mean"
+        )
         assert manual_mapping2.target_name == "special.layer.special_mean"
         assert manual_mapping2.mapping_type == MappingType.MANUAL
 
@@ -151,14 +157,14 @@ class TestNameMapper:
             source_checkpoint="source.pdparams",
             target_checkpoint="target.pth",
             unmapped_source=["unmapped1"],
-            unmapped_target=["unmapped2"]
+            unmapped_target=["unmapped2"],
         )
 
         # Verify file was created
         assert output_path.exists()
 
         # Read and verify content
-        with open(output_path, 'r') as f:
+        with open(output_path, "r") as f:
             data = json.load(f)
 
         assert data["session_id"] == "test-session-123"
@@ -195,9 +201,7 @@ class TestNameMapper:
 
         # Find unmapped keys
         unmapped_source, unmapped_target = mapper.find_unmapped_keys(
-            source_keys,
-            target_keys,
-            mappings
+            source_keys, target_keys, mappings
         )
 
         # Note: param3.custom gets identity mapping but target doesn't exist
@@ -220,7 +224,7 @@ class TestNameMapper:
     def test_load_manual_mappings_invalid_json(self, mapper, tmp_path):
         """Test loading invalid JSON raises error"""
         invalid_file = tmp_path / "invalid.json"
-        with open(invalid_file, 'w') as f:
+        with open(invalid_file, "w") as f:
             f.write("{ invalid json")
 
         with pytest.raises(ValueError, match="Invalid JSON"):
@@ -229,7 +233,7 @@ class TestNameMapper:
     def test_load_manual_mappings_missing_key(self, mapper, tmp_path):
         """Test loading JSON without 'mappings' key raises error"""
         invalid_file = tmp_path / "no_mappings.json"
-        with open(invalid_file, 'w') as f:
+        with open(invalid_file, "w") as f:
             json.dump({"version": "1.0"}, f)
 
         with pytest.raises(ValueError, match="mappings"):

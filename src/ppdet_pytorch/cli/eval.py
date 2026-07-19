@@ -15,62 +15,62 @@ from ppdet_pytorch.metrics import COCOMetric
 from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
 
-
-logger = setup_logger('eval')
+logger = setup_logger("eval")
 
 _DERIVED_BUFFER_KEYS = {
-    'aux_o2m_head.anchor_points',
-    'aux_o2m_head.stride_tensor',
+    "aux_o2m_head.anchor_points",
+    "aux_o2m_head.stride_tensor",
 }
 _COCO_METRIC_NAMES = (
-    'AP',
-    'AP50',
-    'AP75',
-    'APs',
-    'APm',
-    'APl',
-    'AR1',
-    'AR10',
-    'AR100',
-    'ARs',
-    'ARm',
-    'ARl',
+    "AP",
+    "AP50",
+    "AP75",
+    "APs",
+    "APm",
+    "APl",
+    "AR1",
+    "AR10",
+    "AR100",
+    "ARs",
+    "ARm",
+    "ARl",
 )
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description='RT-DETRv3 COCO evaluation')
-    parser.add_argument('-c', '--config', required=True)
-    parser.add_argument('--checkpoint', required=True)
-    parser.add_argument('--anno-file', '--anno_file', dest='anno_file')
-    parser.add_argument('--image-dir', '--image_dir', dest='image_dir')
+    parser = argparse.ArgumentParser(description="RT-DETRv3 COCO evaluation")
+    parser.add_argument("-c", "--config", required=True)
+    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--anno-file", "--anno_file", dest="anno_file")
+    parser.add_argument("--image-dir", "--image_dir", dest="image_dir")
     parser.add_argument(
-        '--batch-size', '--batch_size', dest='batch_size', type=int, default=4)
+        "--batch-size", "--batch_size", dest="batch_size", type=int, default=4
+    )
     parser.add_argument(
-        '--num-workers',
-        '--num_workers',
-        dest='num_workers',
+        "--num-workers",
+        "--num_workers",
+        dest="num_workers",
         type=int,
         default=4,
     )
     parser.add_argument(
-        '--output-dir',
-        '--output_dir',
-        dest='output_dir',
-        help='Keep COCO prediction files in this directory.',
+        "--output-dir",
+        "--output_dir",
+        dest="output_dir",
+        help="Keep COCO prediction files in this directory.",
     )
     parser.add_argument(
-        '--use-ema',
-        '--use_ema',
-        dest='use_ema',
-        action='store_true',
-        help='Evaluate the EMA state stored in a training checkpoint.',
+        "--use-ema",
+        "--use_ema",
+        dest="use_ema",
+        action="store_true",
+        help="Evaluate the EMA state stored in a training checkpoint.",
     )
     parser.add_argument(
-        '--device',
-        default='cuda' if torch.cuda.is_available() else 'cpu',
+        "--device",
+        default="cuda" if torch.cuda.is_available() else "cpu",
     )
-    parser.add_argument('-o', '--override', nargs='*', default=[])
+    parser.add_argument("-o", "--override", nargs="*", default=[])
     return parser
 
 
@@ -78,32 +78,33 @@ def parse_args(argv=None):
     parser = create_argument_parser()
     args = parser.parse_args(argv)
     if args.batch_size < 1:
-        parser.error('--batch-size must be at least 1')
+        parser.error("--batch-size must be at least 1")
     if args.num_workers < 0:
-        parser.error('--num-workers cannot be negative')
+        parser.error("--num-workers cannot be negative")
     return args
 
 
 def _get_ema_state_dict(checkpoint):
-    if 'ema' not in checkpoint:
-        raise RuntimeError('Checkpoint does not contain EMA weights')
+    if "ema" not in checkpoint:
+        raise RuntimeError("Checkpoint does not contain EMA weights")
 
-    ema = checkpoint['ema']
-    if not isinstance(ema, dict) or 'ema_state_dict' not in ema:
+    ema = checkpoint["ema"]
+    if not isinstance(ema, dict) or "ema_state_dict" not in ema:
         return ema
 
-    state_dict = ema['ema_state_dict']
-    step = int(ema.get('step', 0))
-    decay_type = ema.get('ema_decay_type', 'exponential')
-    if step == 0 or decay_type == 'exponential':
+    state_dict = ema["ema_state_dict"]
+    step = int(ema.get("step", 0))
+    decay_type = ema.get("ema_decay_type", "exponential")
+    if step == 0 or decay_type == "exponential":
         return state_dict
 
-    if 'ema_black_list' not in ema:
+    if "ema_black_list" not in ema:
         raise RuntimeError(
-            'Cannot apply bias correction to this legacy EMA checkpoint: '
-            'ema_black_list is missing')
-    correction = 1 - float(ema['current_decay']) ** step
-    black_list = set(ema['ema_black_list'])
+            "Cannot apply bias correction to this legacy EMA checkpoint: "
+            "ema_black_list is missing"
+        )
+    correction = 1 - float(ema["current_decay"]) ** step
+    black_list = set(ema["ema_black_list"])
     return {
         key: value if key in black_list else value / correction
         for key, value in state_dict.items()
@@ -114,17 +115,17 @@ def load_evaluation_weights(model, checkpoint_path, use_ema=False):
     """Load a model checkpoint and reject unknown state-dict differences."""
     checkpoint = torch.load(
         checkpoint_path,
-        map_location='cpu',
+        map_location="cpu",
         weights_only=False,
     )
     if use_ema:
         state_dict = _get_ema_state_dict(checkpoint)
-    elif 'model' in checkpoint:
-        state_dict = checkpoint['model']
-    elif 'model_state_dict' in checkpoint:
-        state_dict = checkpoint['model_state_dict']
-    elif 'state_dict' in checkpoint:
-        state_dict = checkpoint['state_dict']
+    elif "model" in checkpoint:
+        state_dict = checkpoint["model"]
+    elif "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+    elif "state_dict" in checkpoint:
+        state_dict = checkpoint["state_dict"]
     else:
         state_dict = checkpoint
 
@@ -133,27 +134,30 @@ def load_evaluation_weights(model, checkpoint_path, use_ema=False):
     unknown_unexpected = set(incompatible.unexpected_keys)
     if unknown_missing or unknown_unexpected:
         raise RuntimeError(
-            'Checkpoint is incompatible with the evaluation model: '
-            'missing={}, unexpected={}'.format(
-                sorted(unknown_missing), sorted(unknown_unexpected)))
+            "Checkpoint is incompatible with the evaluation model: "
+            "missing={}, unexpected={}".format(
+                sorted(unknown_missing), sorted(unknown_unexpected)
+            )
+        )
     if incompatible.missing_keys:
         logger.info(
-            'Regenerated derived buffers not stored in checkpoint: %s',
+            "Regenerated derived buffers not stored in checkpoint: %s",
             sorted(incompatible.missing_keys),
         )
-    logger.info('Loaded %s weights from %s',
-                'EMA' if use_ema else 'model', checkpoint_path)
+    logger.info(
+        "Loaded %s weights from %s", "EMA" if use_ema else "model", checkpoint_path
+    )
 
 
 @torch.no_grad()
 def evaluate(model, data_loader, metric, prepare_batch, device):
     model.eval()
     logger.info(
-        'Starting evaluation on %d batches with %s',
+        "Starting evaluation on %d batches with %s",
         len(data_loader),
         device,
     )
-    for batch in tqdm(data_loader, total=len(data_loader), desc='Evaluating'):
+    for batch in tqdm(data_loader, total=len(data_loader), desc="Evaluating"):
         batch = prepare_batch(batch)
         outputs = model(batch)
         metric.update(batch, outputs)
@@ -166,23 +170,22 @@ def _configure_dataset(cfg, anno_file=None, image_dir=None):
     if anno_file is None and image_dir is None:
         return
 
-    dataset_dir = Path(cfg.EvalDataset.get('dataset_dir', ''))
+    dataset_dir = Path(cfg.EvalDataset.get("dataset_dir", ""))
     if anno_file is None:
-        anno_file = dataset_dir / cfg.EvalDataset['anno_path']
+        anno_file = dataset_dir / cfg.EvalDataset["anno_path"]
     if image_dir is None:
-        image_dir = dataset_dir / cfg.EvalDataset['image_dir']
+        image_dir = dataset_dir / cfg.EvalDataset["image_dir"]
 
-    cfg.EvalDataset['dataset_dir'] = '.'
-    cfg.EvalDataset['anno_path'] = str(Path(anno_file).resolve())
-    cfg.EvalDataset['image_dir'] = str(Path(image_dir).resolve())
+    cfg.EvalDataset["dataset_dir"] = "."
+    cfg.EvalDataset["anno_path"] = str(Path(anno_file).resolve())
+    cfg.EvalDataset["image_dir"] = str(Path(image_dir).resolve())
 
 
 def _format_results(raw_results):
     formatted = {}
     for metric_type, stats in raw_results.items():
         formatted[metric_type] = {
-            name: float(value)
-            for name, value in zip(_COCO_METRIC_NAMES, stats)
+            name: float(value) for name, value in zip(_COCO_METRIC_NAMES, stats)
         }
     return formatted
 
@@ -194,12 +197,12 @@ def main(argv=None):
     _configure_dataset(cfg, args.anno_file, args.image_dir)
 
     device = torch.device(args.device)
-    if device.type == 'cuda' and not torch.cuda.is_available():
-        raise RuntimeError('CUDA evaluation requested but CUDA is unavailable')
-    cfg.EvalReader['batch_size'] = args.batch_size
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA evaluation requested but CUDA is unavailable")
+    cfg.EvalReader["batch_size"] = args.batch_size
     cfg.worker_num = args.num_workers
     cfg.device = device
-    cfg.use_gpu = device.type == 'cuda'
+    cfg.use_gpu = device.type == "cuda"
     cfg.use_ema = False
 
     if args.output_dir:
@@ -207,11 +210,11 @@ def main(argv=None):
         output_directory.mkdir(parents=True, exist_ok=True)
         output_context = nullcontext(str(output_directory))
     else:
-        output_context = tempfile.TemporaryDirectory(prefix='rtdetrv3-eval-')
+        output_context = tempfile.TemporaryDirectory(prefix="rtdetrv3-eval-")
 
     with output_context as evaluation_directory:
         cfg.save_dir = evaluation_directory
-        trainer = Trainer(cfg, mode='eval')
+        trainer = Trainer(cfg, mode="eval")
         load_evaluation_weights(
             trainer.model,
             args.checkpoint,
@@ -234,16 +237,15 @@ def main(argv=None):
             device,
         )
         if args.output_dir:
-            logger.info(
-                'Kept evaluation outputs in %s', evaluation_directory)
+            logger.info("Kept evaluation outputs in %s", evaluation_directory)
 
     results = _format_results(raw_results)
     for metric_type, values in results.items():
-        logger.info('%s metrics:', metric_type.upper())
+        logger.info("%s metrics:", metric_type.upper())
         for name, value in values.items():
-            logger.info('  %-5s: %.6f', name, value)
+            logger.info("  %-5s: %.6f", name, value)
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

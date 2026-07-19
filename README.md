@@ -20,6 +20,9 @@ uv sync --extra dev
 
 # 仅增加 ONNX 导出和 CPU 回归依赖
 uv sync --extra export
+
+# 仅增加 Ruff/Mypy 质量工具
+uv sync --extra quality
 ```
 
 如果仓库已克隆但缺少 Paddle 参考实现：
@@ -84,6 +87,18 @@ uv run --extra dev pytest -m "not paddle"
 
 # 包含 Paddle 对齐测试
 uv run --extra dev pytest
+```
+
+## 代码质量
+
+Python 文件统一使用 Ruff 格式化和 lint，Mypy 单独负责类型检查。当前门禁按 M6 计划从已迁移模块逐步扩展，命令会打印本批实际覆盖范围。
+
+```bash
+# 检查 Ruff format、Ruff lint 和 Mypy
+uv run --extra quality python scripts/check_quality.py
+
+# 格式化并应用 Ruff 安全修复，再运行 Mypy
+uv run --extra quality python scripts/check_quality.py --fix
 ```
 
 ## 仓库结构
