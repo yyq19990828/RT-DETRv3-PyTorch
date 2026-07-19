@@ -88,6 +88,7 @@ rtdetrv3-convert = "ppdet_pytorch.cli.convert:main"
 rtdetrv3-eval = "ppdet_pytorch.cli.eval:main"
 rtdetrv3-export = "ppdet_pytorch.cli.export:main"
 rtdetrv3-infer = "ppdet_pytorch.cli.infer:main"
+rtdetrv3-models = "ppdet_pytorch.cli.models:main"
 rtdetrv3-train = "ppdet_pytorch.cli.train:main"
 
 [project.urls]

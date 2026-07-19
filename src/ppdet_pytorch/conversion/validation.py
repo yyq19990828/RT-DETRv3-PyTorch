@@ -151,6 +151,11 @@ class ModelOutputValidator:
         max_rel_diff_overall = 0.0
         details_list = []
 
+        extra_torch_keys = set(torch_output) - set(paddle_output)
+        for key in sorted(extra_torch_keys):
+            details_list.append(f"❌ Key '{key}' missing in Paddle output")
+            all_passed = False
+
         # Compare each output tensor
         for key in paddle_output.keys():
             if key not in torch_output:
@@ -179,8 +184,10 @@ class ModelOutputValidator:
             if not result.passed:
                 all_passed = False
 
-        details = "\n".join(details_list)
-        output_shape = tuple(paddle_output[list(paddle_output.keys())[0]].shape)
+        details = "\n".join(details_list) or "Both output dictionaries are empty"
+        output_shape = (
+            tuple(next(iter(paddle_output.values())).shape) if paddle_output else ()
+        )
 
         return ForwardPassResult(
             passed=all_passed,
@@ -223,6 +230,30 @@ class ModelOutputValidator:
         if torch_has_nan or torch_has_inf:
             logger.error(
                 f"PyTorch output for {name} contains NaN={torch_has_nan}, Inf={torch_has_inf}"
+            )
+
+        if paddle_has_nan or paddle_has_inf or torch_has_nan or torch_has_inf:
+            return ForwardPassResult(
+                passed=False,
+                max_abs_diff=float("inf"),
+                mean_abs_diff=float("inf"),
+                max_rel_diff=float("inf"),
+                output_shape=paddle_array.shape,
+                details=(
+                    f"Non-finite values for {name}: "
+                    f"Paddle NaN={paddle_has_nan}, Inf={paddle_has_inf}; "
+                    f"PyTorch NaN={torch_has_nan}, Inf={torch_has_inf}"
+                ),
+            )
+
+        if paddle_array.size == 0:
+            return ForwardPassResult(
+                passed=True,
+                max_abs_diff=0.0,
+                mean_abs_diff=0.0,
+                max_rel_diff=0.0,
+                output_shape=paddle_array.shape,
+                details=f"Comparison for {name}: matching empty outputs",
             )
 
         # Compare outputs

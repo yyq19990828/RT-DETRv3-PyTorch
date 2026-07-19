@@ -51,7 +51,7 @@ def test_summarize_files_keeps_full_and_direct_scopes_separate(monkeypatch):
 def test_threshold_failures_report_each_scope(monkeypatch):
     script = load_script(monkeypatch)
     below = script.CoverageSummary(statements=100, covered=40)
-    above = script.CoverageSummary(statements=100, covered=70)
+    above = script.CoverageSummary(statements=100, covered=80)
 
     assert len(script.threshold_failures(below, below)) == 2
     assert script.threshold_failures(above, above) == []
@@ -70,9 +70,9 @@ def test_main_uses_temporary_outputs_and_reports_success(monkeypatch, capsys):
         report_path.write_text(
             '{"files": {'
             '"src/ppdet_pytorch/cli/train.py": {'
-            '"summary": {"num_statements": 100, "covered_lines": 70}}, '
+            '"summary": {"num_statements": 100, "covered_lines": 75}}, '
             '"src/ppdet_pytorch/data/dataset.py": {'
-            '"summary": {"num_statements": 100, "covered_lines": 25}}}}',
+            '"summary": {"num_statements": 100, "covered_lines": 30}}}}',
             encoding="utf-8",
         )
         return subprocess.CompletedProcess(command, returncode=0)

@@ -6,7 +6,7 @@
 
 - 当前默认测试覆盖权重转换、数据操作、注意力、解码器和部分训练策略；通过并不等于已完成完整 COCO 训练、评估或 mAP 对齐。
 - 迁移早期针对旧构建器、Registry 和模型参数的测试保留在 `tests/legacy/`，默认不收集。这些场景需要按当前 API 重写，不应通过强行恢复旧兼容层来绕过。
-- Train/Eval/Infer/Convert/Export 均有当前 CLI contract。Infer 已用官方 R18 checkpoint 完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 尺寸验证；ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖固定高宽、动态 batch 1/4/8。它仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出、GPU provider、TensorRT 或 C++ 部署已支持。
+- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。Infer 已用官方 R18 checkpoint 完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 尺寸验证；ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖固定高宽、动态 batch 1/4/8。Models 能列出并校验本地权重，但当前没有公开 URL，不能声称下载链路已验收。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出、GPU provider、TensorRT 或 C++ 部署已支持。
 
 ## 数值等价
 

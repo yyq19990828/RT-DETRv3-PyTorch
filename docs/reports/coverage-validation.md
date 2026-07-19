@@ -39,32 +39,34 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 新增 data 的 8 个边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `241 passed, 5 skipped, 34 deselected`，全包 `6,284/13,345`（`47.09%`），直接维护范围为 `1,202/1,799`（`66.81%`）。实现语句净增 49 条，覆盖语句净增 294 条，因此全包回退下限从 45% 提高到 47%。GitHub Actions [run 29675617264](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29675617264) 在提交 `28ec38d` 上完成托管复验：Python 3.12 CPU job 为 `241 passed, 7 skipped, 17 deselected`，全包 `6,285/13,345`（`47.10%`），直接维护范围 `1,202/1,799`（`66.81%`），新双门禁通过。托管环境比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
+新增 Models CLI 和不依赖 Paddle 的转换验证核心测试后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `272 passed, 5 skipped, 34 deselected`，全包 `6,511/13,535`（`48.10%`），直接维护范围为 `1,429/1,989`（`71.85%`）。新增测试覆盖发布状态、size/SHA-256 校验、HTTPS 原子下载与既有文件保护，也实际发现并修复了转换验证器忽略 PyTorch 额外输出字段、非有限值可能被错误接受的问题。基于该证据，全包和直接维护范围回退下限分别从 47%/66% 提高到 48%/71%；托管复验尚待本轮提交后的 CI。
+
 ## 当前结果
 
 | 模块 | 语句数 | 覆盖语句 | 覆盖率 |
 |---|---:|---:|---:|
 | package root | 4 | 4 | 100.0% |
-| `cli` | 681 | 486 | 71.4% |
-| `conversion` | 649 | 352 | 54.2% |
-| `core` | 384 | 283 | 73.7% |
-| `data` | 5,630 | 1,758 | 31.2% |
+| `cli` | 847 | 630 | 74.4% |
+| `conversion` | 657 | 421 | 64.1% |
+| `core` | 400 | 297 | 74.3% |
+| `data` | 5,630 | 1,757 | 31.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 757 | 452 | 59.7% |
 | `metrics` | 577 | 265 | 45.9% |
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,345** | **6,285** | **47.10%** |
+| **全包** | **13,535** | **6,511** | **48.10%** |
 
-直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,799` 条语句，覆盖 `1,202` 条，覆盖率为 **66.81%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
+直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,989` 条语句，覆盖 `1,429` 条，覆盖率为 **71.85%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
 ## 门禁与限制
 
 当前可执行门禁同时要求：
 
-- 非 Paddle 全包语句覆盖率不低于 **47%**。
-- `cli/conversion/core/deploy` 合计覆盖率不低于 **66%**。
+- 非 Paddle 全包语句覆盖率不低于 **48%**。
+- `cli/conversion/core/deploy` 合计覆盖率不低于 **71%**。
 
 两个阈值都低于当前实测值，是防止覆盖率回退的初始下限，不是完成目标。`ROADMAP.md` 中的 90% 目标仍未完成；不应通过排除 `data`、`metrics` 或其他低覆盖源文件来声称全包达标。
 
-下一轮优先覆盖用户可见且当前低于直接维护范围平均值的路径：`conversion/converter.py`、`conversion/validation.py`、`cli/infer.py`、`cli/export.py`、`core/config/yaml_helpers.py` 和 `core/config/schema.py`。之后再以实际新增测试证据逐步提高门禁。
+下一轮优先覆盖用户可见且当前低于直接维护范围平均值的路径：`conversion/converter.py`、`cli/infer.py`、`cli/export.py`、`core/config/yaml_helpers.py` 和 `core/config/schema.py`。之后再以实际新增测试证据逐步提高门禁。

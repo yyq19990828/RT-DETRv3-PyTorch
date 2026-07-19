@@ -4,6 +4,7 @@ from ppdet_pytorch.cli import convert as convert_cli
 from ppdet_pytorch.cli import eval as eval_cli
 from ppdet_pytorch.cli import export as export_cli
 from ppdet_pytorch.cli import infer as infer_cli
+from ppdet_pytorch.cli import models as models_cli
 from ppdet_pytorch.cli import train as train_cli
 
 
@@ -15,6 +16,7 @@ from ppdet_pytorch.cli import train as train_cli
         infer_cli.create_argument_parser,
         convert_cli.create_argument_parser,
         export_cli.create_argument_parser,
+        models_cli.create_argument_parser,
     ],
 )
 def test_public_cli_help_exits_successfully(parser_factory, capsys):

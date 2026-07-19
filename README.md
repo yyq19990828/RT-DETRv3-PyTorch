@@ -70,6 +70,14 @@ uv run --extra dev rtdetrv3-convert \
   --input path/to/model.pdparams \
   --output path/to/model.pth
 
+# 查看权重发布状态，或校验已有转换权重
+uv run rtdetrv3-models list
+uv run rtdetrv3-models verify r18 \
+  pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth
+
+# manifest 记录固定 HTTPS URL 后可原子下载并自动校验
+uv run rtdetrv3-models download r18
+
 # 导出 ONNX 和 TorchScript（需要 export 或 dev 附加依赖）
 uv run --extra export rtdetrv3-export \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
@@ -116,6 +124,8 @@ uv run --extra quality python scripts/check_quality.py --fix
 wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模型权重、数据集或 Paddle 子模块。安装 wheel 后，从仓库外仍可使用 `configs/...` 路径访问包内配置。发布候选权重的来源、大小、SHA-256 和 mapping 数记录在 [`configs/checkpoints/rtdetrv3_coco.yml`](configs/checkpoints/rtdetrv3_coco.yml)。
 
 当前发布候选已通过本地和托管 CI 验证，但权重还没有对外发布。计划以 GitHub Releases 作版本绑定的主下载源，可选同步 Hugging Face Model Hub；具体限制、checksum 规则和剩余发布步骤见[release 验证报告](docs/reports/release-validation.md)。R18 的 Paddle 原权重/PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
+
+`rtdetrv3-models list` 会明确显示当前 R18/R34/R50 为 `unpublished`；未发布时 `download` 会显式失败，不猜测 URL。`verify` 可立即用于校验本地权重的大小和 SHA-256。发布后 manifest 必须同时改为 `published` 并写入固定 tag 的 HTTPS URL，下载命令才会启用。
 
 ```bash
 # 构建 wheel 与 sdist

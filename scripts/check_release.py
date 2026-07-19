@@ -23,6 +23,7 @@ EXPECTED_CONSOLE_SCRIPTS = {
     "rtdetrv3-eval",
     "rtdetrv3-export",
     "rtdetrv3-infer",
+    "rtdetrv3-models",
     "rtdetrv3-train",
 }
 
@@ -140,6 +141,19 @@ def _validate_manifest_entry(
     artifact_path = _repository_path(converted.get("path"), f"{name} artifact")
     artifact_size = _positive_int(converted.get("size_bytes"), f"{name} artifact size")
     artifact_digest = _validate_digest(converted.get("sha256"), f"{name} artifact")
+    distribution_status = converted.get("distribution_status", "unpublished")
+    _require(
+        distribution_status in {"unpublished", "published"},
+        f"{name} has an invalid distribution status",
+    )
+    download_url = converted.get("download_url")
+    if distribution_status == "published":
+        _require(
+            isinstance(download_url, str) and download_url.startswith("https://"),
+            f"{name} published artifact must have an HTTPS URL",
+        )
+    else:
+        _require(download_url is None, f"{name} unpublished artifact has a URL")
     checked += int(
         _validate_local_file(
             artifact_path,

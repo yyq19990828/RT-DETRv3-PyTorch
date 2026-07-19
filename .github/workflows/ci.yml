@@ -98,7 +98,7 @@ jobs:
 
       - name: Verify console entry points
         run: |
-          for command in rtdetrv3-train rtdetrv3-eval rtdetrv3-infer rtdetrv3-export rtdetrv3-convert; do
+          for command in rtdetrv3-train rtdetrv3-eval rtdetrv3-infer rtdetrv3-export rtdetrv3-convert rtdetrv3-models; do
             ".venv/bin/$command" --help
           done
 

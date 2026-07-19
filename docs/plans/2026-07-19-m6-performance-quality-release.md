@@ -48,6 +48,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 在同一硬件执行 R18 基准并定位吞吐或峰值显存未达目标的第一处瓶颈，再决定是否扩展 R34/R50。
 - [x] 生成发布清单和发布候选验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
 - [x] 为 R18 补充官方 Paddle 权重与转换后 PyTorch 权重的 COCO 单图统一渲染及机器可读差异证据。
+- [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
 - [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个转换权重和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
@@ -66,7 +67,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
 - [x] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
 - [x] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
-- [x] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
+- [x] wheel 安装后公开 CLI help、Infer、Eval 和 Export smoke 可重复；Models CLI 安装后合同纳入本轮验收。
 - [x] 发布候选清单、法律文件、wheel/sdist 内容和本地模型文件 checksum 通过自动检查。
 - [x] R18 同权重 COCO 单图对比使用统一渲染器，并保留原始预测和逐项匹配误差。
 
@@ -91,6 +92,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | `dev` extra 改用 PaddlePaddle GPU 3.3.0/cu118 | cu126 与当前 PyTorch cu121 的 `nvidia-nvtx-cu12` 强制版本冲突；cu118 可与 PyTorch cu121 并存，且同一 wheel 已验证 CUDA 执行和 CPU fallback |
 | 2026-07-19 | 性能比值只作观测，不追求训练优化完全对齐 | R18 吞吐已超过 Paddle；CUDA 训练峰值显存约高 16% 的差距已记录，不值得在没有真实使用需求时为了指标完全一致而专项优化 |
 | 2026-07-19 | GitHub Releases 作权重主托管，Hugging Face Model Hub 作可选镜像 | 三个权重均远低于 Release 的 2 GiB 单文件限制，可直接绑定源码 tag；Hub 用于 model card 和发现性，不把权重写入 `main` 历史 |
+| 2026-07-19 | 权重下载严格由 manifest 发布状态和固定 HTTPS URL 驱动 | 未发布时显式失败比猜测 latest URL 更可审计；下载只在 size/SHA-256 通过后原子替换目标 |
+| 2026-07-19 | Models CLI 与转换验证核心补测后将覆盖率下限提高到 48%/71% | 隐藏 GPU 的本地 CPU 实测达到全包 48.10%、直接维护范围 71.85%；新增回归同时修复额外输出字段和非有限值误判 |
 
 ## 完成记录
 
@@ -145,3 +148,5 @@ GitHub Actions [run 29676369588](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 R18 可视化阶段用官方 Paddle 权重、转换后 PyTorch 权重和 COCO `000000000139.jpg` 在 CPU/FP32 下分别生成原始预测，再使用同一脚本渲染。`score >= 0.3` 的两侧 30 个预测全部匹配，最大 score/框差为 `1.37e-6`/`9.16e-5 px`；该单图证据不替代完整 val2017 AP。详见[`docs/reports/prediction-visualization.md`](../reports/prediction-visualization.md)。对外 tag、Release assets 和公开 URL 回读尚未执行，因此 M6 仍为进行中。
 
 GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上通过全部 6 个 jobs：质量 job 为 169 个 Ruff 文件和 106 个 Mypy source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
+
+Models CLI 加固阶段新增 manifest 驱动的 `list/verify/download`：未发布状态没有 URL 时显式失败，发布状态只接受 HTTPS，下载写入目标同目录临时文件并在 size/SHA-256 通过后原子替换，不匹配的既有文件默认保留。纯 CPU 转换验证核心测试同时修复 PyTorch 额外输出字段未被比较、任一侧 NaN/Inf 可能被错误接受的边界。本机隐藏 GPU 的非 Paddle测试为 `272 passed, 5 skipped, 34 deselected`，全包覆盖率 `6,511/13,535`（`48.10%`），直接维护范围 `1,429/1,989`（`71.85%`），双门禁提高到 48%/71%；托管 CI 证据待本轮提交后补录。

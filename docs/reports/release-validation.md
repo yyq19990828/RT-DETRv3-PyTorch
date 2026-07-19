@@ -9,14 +9,15 @@
 ## 源码包与 CI
 
 - 根目录已包含 Apache-2.0 `LICENSE` 和上游归属 `NOTICE`；`pyproject.toml` 记录 SPDX license expression、项目 URL 和支持的 Python `3.9–3.12`。
-- wheel 包含 `26` 个 YAML 配置和五个 CLI entry point，不包含 checkpoint、Paddle 子模块或 dev-only 依赖；sdists 同样排除 `third-party/` 和 `pretrained_models/`。
+- 发布加固基线 wheel 包含 `26` 个 YAML 配置和五个 CLI entry point；本轮新增第六个 `rtdetrv3-models` entry point。wheel 不包含 checkpoint、Paddle 子模块或 dev-only 依赖；sdists 同样排除 `third-party/` 和 `pretrained_models/`。
 - `scripts/check_release.py --require-models` 本机检查 `4` 个 manifest 条目和 `12` 个本地源权重、转换权重及 mapping report，大小、SHA-256 和 mapping 数全部一致。
 - 从本地 wheel 在仓库外的全新 UV 环境安装后，五个 CLI `--help`、包内 R18 config 加载和 `22,942,893` 参数的模型构建通过。
 - GitHub Actions [run 29678063506](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678063506) 在 `dc09cd8` 上全部 `6` 个 job 通过：Ruff `167` 文件、Mypy `105` source file；Python 3.9–3.12 均为 `254 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `47.14%` 和直接维护范围 `67.00%`；wheel smoke 为 `34 passed`。
 - 本轮加入可视化脚本后，本地质量门禁为 Ruff `169` 文件、Mypy `106` source file；隐藏 GPU 的默认回归为 `286 passed, 8 skipped`；本地模型清单仍为 `4` 个条目、`12` 个文件/报告全部通过。
 - GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上再次通过全部 `6` 个 job：Ruff `169` 文件、Mypy `106` source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
+- Models CLI 加固后的本机工作树通过 Ruff `172` 文件、Mypy `107` source file、默认回归 `303 passed, 8 skipped` 和非 Paddle CPU 回归 `272 passed, 5 skipped, 34 deselected`；覆盖率为全包 `48.10%`、直接维护范围 `71.85%`。新 wheel/sdist 通过 `4` 个 manifest 条目和 `12` 个本地文件/报告校验；wheel 在仓库外的全新 UV 环境安装后，`rtdetrv3-models list --json` 从包内 manifest 正确列出 R18/R34/R50。托管复验待本轮提交。
 
-从本轮已验证工作树构建的本地候选产物如下。归档容器可带构建时间，所以这些 SHA-256 是本次观测；最终发布必须对实际上传文件重新计算。
+下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
 | 产物 | 大小 | SHA-256 |
 |---|---:|---|
@@ -43,6 +44,8 @@
 - Hub 的 model card 可结构化记录 license、COCO 数据集、评估结果、预期用途和限制，对模型发现和长期文档更友好。见 [Hugging Face Model Cards](https://huggingface.co/docs/hub/en/model-cards)。
 
 建议的 Release assets 是三个 `.pth`、`SHA256SUMS`、wheel 和 sdist。资产一旦发布不应覆盖同名文件；内容变化则提升 tag，并使用固定 tag 的下载 URL。Hub 镜像同样固定 tag 或 commit revision，不把可变的 `main` URL 写入发布清单。
+
+`rtdetrv3-models list/verify/download` 已完成 manifest 解析、本地 R18 校验、HTTPS 限制、临时文件校验后原子替换、不匹配既有文件保护和未发布显式失败。当前 manifest 的四个转换产物都标记 `unpublished`且没有 URL；这是如实状态，不是下载端到端证据。
 
 ## 尚未完成的发布动作
 
