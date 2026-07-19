@@ -14,6 +14,7 @@
 - 从本地 wheel 在仓库外的全新 UV 环境安装后，五个 CLI `--help`、包内 R18 config 加载和 `22,942,893` 参数的模型构建通过。
 - GitHub Actions [run 29678063506](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678063506) 在 `dc09cd8` 上全部 `6` 个 job 通过：Ruff `167` 文件、Mypy `105` source file；Python 3.9–3.12 均为 `254 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `47.14%` 和直接维护范围 `67.00%`；wheel smoke 为 `34 passed`。
 - 本轮加入可视化脚本后，本地质量门禁为 Ruff `169` 文件、Mypy `106` source file；隐藏 GPU 的默认回归为 `286 passed, 8 skipped`；本地模型清单仍为 `4` 个条目、`12` 个文件/报告全部通过。
+- GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上再次通过全部 `6` 个 job：Ruff `169` 文件、Mypy `106` source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
 
 从本轮已验证工作树构建的本地候选产物如下。归档容器可带构建时间，所以这些 SHA-256 是本次观测；最终发布必须对实际上传文件重新计算。
 
