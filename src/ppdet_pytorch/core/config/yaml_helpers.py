@@ -14,6 +14,7 @@
 
 import importlib
 import inspect
+from typing import Any, Mapping, Optional, Sequence
 
 import yaml
 
@@ -99,11 +100,16 @@ class Callable(object):
         full_type (str): the full module path to target function
     """
 
-    def __init__(self, full_type, args=[], kwargs={}):
+    def __init__(
+        self,
+        full_type: str,
+        args: Optional[Sequence[Any]] = None,
+        kwargs: Optional[Mapping[str, Any]] = None,
+    ):
         super(Callable, self).__init__()
         self.full_type = full_type
-        self.args = args
-        self.kwargs = kwargs
+        self.args = list(args) if args is not None else []
+        self.kwargs = dict(kwargs) if kwargs is not None else {}
 
     def __call__(self):
         if "." in self.full_type:

@@ -94,6 +94,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | GitHub Releases 作权重主托管，Hugging Face Model Hub 作可选镜像 | 三个权重均远低于 Release 的 2 GiB 单文件限制，可直接绑定源码 tag；Hub 用于 model card 和发现性，不把权重写入 `main` 历史 |
 | 2026-07-19 | 权重下载严格由 manifest 发布状态和固定 HTTPS URL 驱动 | 未发布时显式失败比猜测 latest URL 更可审计；下载只在 size/SHA-256 通过后原子替换目标 |
 | 2026-07-19 | Models CLI 与转换验证核心补测后将覆盖率下限提高到 48%/71% | 隐藏 GPU 的本地 CPU 实测达到全包 48.10%、直接维护范围 71.85%；新增回归同时修复额外输出字段和非有限值误判 |
+| 2026-07-19 | 转换器与 YAML 配置补测后将覆盖率下限提高到 49%/80% | 16 个纯 CPU 回归使本地全包达到 49.41%、直接维护范围达到 80.67%，并修复配置对象共享状态和 mapping 静默覆盖 |
 
 ## 完成记录
 
@@ -152,3 +153,5 @@ GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Models CLI 加固阶段新增 manifest 驱动的 `list/verify/download`：未发布状态没有 URL 时显式失败，发布状态只接受 HTTPS，下载写入目标同目录临时文件并在 size/SHA-256 通过后原子替换，不匹配的既有文件默认保留。纯 CPU 转换验证核心测试同时修复 PyTorch 额外输出字段未被比较、任一侧 NaN/Inf 可能被错误接受的边界。本机隐藏 GPU 的非 Paddle 测试为 `272 passed, 5 skipped, 34 deselected`，全包覆盖率 `6,511/13,535`（`48.10%`），直接维护范围 `1,429/1,989`（`71.85%`），双门禁提高到 48%/71%。
 
 GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29679546423) 在提交 `e1a306b` 上通过全部 6 个 jobs：质量 job 为 Ruff 172 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `272 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,512/13,535`（`48.11%`）和直接维护范围 `1,429/1,989`（`71.85%`）；wheel 安装后六个 CLI、包内配置和 `34 passed` smoke 均通过。
+
+转换器/YAML 配置批次把 Paddle-only 集成用例中的核心编排合同拆为 16 个纯 CPU 回归，覆盖 checkpoint 元数据、shape/transpose 传递、严格/宽松失败、内存释放、完整 session metadata、mapping 导出、批量失败隔离和 YAML 构造/序列化。回归修复 `Callable` 可变默认参数跨实例共享，以及批量转换在同名 mapping 已存在时未遵守 `--force` 的问题。本机非 Paddle CPU 为 `288 passed, 5 skipped, 34 deselected`，全包 `6,689/13,538`（`49.41%`），直接维护范围 `1,607/1,992`（`80.67%`），门槛提高到 49%/80%；托管证据待本轮提交后补录。

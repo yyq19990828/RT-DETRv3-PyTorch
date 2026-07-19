@@ -492,15 +492,17 @@ class WeightConverter:
                 else None
             )
             output_existed = output_path.exists()
+            mapping_existed = mapping_path is not None and mapping_path.exists()
 
-            if output_existed and not overwrite:
+            if (output_existed or mapping_existed) and not overwrite:
+                existing_kind = "Output" if output_existed else "Mapping"
                 summary.results.append(
                     BatchConversionResult(
                         source_path=str(input_path),
                         output_path=str(output_path),
                         mapping_path=str(mapping_path) if mapping_path else None,
                         status=ConversionStatus.FAILED,
-                        error="Output file already exists",
+                        error=f"{existing_kind} file already exists",
                     )
                 )
                 continue
@@ -533,7 +535,7 @@ class WeightConverter:
             except Exception as error:
                 if not output_existed:
                     output_path.unlink(missing_ok=True)
-                if mapping_path is not None:
+                if mapping_path is not None and not mapping_existed:
                     mapping_path.unlink(missing_ok=True)
                 failed_session = file_converter.session
                 summary.results.append(

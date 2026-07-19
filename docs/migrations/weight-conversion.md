@@ -143,6 +143,7 @@ uv run rtdetrv3-convert \
 ```
 
 - 输出文件使用源文件 stem 加 `.pth`；mapping 使用 stem 加 `.mapping.json`。
+- 未指定 `--force` 时，已有 checkpoint 或已有同名 mapping 任一存在都会让该输入显式失败，不会因另一项尚不存在而静默覆盖。失败清理只删除本次新建的产物，不删除进入命令前已有的文件。
 - 每个输入使用独立 conversion session。单文件失败会记录错误并继续后续输入；只要存在失败，CLI 最终退出码为 1。
 - JSON summary 记录总数、成功/失败数、耗时，以及每个文件的 session、转换/跳过参数数和错误。
 - `torch.save` 先写目标目录中的临时文件，成功后原子替换，因此中途失败不会破坏已有目标。
