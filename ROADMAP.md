@@ -91,11 +91,13 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，Mypy 临时范围清单已删除，整个 `src/ppdet_pytorch` 与 3 个质量/稳定性脚本共 103 个 source file 门禁通过。新增 data 边界回归后，托管非 Paddle CPU 覆盖率为 47.10%/66.81%，47%/66% 双回退下限和全部 6 个 CI jobs 均已通过。90% 覆盖率目标、完整 CUDA、性能和发布验收仍未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部 165 个活跃 Python 文件，Mypy 临时范围清单已删除，整个 `src/ppdet_pytorch` 与 4 个质量/稳定性/基准脚本共 104 个 source file 门禁通过。托管非 Paddle CPU 覆盖率为 47.10%/66.81%，47%/66% 双回退下限和全部 6 个 CI jobs 均已通过。R18 同机 CPU/CUDA model-only 性能证据已记录；PyTorch 四个 workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%，按维护者决策不追求训练优化完全对齐。详见 [`性能验证报告`](docs/reports/performance-validation.md)。90% 覆盖率、end-to-end DataLoader/profile、托管 CUDA job 和发布验收仍未完成。
 
-- [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
+- [x] 在同一硬件、驱动、batch 和精度下建立 Paddle/PyTorch 基准；两个官方 wheel 的 CUDA/cuDNN 版本不同，已分别记录而不声称完全同运行时。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
-- [ ] 目标训练吞吐不低于 Paddle 的 95%，峰值显存不超过 110%；无法达成时记录可定位瓶颈。
+  - [x] 完成 model-only 训练吞吐、推理延迟和峰值内存证据。
+  - [ ] 按真实用例需求补充 end-to-end DataLoader 占比和关键算子 profile。
+- [x] 评估训练吞吐不低于 Paddle 的 95% 和峰值显存不超过 110% 目标：吞吐通过，CUDA 训练显存约为 116%，已缩小到训练专属路径并记录不专项优化的决策。
 - [x] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
   - [x] 首批 Ruff format/lint 覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测；Mypy 首批 6 个 source file/目录通过。
   - [x] Ruff format/lint 扩展到全部活跃 Python 文件并移除临时范围清单。
@@ -113,7 +115,7 @@
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
   - [x] 增加 Python 3.9–3.12 非 Paddle CPU workflow，并在本机 UV 隔离环境验证锁文件安装和测试。
   - [x] GitHub 托管 Python 3.9–3.12 CPU jobs、质量门禁和 wheel smoke 通过。
-  - [ ] 补充受控 CUDA job 或自托管验证证据。
+  - [x] 补充受控 CUDA job 或自托管验证证据。
 - [ ] 发布模型库、checksum、配置、许可说明和最终验证报告。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。

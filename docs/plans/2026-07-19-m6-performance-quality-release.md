@@ -43,9 +43,9 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
   - [x] 清理 `data` 的 87 项错误，将整个 `src/ppdet_pytorch` 收敛为单一 Mypy 目标；含 3 个脚本共 103 个 source file 通过。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
-- [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
-- [ ] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
-- [ ] 在同一硬件执行 R18 基准并定位吞吐或峰值显存未达目标的第一处瓶颈，再决定是否扩展 R34/R50。
+- [x] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
+- [x] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
+- [x] 在同一硬件执行 R18 基准并定位吞吐或峰值显存未达目标的第一处瓶颈，再决定是否扩展 R34/R50。
 - [ ] 生成发布清单和最终验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
 
 ## 风险与回退
@@ -63,7 +63,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] Ruff 全活跃范围经格式化、lint 和默认全量测试验证通过。
 - [x] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
 - [x] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
-- [ ] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
+- [x] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
 - [x] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
 
 ## 决策记录
@@ -80,10 +80,12 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | modeling 批次后将全包下限提高到 45% | 3 个实际边界回归使隐藏 GPU 的本地 CPU 实测达到 45.05%，新增覆盖应继续转成可执行回退约束 |
 | 2026-07-19 | data 批次后完成全包 Mypy，并将覆盖率下限提高到 47% | 8 个 data 边界回归使隐藏 GPU 的本地 CPU 实测达到 47.09%；质量命令已无需逐模块范围清单 |
 | 2026-07-19 | 新增 core schema 活跃测试后将直接维护范围下限提高到 66% | 显式隐藏 GPU 的本地 CPU 实测达到 66.89%；Typeguard 4 合法值/错误值路径已成为可执行回退证据 |
-| 2026-07-19 | PyYAML stub 只进入 `quality`/`dev`，Paddle nightly 固定为已验证的 3.3.0.dev20251015 | 类型 stub 不属于核心运行时；宽松 Paddle nightly 约束曾解析到只有 aarch64 wheel 的版本，固定已验证版本并要求 Linux x86_64 可安装轮子可恢复干净 `dev` 同步 |
+| 2026-07-19 | PyYAML stub 只进入 `quality`/`dev`，当时将 Paddle nightly 固定为 3.3.0.dev20251015 | 类型 stub 不属于核心运行时；宽松 Paddle nightly 约束曾解析到只有 aarch64 wheel 的版本。该 CPU nightly 决策后续已被稳定 GPU 构建取代 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
 | 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
 | 2026-07-19 | 锁文件与 CI 统一使用 UV 0.11.29.x | UV 0.7 与 0.11 的锁文件修订语义不同；固定版本范围避免本地通过而托管 `--locked` 拒绝 |
+| 2026-07-19 | `dev` extra 改用 PaddlePaddle GPU 3.3.0/cu118 | cu126 与当前 PyTorch cu121 的 `nvidia-nvtx-cu12` 强制版本冲突；cu118 可与 PyTorch cu121 并存，且同一 wheel 已验证 CUDA 执行和 CPU fallback |
+| 2026-07-19 | 性能比值只作观测，不追求训练优化完全对齐 | R18 吞吐已超过 Paddle；CUDA 训练峰值显存约高 16% 的差距已记录，不值得在没有真实使用需求时为了指标完全一致而专项优化 |
 
 ## 完成记录
 
@@ -128,3 +130,7 @@ GitHub Actions [run 29674832957](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第九批清理 `data` 的 87 项类型错误，并删除逐模块临时范围清单；统一质量命令现对 100 个 package source 和 3 个质量/稳定性脚本执行 Mypy，本机实测 103 个 source file 无错误。审计同时修复了无 annotation 的 ImageFolder 错误构造 `COCO(None)`、SSOD loader 首次迭代未初始化、SSOD 固定 resize 返回未定义 `index`、VOC 必需 XML 字段缺失和 Pillow affine 新 API 等边界。8 个新回归覆盖这些数据加载/变换路径；data 与训练链定向为 `35 passed`，隐藏 GPU 的默认全量为 `272 passed, 8 skipped`。非 Paddle CPU 覆盖率为全包 `6,284/13,345`（`47.09%`）和直接维护范围 `1,202/1,799`（`66.81%`），因此全包回退下限从 45% 提高到 47%。本段为本机观测；托管证据如下。
 
 GitHub Actions [run 29675617264](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29675617264) 在提交 `28ec38d` 上通过全部 6 个 jobs：质量 job 为 163 个 Ruff 文件和 103 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `241 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `6,285/13,345`（`47.10%`），直接维护范围为 `1,202/1,799`（`66.81%`）；wheel smoke 为 `34 passed`。托管环境比本地多覆盖 1 条 `data` 语句，两个环境均通过 47%/66% 双门禁。
+
+M6 性能阶段在干净提交 `39e12b3` 上增加隔离框架进程的 JSON benchmark runner，统一质量命令现对 104 个 source file 执行 Mypy，Ruff 覆盖 165 个活跃 Python 文件。Paddle GPU 3.3.0/cu118 在同一 `.venv` 中通过 CUDA 与 CPU R18 前向；Paddle 标记测试为 `31 passed, 3 skipped`，安装 `dev` extra 的默认全量为 `286 passed, 3 skipped`。同一 RTX 3090/CPU 上的 R18 model-only 短采样表明，PyTorch 的 CPU/CUDA 推理吞吐分别为 Paddle 的 `2.061×`/`1.904×`，CPU/CUDA 训练 step 为 `1.528×`/`1.195×`；CUDA 训练 allocated 峰值显存约为 Paddle 的 `116%`，已定位到训练专属路径但不为完全对齐开启专项优化。完整协议、原始 JSON 和局限见 [`docs/reports/performance-validation.md`](../reports/performance-validation.md)。end-to-end DataLoader/profile、90% 覆盖率和发布验收仍未完成。
+
+GitHub Actions [run 29676369588](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29676369588) 在提交 `39e12b3` 上通过全部 6 个 jobs：质量 job 为 165 个 Ruff 文件和 104 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `250 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `6,285/13,345`（`47.10%`），直接维护范围为 `1,202/1,799`（`66.81%`）；wheel smoke 为 `34 passed`。
