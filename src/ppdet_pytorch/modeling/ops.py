@@ -19,14 +19,12 @@ Ops Module - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/ops.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import torch
 import torch.nn.functional as F
 
-__all__ = ['get_act_fn', 'get_static_shape']
+__all__ = ["get_act_fn", "get_static_shape"]
 
 
 def identity(x):
@@ -50,10 +48,10 @@ def swish(x):
 
 
 # TRT (TensorRT) compatible activation functions
-TRT_ACT_SPEC = {'swish': swish, 'silu': swish}
+TRT_ACT_SPEC = {"swish": swish, "silu": swish}
 
 # Custom activation functions
-ACT_SPEC = {'mish': mish, 'silu': silu}
+ACT_SPEC = {"mish": mish, "silu": silu}
 
 
 def get_act_fn(act=None, trt=False):
@@ -71,16 +69,17 @@ def get_act_fn(act=None, trt=False):
         >>> act_fn = get_act_fn({'name': 'leaky_relu', 'negative_slope': 0.1})
         >>> act_fn = get_act_fn(None)  # Returns identity
     """
-    assert act is None or isinstance(act, (str, dict)), \
-        'name of activation should be str, dict or None'
+    assert act is None or isinstance(act, (str, dict)), (
+        "name of activation should be str, dict or None"
+    )
 
     if not act:
         return identity
 
     if isinstance(act, dict):
-        name = act['name']
+        name = act["name"]
         act_copy = act.copy()
-        act_copy.pop('name')
+        act_copy.pop("name")
         kwargs = act_copy
     else:
         name = act

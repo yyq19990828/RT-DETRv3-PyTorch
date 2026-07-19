@@ -20,10 +20,16 @@ Reference: ppdet/modeling/bbox_utils.py
 """
 
 import math
-import torch
-import numpy as np
 
-__all__ = ['batch_distance2bbox', 'iou_similarity', 'batch_iou_similarity', 'bbox_center', 'bbox_iou']
+import torch
+
+__all__ = [
+    "batch_distance2bbox",
+    "iou_similarity",
+    "batch_iou_similarity",
+    "bbox_center",
+    "bbox_iou",
+]
 
 
 def batch_distance2bbox(points, distance, max_shapes=None):
@@ -156,7 +162,7 @@ def bbox_iou(box1, box2, giou=False, diou=False, ciou=False, eps=1e-9):
             # convex diagonal squared
             c2 = cw**2 + ch**2 + eps
             # center distance
-            rho2 = ((px1 + px2 - gx1 - gx2)**2 + (py1 + py2 - gy1 - gy2)**2) / 4
+            rho2 = ((px1 + px2 - gx1 - gx2) ** 2 + (py1 + py2 - gy1 - gy2) ** 2) / 4
             if diou:
                 return iou - rho2 / c2
             else:

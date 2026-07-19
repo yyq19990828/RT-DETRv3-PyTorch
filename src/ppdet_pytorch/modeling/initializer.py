@@ -21,24 +21,25 @@ Reference: ppdet/modeling/initializer.py
 """
 
 import math
+
 import numpy as np
 import torch
 import torch.nn as nn
 
 __all__ = [
-    'uniform_',
-    'normal_',
-    'constant_',
-    'ones_',
-    'zeros_',
-    'xavier_uniform_',
-    'xavier_normal_',
-    'kaiming_uniform_',
-    'kaiming_normal_',
-    'linear_init_',
-    'conv_init_',
-    'bias_init_with_prob',
-    'reset_initialized_parameter',
+    "uniform_",
+    "normal_",
+    "constant_",
+    "ones_",
+    "zeros_",
+    "xavier_uniform_",
+    "xavier_normal_",
+    "kaiming_uniform_",
+    "kaiming_normal_",
+    "linear_init_",
+    "conv_init_",
+    "bias_init_with_prob",
+    "reset_initialized_parameter",
 ]
 
 
@@ -49,14 +50,14 @@ def uniform_(tensor, a, b):
     return tensor
 
 
-def normal_(tensor, mean=0., std=1.):
+def normal_(tensor, mean=0.0, std=1.0):
     """Modified tensor inplace using normal distribution"""
     with torch.no_grad():
         tensor.normal_(mean, std)
     return tensor
 
 
-def constant_(tensor, value=0.):
+def constant_(tensor, value=0.0):
     """Modified tensor inplace using constant value"""
     with torch.no_grad():
         tensor.fill_(value)
@@ -117,7 +118,7 @@ def _calculate_fan_in_and_fan_out(tensor, reverse=False):
     return fan_in, fan_out
 
 
-def xavier_uniform_(tensor, gain=1., reverse=False):
+def xavier_uniform_(tensor, gain=1.0, reverse=False):
     """Xavier uniform initialization"""
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor, reverse=reverse)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
@@ -127,7 +128,7 @@ def xavier_uniform_(tensor, gain=1., reverse=False):
     return tensor
 
 
-def xavier_normal_(tensor, gain=1., reverse=False):
+def xavier_normal_(tensor, gain=1.0, reverse=False):
     """Xavier normal initialization"""
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor, reverse=reverse)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
@@ -139,43 +140,53 @@ def xavier_normal_(tensor, gain=1., reverse=False):
 def _calculate_correct_fan(tensor, mode, reverse=False):
     """Calculate fan_in or fan_out"""
     mode = mode.lower()
-    valid_modes = ['fan_in', 'fan_out']
+    valid_modes = ["fan_in", "fan_out"]
     if mode not in valid_modes:
-        raise ValueError("Mode {} not supported, please use one of {}".format(
-            mode, valid_modes))
+        raise ValueError(
+            "Mode {} not supported, please use one of {}".format(mode, valid_modes)
+        )
 
     fan_in, fan_out = _calculate_fan_in_and_fan_out(tensor, reverse)
 
-    return fan_in if mode == 'fan_in' else fan_out
+    return fan_in if mode == "fan_in" else fan_out
 
 
 def _calculate_gain(nonlinearity, param=None):
     """Calculate gain for different nonlinearities"""
     linear_fns = [
-        'linear', 'conv1d', 'conv2d', 'conv3d', 'conv_transpose1d',
-        'conv_transpose2d', 'conv_transpose3d'
+        "linear",
+        "conv1d",
+        "conv2d",
+        "conv3d",
+        "conv_transpose1d",
+        "conv_transpose2d",
+        "conv_transpose3d",
     ]
-    if nonlinearity in linear_fns or nonlinearity == 'sigmoid':
+    if nonlinearity in linear_fns or nonlinearity == "sigmoid":
         return 1
-    elif nonlinearity == 'tanh':
+    elif nonlinearity == "tanh":
         return 5.0 / 3
-    elif nonlinearity == 'relu':
+    elif nonlinearity == "relu":
         return math.sqrt(2.0)
-    elif nonlinearity == 'leaky_relu':
+    elif nonlinearity == "leaky_relu":
         if param is None:
             negative_slope = 0.01
-        elif not isinstance(param, bool) and (isinstance(param, int) or isinstance(param, float)):
+        elif not isinstance(param, bool) and (
+            isinstance(param, int) or isinstance(param, float)
+        ):
             negative_slope = param
         else:
             raise ValueError("negative_slope {} not a valid number".format(param))
         return math.sqrt(2.0 / (1 + negative_slope**2))
-    elif nonlinearity == 'selu':
+    elif nonlinearity == "selu":
         return 3.0 / 4
     else:
         raise ValueError("Unsupported nonlinearity {}".format(nonlinearity))
 
 
-def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', reverse=False):
+def kaiming_uniform_(
+    tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", reverse=False
+):
     """Kaiming uniform initialization"""
     fan = _calculate_correct_fan(tensor, mode, reverse)
     gain = _calculate_gain(nonlinearity, a)
@@ -186,7 +197,9 @@ def kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', reve
     return tensor
 
 
-def kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu', reverse=False):
+def kaiming_normal_(
+    tensor, a=0, mode="fan_in", nonlinearity="leaky_relu", reverse=False
+):
     """Kaiming normal initialization"""
     fan = _calculate_correct_fan(tensor, mode, reverse)
     gain = _calculate_gain(nonlinearity, a)
@@ -237,19 +250,19 @@ def reset_initialized_parameter(model, include_self=True):
             k = float(m.groups) / (m.in_channels * m.kernel_size[0] * m.kernel_size[1])
             k = math.sqrt(k)
             m.weight.uniform_(-k, k)
-            if hasattr(m, 'bias') and m.bias is not None:
+            if hasattr(m, "bias") and m.bias is not None:
                 m.bias.uniform_(-k, k)
 
         elif isinstance(m, nn.Linear):
-            k = math.sqrt(1. / m.weight.shape[0])
+            k = math.sqrt(1.0 / m.weight.shape[0])
             m.weight.uniform_(-k, k)
-            if hasattr(m, 'bias') and m.bias is not None:
+            if hasattr(m, "bias") and m.bias is not None:
                 m.bias.uniform_(-k, k)
 
         elif isinstance(m, nn.Embedding):
-            m.weight.normal_(mean=0., std=1.)
+            m.weight.normal_(mean=0.0, std=1.0)
 
         elif isinstance(m, (nn.BatchNorm2d, nn.LayerNorm)):
-            m.weight.fill_(1.)
-            if hasattr(m, 'bias') and m.bias is not None:
+            m.weight.fill_(1.0)
+            if hasattr(m, "bias") and m.bias is not None:
                 m.bias.fill_(0)

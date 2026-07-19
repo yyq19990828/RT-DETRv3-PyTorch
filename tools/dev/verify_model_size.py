@@ -32,7 +32,7 @@ def get_component_params(model):
     """Get parameter count for each component"""
     components = {}
 
-    for name in ['backbone', 'neck', 'transformer', 'detr_head', 'aux_o2m_head']:
+    for name in ["backbone", "neck", "transformer", "detr_head", "aux_o2m_head"]:
         if hasattr(model, name):
             module = getattr(model, name)
             if module is not None and isinstance(module, torch.nn.Module):
@@ -48,7 +48,7 @@ def build_pytorch_model(config_path: str):
 
     # Import PyTorch workspace
     try:
-        from ppdet_pytorch.core.workspace import load_config, create
+        from ppdet_pytorch.core.workspace import create, load_config
     except ImportError as e:
         logger.error(f"Failed to import PyTorch components: {e}")
         logger.error("Install the project or add its src directory to PYTHONPATH")
@@ -71,10 +71,10 @@ def build_pytorch_model(config_path: str):
 
 def print_model_info(config_path, model_name):
     """Load model from config and print parameter info"""
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print(f"Model: {model_name}")
     print(f"Config: {config_path}")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Build model
     model, cfg = build_pytorch_model(config_path)
@@ -100,13 +100,13 @@ def print_model_info(config_path, model_name):
     print("\nTesting forward pass...")
     with torch.no_grad():
         dummy_input = {
-            'image': torch.randn(1, 3, 640, 640),
-            'im_shape': torch.tensor([[640, 640]], dtype=torch.float32),
-            'scale_factor': torch.tensor([[1.0, 1.0]], dtype=torch.float32)
+            "image": torch.randn(1, 3, 640, 640),
+            "im_shape": torch.tensor([[640, 640]], dtype=torch.float32),
+            "scale_factor": torch.tensor([[1.0, 1.0]], dtype=torch.float32),
         }
         try:
             outputs = model(dummy_input)
-            print(f"  ✓ Forward pass successful")
+            print("  ✓ Forward pass successful")
             if isinstance(outputs, dict):
                 print(f"  Output keys: {list(outputs.keys())}")
                 for key, value in outputs.items():
@@ -119,68 +119,69 @@ def print_model_info(config_path, model_name):
         except Exception as e:
             print(f"  ✗ Forward pass failed: {e}")
             import traceback
+
             traceback.print_exc()
 
     return {
-        'name': model_name,
-        'total_params': total,
-        'trainable_params': trainable,
-        'components': components,
-        'config': cfg
+        "name": model_name,
+        "total_params": total,
+        "trainable_params": trainable,
+        "components": components,
+        "config": cfg,
     }
 
 
 def compare_models(results):
     """Compare parameter counts across models"""
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("MODEL COMPARISON")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     print(f"\n{'Model':<25} {'Total Params':>15} {'Size (MB)':>12}")
     print("-" * 60)
 
     for result in results:
-        size_mb = result['total_params'] * 4 / 1024 / 1024
+        size_mb = result["total_params"] * 4 / 1024 / 1024
         print(f"{result['name']:<25} {result['total_params']:>15,} {size_mb:>12.2f}")
 
     # Component-wise comparison
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("COMPONENT-WISE COMPARISON")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     # Get all unique components
     all_components = set()
     for result in results:
-        all_components.update(result['components'].keys())
+        all_components.update(result["components"].keys())
 
-    print(f"\n{'Component':<15}", end='')
+    print(f"\n{'Component':<15}", end="")
     for result in results:
-        model_short = result['name'].replace('RT-DETRv3-', '').replace('-vd', '')
-        print(f" {model_short:>15}", end='')
+        model_short = result["name"].replace("RT-DETRv3-", "").replace("-vd", "")
+        print(f" {model_short:>15}", end="")
     print()
     print("-" * (15 + 16 * len(results)))
 
     for comp in sorted(all_components):
-        print(f"{comp:<15}", end='')
+        print(f"{comp:<15}", end="")
         for result in results:
-            count = result['components'].get(comp, 0)
-            print(f" {count:>15,}", end='')
+            count = result["components"].get(comp, 0)
+            print(f" {count:>15,}", end="")
         print()
 
     # Validation
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("VALIDATION SUMMARY")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
 
     issues = []
 
     # Check that detr_head has same params across models
-    detr_params = [r['components'].get('detr_head', 0) for r in results]
+    detr_params = [r["components"].get("detr_head", 0) for r in results]
     if len(set(detr_params)) > 1:
         issues.append("⚠ Detection head parameters differ across models")
 
     # Check that aux_o2m_head has same params across models
-    aux_params = [r['components'].get('aux_o2m_head', 0) for r in results]
+    aux_params = [r["components"].get("aux_o2m_head", 0) for r in results]
     if len(set(aux_params)) > 1 and all(p > 0 for p in aux_params):
         issues.append("⚠ Auxiliary head parameters differ across models")
 
@@ -201,29 +202,31 @@ def compare_models(results):
     if len(results) > 1:
         print("\nParameter Growth Analysis:")
         for i in range(1, len(results)):
-            growth = results[i]['total_params'] - results[i-1]['total_params']
-            growth_pct = growth / results[i-1]['total_params'] * 100
-            print(f"  {results[i-1]['name']} → {results[i]['name']}: "
-                  f"+{growth:,} (+{growth_pct:.1f}%)")
+            growth = results[i]["total_params"] - results[i - 1]["total_params"]
+            growth_pct = growth / results[i - 1]["total_params"] * 100
+            print(
+                f"  {results[i - 1]['name']} → {results[i]['name']}: "
+                f"+{growth:,} (+{growth_pct:.1f}%)"
+            )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Verify RT-DETRv3 model sizes")
     parser.add_argument(
         "--configs",
-        nargs='+',
+        nargs="+",
         default=[
-            'configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml',
-            'configs/rtdetrv3/rtdetrv3_r34vd_6x_coco.yml',
-            'configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml',
+            "configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml",
+            "configs/rtdetrv3/rtdetrv3_r34vd_6x_coco.yml",
+            "configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml",
         ],
-        help="List of config file paths to verify"
+        help="List of config file paths to verify",
     )
     parser.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging level"
+        help="Logging level",
     )
 
     args = parser.parse_args()
@@ -231,20 +234,22 @@ def main():
     # Setup logging
     logging.basicConfig(
         level=getattr(logging, args.log_level),
-        format='[%(asctime)s] %(levelname)s: %(message)s',
-        datefmt='%m/%d %H:%M:%S'
+        format="[%(asctime)s] %(levelname)s: %(message)s",
+        datefmt="%m/%d %H:%M:%S",
     )
 
-    print("="*80)
+    print("=" * 80)
     print("RT-DETRv3 Model Size Verification")
     print("PaddlePaddle → PyTorch Migration Validation")
-    print("="*80)
+    print("=" * 80)
 
     results = []
 
     for config_path in args.configs:
         model_name = Path(config_path).stem.upper()
-        model_name = model_name.replace('RTDETRV3_', 'RT-DETRv3-').replace('_6X_COCO', '')
+        model_name = model_name.replace("RTDETRV3_", "RT-DETRv3-").replace(
+            "_6X_COCO", ""
+        )
 
         try:
             result = print_model_info(config_path, model_name)
@@ -253,6 +258,7 @@ def main():
         except Exception as e:
             logger.error(f"Failed to process {model_name}: {e}")
             import traceback
+
             traceback.print_exc()
             continue
 
@@ -264,11 +270,11 @@ def main():
         print("\n⚠ No models loaded successfully")
         return 1
 
-    print(f"\n{'='*80}")
+    print(f"\n{'=' * 80}")
     print("✓ VERIFICATION COMPLETE")
-    print(f"{'='*80}")
+    print(f"{'=' * 80}")
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

@@ -16,7 +16,6 @@ from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
     RTDETRTransformerv3,
 )
 
-
 ROOT = Path(__file__).resolve().parents[2]
 R18_CONFIG = ROOT / "configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"
 

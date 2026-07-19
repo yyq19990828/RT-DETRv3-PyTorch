@@ -21,6 +21,9 @@ uv sync --extra dev
 # 仅增加 ONNX 导出和 CPU 回归依赖
 uv sync --extra export
 
+# 不安装 Paddle 的核心测试与导出回归依赖
+uv sync --extra test
+
 # 仅增加 Ruff/Mypy 质量工具
 uv sync --extra quality
 ```
@@ -83,7 +86,7 @@ uv run --extra export rtdetrv3-export \
 
 ```bash
 # 不依赖 Paddle 的测试
-uv run --extra dev pytest -m "not paddle"
+uv run --extra test pytest -m "not paddle"
 
 # 包含 Paddle 对齐测试
 uv run --extra dev pytest
@@ -91,7 +94,7 @@ uv run --extra dev pytest
 
 ## 代码质量
 
-Python 文件统一使用 Ruff 格式化和 lint，Mypy 单独负责类型检查。当前门禁按 M6 计划从已迁移模块逐步扩展，命令会打印本批实际覆盖范围。
+全部活跃 Python 文件统一使用 Ruff 格式化和基础 lint，Mypy 单独负责类型检查。Ruff 已覆盖仓库根目录并排除只读子模块、历史测试和生成目录；Mypy 仍按 M6 计划逐步扩展已验证范围。
 
 ```bash
 # 检查 Ruff format、Ruff lint 和 Mypy

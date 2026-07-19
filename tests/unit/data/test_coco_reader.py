@@ -3,9 +3,9 @@ from pathlib import Path
 
 import numpy as np
 
-from ppdet_pytorch.core.workspace import create
 import ppdet_pytorch.data.reader  # noqa: F401
 import ppdet_pytorch.data.source  # noqa: F401
+from ppdet_pytorch.core.workspace import create
 
 
 def test_coco_dataset_parses_xyxy_boxes_and_contiguous_classes(

@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality / Python 3.12
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.29"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install quality dependencies
+        run: uv sync --locked --extra quality
+
+      - name: Run quality gate
+        run: uv run --no-sync python scripts/check_quality.py
+
+  cpu-tests:
+    name: CPU / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.29"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
+      - name: Install core test dependencies
+        run: uv sync --locked --extra test
+
+      - name: Confirm CPU execution
+        run: uv run --no-sync python -c "import torch; assert not torch.cuda.is_available()"
+
+      - name: Run non-Paddle tests
+        run: uv run --no-sync pytest -p no:cacheprovider -q -m "not paddle"
+
+  wheel-smoke:
+    name: Wheel smoke / Python 3.12
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.29"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install locked test environment
+        run: uv sync --locked --extra test
+
+      - name: Build wheel
+        run: uv build --wheel
+
+      - name: Install wheel over editable package
+        run: uv pip install --python .venv/bin/python --no-deps --reinstall dist/*.whl
+
+      - name: Verify console entry points
+        run: |
+          for command in rtdetrv3-train rtdetrv3-eval rtdetrv3-infer rtdetrv3-export rtdetrv3-convert; do
+            ".venv/bin/$command" --help
+          done
+
+      - name: Run wheel CLI and export smoke tests
+        run: >-
+          uv run --no-sync pytest -p no:cacheprovider -q
+          tests/unit/cli/test_eval.py
+          tests/unit/cli/test_infer.py
+          tests/unit/cli/test_export.py
+          tests/unit/deploy/test_export.py

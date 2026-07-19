@@ -23,15 +23,15 @@ The EMA model typically has better generalization performance.
 """
 
 import math
-from copy import deepcopy
-from typing import Optional, Set, List, Union
+from typing import List, Optional, Set, Union
+
 import torch
 import torch.nn as nn
 
 from ..core.workspace import register
 from .utils import get_bn_running_state_names
 
-__all__ = ['ModelEMA']
+__all__ = ["ModelEMA"]
 
 
 @register
@@ -61,14 +61,16 @@ class ModelEMA:
         device (str): Device to store EMA parameters. Default: 'cuda'
     """
 
-    def __init__(self,
-                 model: nn.Module,
-                 decay: float = 0.9998,
-                 ema_decay_type: str = 'threshold',
-                 cycle_epoch: int = -1,
-                 ema_black_list: Optional[Union[Set, List, tuple]] = None,
-                 ema_filter_no_grad: bool = False,
-                 device: str = 'cuda'):
+    def __init__(
+        self,
+        model: nn.Module,
+        decay: float = 0.9998,
+        ema_decay_type: str = "threshold",
+        cycle_epoch: int = -1,
+        ema_black_list: Optional[Union[Set, List, tuple]] = None,
+        ema_filter_no_grad: bool = False,
+        device: str = "cuda",
+    ):
         self.step = 0
         self.epoch = 0
         self.decay = decay
@@ -78,7 +80,9 @@ class ModelEMA:
 
         # Build EMA black list (parameters that won't participate in EMA)
         model_state_keys = set(model.state_dict().keys())
-        self.ema_black_list = self._match_ema_black_list(model_state_keys, ema_black_list)
+        self.ema_black_list = self._match_ema_black_list(
+            model_state_keys, ema_black_list
+        )
 
         # Get BN running states
         bn_states_names = get_bn_running_state_names(model)
@@ -97,7 +101,9 @@ class ModelEMA:
                 self.state_dict[k] = v.clone().to(device)
             else:
                 # For EMA parameters, initialize with zeros
-                self.state_dict[k] = torch.zeros_like(v, dtype=torch.float32, device=device)
+                self.state_dict[k] = torch.zeros_like(
+                    v, dtype=torch.float32, device=device
+                )
 
         # Store decay for apply() method
         self._decay = decay
@@ -135,9 +141,9 @@ class ModelEMA:
             model: Current model with updated parameters
         """
         # Calculate decay based on decay type
-        if self.ema_decay_type == 'threshold':
+        if self.ema_decay_type == "threshold":
             decay = min(self.decay, (1 + self.step) / (10 + self.step))
-        elif self.ema_decay_type == 'exponential':
+        elif self.ema_decay_type == "exponential":
             decay = self.decay * (1 - math.exp(-(self.step + 1) / 2000))
         else:  # 'normal'
             decay = self.decay
@@ -152,7 +158,9 @@ class ModelEMA:
             for k, v in self.state_dict.items():
                 if k not in self.ema_black_list:
                     # EMA update: ema = decay * ema + (1 - decay) * current
-                    model_param = model_dict[k].to(dtype=torch.float32, device=self.device)
+                    model_param = model_dict[k].to(
+                        dtype=torch.float32, device=self.device
+                    )
                     v.mul_(decay).add_(model_param, alpha=1 - decay)
 
         self.step += 1
@@ -179,9 +187,9 @@ class ModelEMA:
                     state_dict[k] = v.clone()
                 else:
                     # Apply bias correction for non-exponential types
-                    if self.ema_decay_type != 'exponential':
+                    if self.ema_decay_type != "exponential":
                         # Bias correction: ema / (1 - decay^step)
-                        corrected_v = v / (1 - self._decay ** self.step)
+                        corrected_v = v / (1 - self._decay**self.step)
                         state_dict[k] = corrected_v
                     else:
                         state_dict[k] = v.clone()
@@ -194,9 +202,11 @@ class ModelEMA:
 
         return state_dict
 
-    def _match_ema_black_list(self,
-                               weight_names: Set[str],
-                               ema_black_list: Optional[Union[Set, List, tuple]] = None) -> Set[str]:
+    def _match_ema_black_list(
+        self,
+        weight_names: Set[str],
+        ema_black_list: Optional[Union[Set, List, tuple]] = None,
+    ) -> Set[str]:
         """
         Match weight names against black list patterns.
 
@@ -223,13 +233,13 @@ class ModelEMA:
             Dictionary containing EMA state for saving
         """
         return {
-            'ema_state_dict': self.state_dict,
-            'step': self.step,
-            'epoch': self.epoch,
-            'decay': self.decay,
-            'current_decay': self._decay,
-            'ema_decay_type': self.ema_decay_type,
-            'ema_black_list': sorted(self.ema_black_list),
+            "ema_state_dict": self.state_dict,
+            "step": self.step,
+            "epoch": self.epoch,
+            "decay": self.decay,
+            "current_decay": self._decay,
+            "ema_decay_type": self.ema_decay_type,
+            "ema_black_list": sorted(self.ema_black_list),
         }
 
     def load_state_dict(self, checkpoint: dict):
@@ -239,10 +249,9 @@ class ModelEMA:
         Args:
             checkpoint: Dictionary containing EMA state
         """
-        if 'ema_state_dict' in checkpoint:
-            self.resume(checkpoint['ema_state_dict'], checkpoint.get('step', 0))
-            self.epoch = checkpoint.get('epoch', 0)
-            self.decay = checkpoint.get('decay', self.decay)
-            self._decay = checkpoint.get('current_decay', self.decay)
-            self.ema_decay_type = checkpoint.get(
-                'ema_decay_type', self.ema_decay_type)
+        if "ema_state_dict" in checkpoint:
+            self.resume(checkpoint["ema_state_dict"], checkpoint.get("step", 0))
+            self.epoch = checkpoint.get("epoch", 0)
+            self.decay = checkpoint.get("decay", self.decay)
+            self._decay = checkpoint.get("current_decay", self.decay)
+            self.ema_decay_type = checkpoint.get("ema_decay_type", self.ema_decay_type)

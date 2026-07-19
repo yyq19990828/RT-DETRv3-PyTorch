@@ -12,19 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import itertools
 import os
 import sys
-import numpy as np
-import itertools
 
-from .json_results import get_det_res, get_det_poly_res, get_seg_res, get_solov2_segm_res, get_keypoint_res, get_pose3d_res
-from .map_utils import draw_pr_curve
+import numpy as np
 
 from ..utils.logger import setup_logger
+from .json_results import (
+    get_det_poly_res,
+    get_det_res,
+    get_keypoint_res,
+    get_pose3d_res,
+    get_seg_res,
+    get_solov2_segm_res,
+)
+from .map_utils import draw_pr_curve
+
 logger = setup_logger(__name__)
 
 
@@ -38,54 +44,59 @@ def get_infer_results(outs, catid, bias=0, save_threshold=0):
     """
     if outs is None or len(outs) == 0:
         raise ValueError(
-            'The number of valid detection result if zero. Please use reasonable model and check input data.'
+            "The number of valid detection result if zero. Please use reasonable model and check input data."
         )
 
-    im_id = outs['im_id']
-    im_file = outs['im_file'] if 'im_file' in outs else None
+    im_id = outs["im_id"]
+    im_file = outs["im_file"] if "im_file" in outs else None
 
     infer_res = {}
-    if 'bbox' in outs:
-        if len(outs['bbox']) > 0 and len(outs['bbox'][0]) > 6:
-            infer_res['bbox'] = get_det_poly_res(
-                outs['bbox'], outs['bbox_num'], im_id, catid, bias=bias)
+    if "bbox" in outs:
+        if len(outs["bbox"]) > 0 and len(outs["bbox"][0]) > 6:
+            infer_res["bbox"] = get_det_poly_res(
+                outs["bbox"], outs["bbox_num"], im_id, catid, bias=bias
+            )
         else:
-            infer_res['bbox'] = get_det_res(
-                outs['bbox'],
-                outs['bbox_num'],
+            infer_res["bbox"] = get_det_res(
+                outs["bbox"],
+                outs["bbox_num"],
                 im_id,
                 catid,
                 bias=bias,
                 im_file=im_file,
-                save_threshold=save_threshold)
+                save_threshold=save_threshold,
+            )
 
-    if 'mask' in outs:
+    if "mask" in outs:
         # mask post process
-        infer_res['mask'] = get_seg_res(outs['mask'], outs['bbox'],
-                                        outs['bbox_num'], im_id, catid)
+        infer_res["mask"] = get_seg_res(
+            outs["mask"], outs["bbox"], outs["bbox_num"], im_id, catid
+        )
 
-    if 'segm' in outs:
-        infer_res['segm'] = get_solov2_segm_res(outs, im_id, catid)
+    if "segm" in outs:
+        infer_res["segm"] = get_solov2_segm_res(outs, im_id, catid)
 
-    if 'keypoint' in outs:
-        infer_res['keypoint'] = get_keypoint_res(outs, im_id)
-        outs['bbox_num'] = [len(infer_res['keypoint'])]
+    if "keypoint" in outs:
+        infer_res["keypoint"] = get_keypoint_res(outs, im_id)
+        outs["bbox_num"] = [len(infer_res["keypoint"])]
 
-    if 'pose3d' in outs:
-        infer_res['pose3d'] = get_pose3d_res(outs, im_id)
-        outs['bbox_num'] = [len(infer_res['pose3d'])]
+    if "pose3d" in outs:
+        infer_res["pose3d"] = get_pose3d_res(outs, im_id)
+        outs["bbox_num"] = [len(infer_res["pose3d"])]
 
     return infer_res
 
 
-def cocoapi_eval(jsonfile,
-                 style,
-                 coco_gt=None,
-                 anno_file=None,
-                 max_dets=(100, 300, 1000),
-                 classwise=False,
-                 sigmas=None,
-                 use_area=True):
+def cocoapi_eval(
+    jsonfile,
+    style,
+    coco_gt=None,
+    anno_file=None,
+    max_dets=(100, 300, 1000),
+    classwise=False,
+    sigmas=None,
+    use_area=True,
+):
     """
     Args:
         jsonfile (str): Evaluation json file, eg: bbox.json, mask.json.
@@ -99,27 +110,28 @@ def cocoapi_eval(jsonfile,
         use_area (bool): If gt annotations (eg. CrowdPose, AIC)
                          do not have 'area', please set use_area=False.
     """
-    assert coco_gt != None or anno_file != None
-    if style == 'keypoints_crowd':
-        #please install xtcocotools==1.6
+    assert coco_gt is not None or anno_file is not None
+    if style == "keypoints_crowd":
+        # please install xtcocotools==1.6
         from xtcocotools.coco import COCO
         from xtcocotools.cocoeval import COCOeval
     else:
         from pycocotools.coco import COCO
+
         try:
             from .fast_cocoeval import FastCOCOeval as COCOeval
-        except:
+        except ImportError:
             from pycocotools.cocoeval import COCOeval
 
-    if coco_gt == None:
+    if coco_gt is None:
         coco_gt = COCO(anno_file)
     logger.info("Start evaluate...")
     coco_dt = coco_gt.loadRes(jsonfile)
-    if style == 'proposal':
-        coco_eval = COCOeval(coco_gt, coco_dt, 'bbox')
+    if style == "proposal":
+        coco_eval = COCOeval(coco_gt, coco_dt, "bbox")
         coco_eval.params.useCats = 0
         coco_eval.params.maxDets = list(max_dets)
-    elif style == 'keypoints_crowd':
+    elif style == "keypoints_crowd":
         coco_eval = COCOeval(coco_gt, coco_dt, style, sigmas, use_area)
     else:
         coco_eval = COCOeval(coco_gt, coco_dt, style)
@@ -132,10 +144,11 @@ def cocoapi_eval(jsonfile,
             from terminaltables import AsciiTable
         except Exception as e:
             logger.error(
-                'terminaltables not found, plaese install terminaltables. '
-                'for example: `pip install terminaltables`.')
+                "terminaltables not found, plaese install terminaltables. "
+                "for example: `pip install terminaltables`."
+            )
             raise e
-        precisions = coco_eval.eval['precision']
+        precisions = coco_eval.eval["precision"]
         cat_ids = coco_gt.getCatIds()
         # precision: (iou, recall, cls, area range, max dets)
         assert len(cat_ids) == precisions.shape[2]
@@ -149,28 +162,30 @@ def cocoapi_eval(jsonfile,
             if precision.size:
                 ap = np.mean(precision)
             else:
-                ap = float('nan')
-            results_per_category.append(
-                (str(nm["name"]), '{:0.3f}'.format(float(ap))))
+                ap = float("nan")
+            results_per_category.append((str(nm["name"]), "{:0.3f}".format(float(ap))))
             pr_array = precisions[0, :, idx, 0, 2]
             recall_array = np.arange(0.0, 1.01, 0.01)
             draw_pr_curve(
                 pr_array,
                 recall_array,
-                out_dir=style + '_pr_curve',
-                file_name='{}_precision_recall_curve.jpg'.format(nm["name"]))
+                out_dir=style + "_pr_curve",
+                file_name="{}_precision_recall_curve.jpg".format(nm["name"]),
+            )
 
         num_columns = min(6, len(results_per_category) * 2)
         results_flatten = list(itertools.chain(*results_per_category))
-        headers = ['category', 'AP'] * (num_columns // 2)
+        headers = ["category", "AP"] * (num_columns // 2)
         results_2d = itertools.zip_longest(
-            *[results_flatten[i::num_columns] for i in range(num_columns)])
+            *[results_flatten[i::num_columns] for i in range(num_columns)]
+        )
         table_data = [headers]
         table_data += [result for result in results_2d]
         table = AsciiTable(table_data)
-        logger.info('Per-category of {} AP: \n{}'.format(style, table.table))
-        logger.info("per-category PR curve has output to {} folder.".format(
-            style + '_pr_curve'))
+        logger.info("Per-category of {} AP: \n{}".format(style, table.table))
+        logger.info(
+            "per-category PR curve has output to {} folder.".format(style + "_pr_curve")
+        )
     # flush coco evaluation result
     sys.stdout.flush()
     return coco_eval.stats
@@ -180,17 +195,17 @@ def json_eval_results(metric, json_directory, dataset):
     """
     cocoapi eval with already exists proposal.json, bbox.json or mask.json
     """
-    assert metric == 'COCO'
+    assert metric == "COCO"
     anno_file = dataset.get_anno()
-    json_file_list = ['proposal.json', 'bbox.json', 'mask.json']
+    json_file_list = ["proposal.json", "bbox.json", "mask.json"]
     if json_directory:
-        assert os.path.exists(
-            json_directory), "The json directory:{} does not exist".format(
-                json_directory)
+        assert os.path.exists(json_directory), (
+            "The json directory:{} does not exist".format(json_directory)
+        )
         for k, v in enumerate(json_file_list):
             json_file_list[k] = os.path.join(str(json_directory), v)
 
-    coco_eval_style = ['proposal', 'bbox', 'segm']
+    coco_eval_style = ["proposal", "bbox", "segm"]
     for i, v_json in enumerate(json_file_list):
         if os.path.exists(v_json):
             cocoapi_eval(v_json, coco_eval_style[i], anno_file=anno_file)

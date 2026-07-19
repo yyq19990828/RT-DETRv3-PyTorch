@@ -12,18 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import random
-import numpy as np
 
+import numpy as np
 import torch
 import torch.distributed as dist
 
-__all__ = ['init_parallel_env', 'set_random_seed', 'init_fleet_env']
+__all__ = ["init_parallel_env", "set_random_seed", "init_fleet_env"]
 
 
 def init_fleet_env(find_unused_parameters=False):
@@ -49,18 +47,20 @@ def init_fleet_env(find_unused_parameters=False):
     # Initialize process group if not already initialized
     if not dist.is_initialized():
         # Get backend from environment or use default
-        backend = os.environ.get('DIST_BACKEND', 'nccl' if torch.cuda.is_available() else 'gloo')
+        backend = os.environ.get(
+            "DIST_BACKEND", "nccl" if torch.cuda.is_available() else "gloo"
+        )
 
         # Initialize the process group
         dist.init_process_group(backend=backend)
 
         # Set device for current process
         if torch.cuda.is_available():
-            local_rank = int(os.environ.get('LOCAL_RANK', 0))
+            local_rank = int(os.environ.get("LOCAL_RANK", 0))
             torch.cuda.set_device(local_rank)
 
     # Store find_unused_parameters in environment for later use in DDP wrapper
-    os.environ['DDP_FIND_UNUSED_PARAMETERS'] = str(find_unused_parameters)
+    os.environ["DDP_FIND_UNUSED_PARAMETERS"] = str(find_unused_parameters)
 
 
 def init_parallel_env():
@@ -79,25 +79,25 @@ def init_parallel_env():
 
     # Check if we're in distributed mode
     # PyTorch uses RANK/LOCAL_RANK/WORLD_SIZE instead of PADDLE_TRAINER_ID/PADDLE_TRAINERS_NUM
-    is_distributed = ('RANK' in env or 'LOCAL_RANK' in env) and 'WORLD_SIZE' in env
+    is_distributed = ("RANK" in env or "LOCAL_RANK" in env) and "WORLD_SIZE" in env
 
     if is_distributed:
         # Get rank (use RANK if available, otherwise LOCAL_RANK)
-        rank = int(env.get('RANK', env.get('LOCAL_RANK', 0)))
+        rank = int(env.get("RANK", env.get("LOCAL_RANK", 0)))
 
         # Set process-specific seed for reproducibility
-        local_seed = (99 + rank)
+        local_seed = 99 + rank
         random.seed(local_seed)
         np.random.seed(local_seed)
 
         # Initialize distributed training if not already done
         if not dist.is_initialized():
-            backend = 'nccl' if torch.cuda.is_available() else 'gloo'
+            backend = "nccl" if torch.cuda.is_available() else "gloo"
             dist.init_process_group(backend=backend)
 
             # Set device if using CUDA
             if torch.cuda.is_available():
-                local_rank = int(env.get('LOCAL_RANK', 0))
+                local_rank = int(env.get("LOCAL_RANK", 0))
                 torch.cuda.set_device(local_rank)
 
 

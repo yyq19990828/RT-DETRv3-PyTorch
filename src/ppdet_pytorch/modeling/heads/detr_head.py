@@ -16,13 +16,14 @@ Reference:
 - PaddlePaddle RT-DETR: ppdet/modeling/heads/detr_head.py
 """
 
+from typing import Dict, Optional, Tuple
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from typing import Optional, Tuple, Dict, List
+
 from ppdet_pytorch.core.workspace import register
 
-__all__ = ['DINOv3Head']
+__all__ = ["DINOv3Head"]
 
 
 @register
@@ -41,16 +42,16 @@ class DINOv3Head(nn.Module):
         num_queries_o2m: Number of one-to-many queries (default: 450)
     """
 
-    __inject__ = ['loss']
-    __shared__ = ['o2m_branch', 'num_queries_o2m']
+    __inject__ = ["loss"]
+    __shared__ = ["o2m_branch", "num_queries_o2m"]
 
     def __init__(
         self,
-        loss='DINOLoss',
+        loss="DINOLoss",
         eval_idx: int = -1,
         o2m: int = 4,
         o2m_branch: bool = False,
-        num_queries_o2m: int = 450
+        num_queries_o2m: int = 450,
     ):
         super().__init__()
         self.loss = loss
@@ -63,7 +64,7 @@ class DINOv3Head(nn.Module):
         self,
         out_transformer: Tuple[torch.Tensor, ...],
         body_feats: Optional[torch.Tensor] = None,
-        inputs: Optional[Dict] = None
+        inputs: Optional[Dict] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor]]:
         """
         Forward pass of DINOv3Head
@@ -86,13 +87,17 @@ class DINOv3Head(nn.Module):
                 - pred_bboxes: (B, N, 4) in [0, 1] range
                 - pred_logits: (B, N, num_classes) raw logits
         """
-        dec_out_bboxes, dec_out_logits, enc_topk_bboxes, enc_topk_logits, dn_meta = out_transformer
+        dec_out_bboxes, dec_out_logits, enc_topk_bboxes, enc_topk_logits, dn_meta = (
+            out_transformer
+        )
 
         if self.training:
             # Training mode: compute losses
             # Following Paddle: ppdet/modeling/heads/detr_head.py:558-642
             assert inputs is not None, "inputs must be provided in training mode"
-            assert 'gt_bbox' in inputs and 'gt_class' in inputs, "inputs must contain 'gt_bbox' and 'gt_class'"
+            assert "gt_bbox" in inputs and "gt_class" in inputs, (
+                "inputs must contain 'gt_bbox' and 'gt_class'"
+            )
             assert self.loss is not None, "loss must be set for training mode"
 
             # Case 1: Multi-group denoising (dn_meta is a list of dicts)
@@ -109,52 +114,67 @@ class DINOv3Head(nn.Module):
                     # Split o2m queries from main queries
                     dec_out_bboxes, dec_out_bboxes_o2m = torch.split(
                         dec_out_bboxes,
-                        [total_dec_queries - self.num_queries_o2m, self.num_queries_o2m],
-                        dim=2
+                        [
+                            total_dec_queries - self.num_queries_o2m,
+                            self.num_queries_o2m,
+                        ],
+                        dim=2,
                     )
                     dec_out_logits, dec_out_logits_o2m = torch.split(
                         dec_out_logits,
-                        [total_dec_queries - self.num_queries_o2m, self.num_queries_o2m],
-                        dim=2
+                        [
+                            total_dec_queries - self.num_queries_o2m,
+                            self.num_queries_o2m,
+                        ],
+                        dim=2,
                     )
                     enc_topk_bboxes, enc_topk_bboxes_o2m = torch.split(
                         enc_topk_bboxes,
-                        [total_enc_queries - self.num_queries_o2m, self.num_queries_o2m],
-                        dim=1
+                        [
+                            total_enc_queries - self.num_queries_o2m,
+                            self.num_queries_o2m,
+                        ],
+                        dim=1,
                     )
                     enc_topk_logits, enc_topk_logits_o2m = torch.split(
                         enc_topk_logits,
-                        [total_enc_queries - self.num_queries_o2m, self.num_queries_o2m],
-                        dim=1
+                        [
+                            total_enc_queries - self.num_queries_o2m,
+                            self.num_queries_o2m,
+                        ],
+                        dim=1,
                     )
 
                     # Compute o2m branch loss
                     # Concatenate encoder + decoder outputs for o2m
                     # Match Paddle: paddle.concat([enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m])
-                    out_bboxes_o2m = torch.cat([enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m])
-                    out_logits_o2m = torch.cat([enc_topk_logits_o2m.unsqueeze(0), dec_out_logits_o2m])
+                    out_bboxes_o2m = torch.cat(
+                        [enc_topk_bboxes_o2m.unsqueeze(0), dec_out_bboxes_o2m]
+                    )
+                    out_logits_o2m = torch.cat(
+                        [enc_topk_logits_o2m.unsqueeze(0), dec_out_logits_o2m]
+                    )
 
                     loss_o2m = self.loss(
                         out_bboxes_o2m,
                         out_logits_o2m,
-                        inputs['gt_bbox'],
-                        inputs['gt_class'],
+                        inputs["gt_bbox"],
+                        inputs["gt_class"],
                         dn_out_bboxes=None,
                         dn_out_logits=None,
                         dn_meta=None,
-                        o2m=self.o2m
+                        o2m=self.o2m,
                     )
                     # Add o2m_branch suffix to loss keys
                     # Match Paddle: loss.update({key: loss.get(key, paddle.zeros([1])) + value})
                     for key, value in loss_o2m.items():
-                        loss_key = key + '_o2m_branch'
-                        loss[loss_key] = loss.get(
-                            loss_key, value.new_zeros(())) + value
+                        loss_key = key + "_o2m_branch"
+                        loss[loss_key] = loss.get(loss_key, value.new_zeros(())) + value
 
                 # Split queries by groups
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:590-595
-                split_dec_num = [sum(dn['dn_num_split']) for dn in dn_meta]
-                split_enc_num = [dn['dn_num_split'][1] for dn in dn_meta]
+                split_dec_num = [sum(dn["dn_num_split"]) for dn in dn_meta]
+                split_enc_num = [dn["dn_num_split"][1] for dn in dn_meta]
 
                 dec_out_bboxes = torch.split(dec_out_bboxes, split_dec_num, dim=2)
                 dec_out_logits = torch.split(dec_out_logits, split_dec_num, dim=2)
@@ -166,31 +186,31 @@ class DINOv3Head(nn.Module):
                 for g_id in range(num_groups):
                     # Split denoising and matching queries for this group
                     dn_out_bboxes_gid, dec_out_bboxes_gid = torch.split(
-                        dec_out_bboxes[g_id],
-                        dn_meta[g_id]['dn_num_split'],
-                        dim=2
+                        dec_out_bboxes[g_id], dn_meta[g_id]["dn_num_split"], dim=2
                     )
                     dn_out_logits_gid, dec_out_logits_gid = torch.split(
-                        dec_out_logits[g_id],
-                        dn_meta[g_id]['dn_num_split'],
-                        dim=2
+                        dec_out_logits[g_id], dn_meta[g_id]["dn_num_split"], dim=2
                     )
 
                     # Concatenate encoder + decoder outputs
                     # Match Paddle: paddle.concat([enc_topk_bboxes[g_id].unsqueeze(0), dec_out_bboxes_gid])
-                    out_bboxes_gid = torch.cat([enc_topk_bboxes[g_id].unsqueeze(0), dec_out_bboxes_gid])
-                    out_logits_gid = torch.cat([enc_topk_logits[g_id].unsqueeze(0), dec_out_logits_gid])
+                    out_bboxes_gid = torch.cat(
+                        [enc_topk_bboxes[g_id].unsqueeze(0), dec_out_bboxes_gid]
+                    )
+                    out_logits_gid = torch.cat(
+                        [enc_topk_logits[g_id].unsqueeze(0), dec_out_logits_gid]
+                    )
 
                     # Compute loss for this group
                     # Match Paddle: passes dn_out_bboxes_gid and dn_out_logits_gid directly (as tensors)
                     loss_gid = self.loss(
                         out_bboxes_gid,
                         out_logits_gid,
-                        inputs['gt_bbox'],
-                        inputs['gt_class'],
+                        inputs["gt_bbox"],
+                        inputs["gt_class"],
                         dn_out_bboxes=dn_out_bboxes_gid,
                         dn_out_logits=dn_out_logits_gid,
-                        dn_meta=dn_meta[g_id]
+                        dn_meta=dn_meta[g_id],
                     )
 
                     # Accumulate losses across groups
@@ -201,7 +221,7 @@ class DINOv3Head(nn.Module):
                 # Average losses across groups (except o2m_branch losses)
                 # Following Paddle: ppdet/modeling/heads/detr_head.py:622-624
                 for key, value in loss.items():
-                    if '_o2m_branch' not in key:
+                    if "_o2m_branch" not in key:
                         loss[key] = value / num_groups
 
                 return loss
@@ -223,12 +243,12 @@ class DINOv3Head(nn.Module):
                 return self.loss(
                     out_bboxes,
                     out_logits,
-                    inputs['gt_bbox'],
-                    inputs['gt_class'],
+                    inputs["gt_bbox"],
+                    inputs["gt_class"],
                     dn_out_bboxes=dn_out_bboxes,
                     dn_out_logits=dn_out_logits,
                     dn_meta=dn_meta,
-                    gt_score=inputs.get('gt_score', None)
+                    gt_score=inputs.get("gt_score", None),
                 )
         else:
             # Evaluation mode: return predictions from specified decoder layer
@@ -238,5 +258,5 @@ class DINOv3Head(nn.Module):
             return (
                 dec_out_bboxes[self.eval_idx],  # (B, N, 4)
                 dec_out_logits[self.eval_idx],  # (B, N, num_classes)
-                None  # No auxiliary outputs in eval mode
+                None,  # No auxiliary outputs in eval mode
             )

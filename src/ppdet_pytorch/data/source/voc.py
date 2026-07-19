@@ -8,15 +8,17 @@ Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 Licensed under the Apache License, Version 2.0.
 """
 
+import logging
 import os
-import numpy as np
 import xml.etree.ElementTree as ET
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional
+
+import numpy as np
 
 from ppdet_pytorch.core.workspace import register, serializable
+
 from .dataset import DetDataset
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -53,10 +55,10 @@ class VOCDataSet(DetDataset):
         label_list: Optional[str] = None,
         allow_empty: bool = False,
         empty_ratio: float = 1.0,
-        repeat: int = 1
+        repeat: int = 1,
     ):
         if data_fields is None:
-            data_fields = ['image']
+            data_fields = ["image"]
 
         super(VOCDataSet, self).__init__(
             dataset_dir=dataset_dir,
@@ -64,7 +66,7 @@ class VOCDataSet(DetDataset):
             anno_path=anno_path,
             data_fields=data_fields,
             sample_num=sample_num,
-            repeat=repeat
+            repeat=repeat,
         )
 
         # VOC-specific parameters
@@ -91,9 +93,9 @@ class VOCDataSet(DetDataset):
             return records
 
         import random
+
         sample_num = min(
-            int(num * self.empty_ratio / (1 - self.empty_ratio)),
-            len(records)
+            int(num * self.empty_ratio / (1 - self.empty_ratio)), len(records)
         )
         records = random.sample(records, sample_num)
         return records
@@ -121,7 +123,7 @@ class VOCDataSet(DetDataset):
             if not os.path.exists(label_path):
                 raise ValueError(f"label_list {label_path} does not exist")
 
-            with open(label_path, 'r') as fr:
+            with open(label_path, "r") as fr:
                 label_id = 0
                 for line in fr.readlines():
                     cname2cid[line.strip()] = label_id
@@ -133,7 +135,7 @@ class VOCDataSet(DetDataset):
         logger.info(f"Loading VOC annotations from {anno_path}")
 
         # Parse annotation list file
-        with open(anno_path, 'r') as fr:
+        with open(anno_path, "r") as fr:
             while True:
                 line = fr.readline()
                 if not line:
@@ -141,47 +143,41 @@ class VOCDataSet(DetDataset):
 
                 # Parse image and XML paths
                 parts = line.strip().split()[:2]
-                img_file, xml_file = [
-                    os.path.join(image_dir, x) for x in parts
-                ]
+                img_file, xml_file = [os.path.join(image_dir, x) for x in parts]
 
                 # Validate image file
                 if not os.path.exists(img_file):
-                    logger.warning(
-                        f'Illegal image file: {img_file}, will be ignored'
-                    )
+                    logger.warning(f"Illegal image file: {img_file}, will be ignored")
                     continue
 
                 # Validate XML file
                 if not os.path.isfile(xml_file):
-                    logger.warning(
-                        f'Illegal xml file: {xml_file}, will be ignored'
-                    )
+                    logger.warning(f"Illegal xml file: {xml_file}, will be ignored")
                     continue
 
                 # Parse XML annotation
                 tree = ET.parse(xml_file)
 
                 # Get image ID (use counter if not in XML)
-                if tree.find('id') is None:
+                if tree.find("id") is None:
                     im_id = np.array([ct])
                 else:
-                    im_id = np.array([int(tree.find('id').text)])
+                    im_id = np.array([int(tree.find("id").text)])
 
                 # Get image dimensions
-                im_w = float(tree.find('size').find('width').text)
-                im_h = float(tree.find('size').find('height').text)
+                im_w = float(tree.find("size").find("width").text)
+                im_h = float(tree.find("size").find("height").text)
 
                 # Validate dimensions
                 if im_w < 0 or im_h < 0:
                     logger.warning(
-                        f'Illegal width: {im_w} or height: {im_h} in annotation, '
-                        f'{xml_file} will be ignored'
+                        f"Illegal width: {im_w} or height: {im_h} in annotation, "
+                        f"{xml_file} will be ignored"
                     )
                     continue
 
                 # Parse objects
-                objs = tree.findall('object')
+                objs = tree.findall("object")
                 num_bbox = len(objs)
 
                 # Initialize annotation arrays
@@ -192,17 +188,17 @@ class VOCDataSet(DetDataset):
 
                 i = 0
                 for obj in objs:
-                    cname = obj.find('name').text
+                    cname = obj.find("name").text
 
                     # Parse difficult flag (user dataset may not contain it)
-                    _difficult = obj.find('difficult')
+                    _difficult = obj.find("difficult")
                     _difficult = int(_difficult.text) if _difficult is not None else 0
 
                     # Parse bounding box
-                    x1 = float(obj.find('bndbox').find('xmin').text)
-                    y1 = float(obj.find('bndbox').find('ymin').text)
-                    x2 = float(obj.find('bndbox').find('xmax').text)
-                    y2 = float(obj.find('bndbox').find('ymax').text)
+                    x1 = float(obj.find("bndbox").find("xmin").text)
+                    y1 = float(obj.find("bndbox").find("ymin").text)
+                    x2 = float(obj.find("bndbox").find("xmax").text)
+                    y2 = float(obj.find("bndbox").find("ymax").text)
 
                     # Clip to image boundaries
                     x1 = max(0, x1)
@@ -219,8 +215,8 @@ class VOCDataSet(DetDataset):
                         i += 1
                     else:
                         logger.warning(
-                            f'Found an invalid bbox in annotations: '
-                            f'xml_file: {xml_file}, x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}.'
+                            f"Found an invalid bbox in annotations: "
+                            f"xml_file: {xml_file}, x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}."
                         )
 
                 # Trim arrays to actual object count
@@ -230,19 +226,18 @@ class VOCDataSet(DetDataset):
                 difficult = difficult[:i, :]
 
                 # Build record dict
-                voc_rec = {
-                    'im_file': img_file,
-                    'im_id': im_id,
-                    'h': im_h,
-                    'w': im_w
-                } if 'image' in self.data_fields else {}
+                voc_rec = (
+                    {"im_file": img_file, "im_id": im_id, "h": im_h, "w": im_w}
+                    if "image" in self.data_fields
+                    else {}
+                )
 
                 # Add ground truth annotations
                 gt_rec = {
-                    'gt_class': gt_class,
-                    'gt_score': gt_score,
-                    'gt_bbox': gt_bbox,
-                    'difficult': difficult
+                    "gt_class": gt_class,
+                    "gt_score": gt_score,
+                    "gt_bbox": gt_bbox,
+                    "difficult": difficult,
                 }
 
                 # Filter by data_fields
@@ -262,9 +257,9 @@ class VOCDataSet(DetDataset):
                 if self.sample_num > 0 and ct >= self.sample_num:
                     break
 
-        assert ct > 0, f'Not found any VOC record in {self.anno_path}'
+        assert ct > 0, f"Not found any VOC record in {self.anno_path}"
 
-        logger.debug(f'{ct} samples in file {anno_path}')
+        logger.debug(f"{ct} samples in file {anno_path}")
 
         # Sample and add empty records
         if self.allow_empty and len(empty_records) > 0:
@@ -289,25 +284,25 @@ def pascalvoc_label() -> Dict[str, int]:
         Dictionary mapping class names to class IDs (0-19)
     """
     labels_map = {
-        'aeroplane': 0,
-        'bicycle': 1,
-        'bird': 2,
-        'boat': 3,
-        'bottle': 4,
-        'bus': 5,
-        'car': 6,
-        'cat': 7,
-        'chair': 8,
-        'cow': 9,
-        'diningtable': 10,
-        'dog': 11,
-        'horse': 12,
-        'motorbike': 13,
-        'person': 14,
-        'pottedplant': 15,
-        'sheep': 16,
-        'sofa': 17,
-        'train': 18,
-        'tvmonitor': 19
+        "aeroplane": 0,
+        "bicycle": 1,
+        "bird": 2,
+        "boat": 3,
+        "bottle": 4,
+        "bus": 5,
+        "car": 6,
+        "cat": 7,
+        "chair": 8,
+        "cow": 9,
+        "diningtable": 10,
+        "dog": 11,
+        "horse": 12,
+        "motorbike": 13,
+        "person": 14,
+        "pottedplant": 15,
+        "sheep": 16,
+        "sofa": 17,
+        "train": 18,
+        "tvmonitor": 19,
     }
     return labels_map

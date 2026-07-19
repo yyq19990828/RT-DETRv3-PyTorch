@@ -26,10 +26,10 @@ but this module is preserved for:
 """
 
 import math
-import torch
-import numpy as np
+
 import cv2
-from typing import List, Tuple
+import numpy as np
+import torch
 
 
 def norm_angle(angle, range=[-np.pi / 4, np.pi]):
@@ -54,10 +54,12 @@ def poly2rbox_le135_np(poly):
     pt3 = (poly[4], poly[5])
     pt4 = (poly[6], poly[7])
 
-    edge1 = np.sqrt((pt1[0] - pt2[0]) * (pt1[0] - pt2[0]) + (pt1[1] - pt2[1]) *
-                    (pt1[1] - pt2[1]))
-    edge2 = np.sqrt((pt2[0] - pt3[0]) * (pt2[0] - pt3[0]) + (pt2[1] - pt3[1]) *
-                    (pt2[1] - pt3[1]))
+    edge1 = np.sqrt(
+        (pt1[0] - pt2[0]) * (pt1[0] - pt2[0]) + (pt1[1] - pt2[1]) * (pt1[1] - pt2[1])
+    )
+    edge2 = np.sqrt(
+        (pt2[0] - pt3[0]) * (pt2[0] - pt3[0]) + (pt2[1] - pt3[1]) * (pt2[1] - pt3[1])
+    )
 
     width = max(edge1, edge2)
     height = min(edge1, edge2)
@@ -103,7 +105,7 @@ def poly2rbox_oc_np(poly):
     return [cx, cy, w, h, angle]
 
 
-def poly2rbox_np(polys, rbox_type='oc'):
+def poly2rbox_np(polys, rbox_type="oc"):
     """Convert polygons to rotated boxes
 
     Args:
@@ -113,8 +115,8 @@ def poly2rbox_np(polys, rbox_type='oc'):
     Returns:
         rboxes: [x_ctr,y_ctr,w,h,angle]
     """
-    assert rbox_type in ['oc', 'le135'], 'only oc or le135 is supported now'
-    poly2rbox_fn = poly2rbox_oc_np if rbox_type == 'oc' else poly2rbox_le135_np
+    assert rbox_type in ["oc", "le135"], "only oc or le135 is supported now"
+    poly2rbox_fn = poly2rbox_oc_np if rbox_type == "oc" else poly2rbox_le135_np
     rboxes = []
     for poly in polys:
         x, y, w, h, angle = poly2rbox_fn(poly)
@@ -127,7 +129,8 @@ def poly2rbox_np(polys, rbox_type='oc'):
 def cal_line_length(point1, point2):
     """Calculate Euclidean distance between two points"""
     return math.sqrt(
-        math.pow(point1[0] - point2[0], 2) + math.pow(point1[1] - point2[1], 2))
+        math.pow(point1[0] - point2[0], 2) + math.pow(point1[1] - point2[1], 2)
+    )
 
 
 def get_best_begin_point_single(coordinate):
@@ -137,18 +140,22 @@ def get_best_begin_point_single(coordinate):
     ymin = min(y1, y2, y3, y4)
     xmax = max(x1, x2, x3, x4)
     ymax = max(y1, y2, y3, y4)
-    combinate = [[[x1, y1], [x2, y2], [x3, y3], [x4, y4]],
-                 [[x4, y4], [x1, y1], [x2, y2], [x3, y3]],
-                 [[x3, y3], [x4, y4], [x1, y1], [x2, y2]],
-                 [[x2, y2], [x3, y3], [x4, y4], [x1, y1]]]
+    combinate = [
+        [[x1, y1], [x2, y2], [x3, y3], [x4, y4]],
+        [[x4, y4], [x1, y1], [x2, y2], [x3, y3]],
+        [[x3, y3], [x4, y4], [x1, y1], [x2, y2]],
+        [[x2, y2], [x3, y3], [x4, y4], [x1, y1]],
+    ]
     dst_coordinate = [[xmin, ymin], [xmax, ymin], [xmax, ymax], [xmin, ymax]]
     force = 100000000.0
     force_flag = 0
     for i in range(4):
-        temp_force = cal_line_length(combinate[i][0], dst_coordinate[0]) \
-                     + cal_line_length(combinate[i][1], dst_coordinate[1]) \
-                     + cal_line_length(combinate[i][2], dst_coordinate[2]) \
-                     + cal_line_length(combinate[i][3], dst_coordinate[3])
+        temp_force = (
+            cal_line_length(combinate[i][0], dst_coordinate[0])
+            + cal_line_length(combinate[i][1], dst_coordinate[1])
+            + cal_line_length(combinate[i][2], dst_coordinate[2])
+            + cal_line_length(combinate[i][3], dst_coordinate[3])
+        )
         if temp_force < force:
             force = temp_force
             force_flag = i
@@ -171,8 +178,7 @@ def rbox2poly_np(rboxes):
         x_ctr, y_ctr, width, height, angle = rboxes[i][:5]
         tl_x, tl_y, br_x, br_y = -width / 2, -height / 2, width / 2, height / 2
         rect = np.array([[tl_x, br_x, br_x, tl_x], [tl_y, tl_y, br_y, br_y]])
-        R = np.array([[np.cos(angle), -np.sin(angle)],
-                      [np.sin(angle), np.cos(angle)]])
+        R = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
         poly = R.dot(rect)
         x0, x1, x2, x3 = poly[0, :4] + x_ctr
         y0, y1, y2, y3 = poly[1, :4] + y_ctr
@@ -195,9 +201,13 @@ def box2corners(box: torch.Tensor) -> torch.Tensor:
     """
     B = box.shape[0]
     x, y, w, h, alpha = torch.split(box, 1, dim=-1)
-    x4 = torch.tensor([0.5, 0.5, -0.5, -0.5], dtype=torch.float32, device=box.device).reshape(1, 1, 4)
+    x4 = torch.tensor(
+        [0.5, 0.5, -0.5, -0.5], dtype=torch.float32, device=box.device
+    ).reshape(1, 1, 4)
     x4 = x4 * w  # (B, N, 4)
-    y4 = torch.tensor([-0.5, 0.5, 0.5, -0.5], dtype=torch.float32, device=box.device).reshape(1, 1, 4)
+    y4 = torch.tensor(
+        [-0.5, 0.5, 0.5, -0.5], dtype=torch.float32, device=box.device
+    ).reshape(1, 1, 4)
     y4 = y4 * h  # (B, N, 4)
     corners = torch.stack([x4, y4], dim=-1)  # (B, N, 4, 2)
     sin = torch.sin(alpha)
@@ -239,12 +249,18 @@ def check_points_in_polys(points: torch.Tensor, polys: torch.Tensor) -> torch.Te
     # [B, N, L] dot product
     ap_dot_ad = torch.sum(ap * ad, dim=-1)
     # [B, N, L] <A, B> = |A|*|B|*cos(theta)
-    is_in_polys = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (
-        ap_dot_ad >= 0) & (ap_dot_ad <= norm_ad)
+    is_in_polys = (
+        (ap_dot_ab >= 0)
+        & (ap_dot_ab <= norm_ab)
+        & (ap_dot_ad >= 0)
+        & (ap_dot_ad <= norm_ad)
+    )
     return is_in_polys
 
 
-def check_points_in_rotated_boxes(points: torch.Tensor, boxes: torch.Tensor) -> torch.Tensor:
+def check_points_in_rotated_boxes(
+    points: torch.Tensor, boxes: torch.Tensor
+) -> torch.Tensor:
     """Check whether point is in rotated boxes
 
     Args:
@@ -273,12 +289,18 @@ def check_points_in_rotated_boxes(points: torch.Tensor, boxes: torch.Tensor) -> 
     # [B, N, L] dot product
     ap_dot_ad = torch.sum(ap * ad, dim=-1)
     # [B, N, L] <A, B> = |A|*|B|*cos(theta)
-    is_in_box = (ap_dot_ab >= 0) & (ap_dot_ab <= norm_ab) & (ap_dot_ad >= 0) & (
-        ap_dot_ad <= norm_ad)
+    is_in_box = (
+        (ap_dot_ab >= 0)
+        & (ap_dot_ab <= norm_ab)
+        & (ap_dot_ad >= 0)
+        & (ap_dot_ad <= norm_ad)
+    )
     return is_in_box
 
 
-def rotated_iou_similarity(box1: torch.Tensor, box2: torch.Tensor, eps: float = 1e-9) -> torch.Tensor:
+def rotated_iou_similarity(
+    box1: torch.Tensor, box2: torch.Tensor, eps: float = 1e-9
+) -> torch.Tensor:
     """Calculate IoU of rotated boxes
 
     NOTE: This is a placeholder implementation.
@@ -303,13 +325,13 @@ def rotated_iou_similarity(box1: torch.Tensor, box2: torch.Tensor, eps: float = 
 
 
 __all__ = [
-    'norm_angle',
-    'poly2rbox_le135_np',
-    'poly2rbox_oc_np',
-    'poly2rbox_np',
-    'rbox2poly_np',
-    'box2corners',
-    'check_points_in_polys',
-    'check_points_in_rotated_boxes',
-    'rotated_iou_similarity',
+    "norm_angle",
+    "poly2rbox_le135_np",
+    "poly2rbox_oc_np",
+    "poly2rbox_np",
+    "rbox2poly_np",
+    "box2corners",
+    "check_points_in_polys",
+    "check_points_in_rotated_boxes",
+    "rotated_iou_similarity",
 ]

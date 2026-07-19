@@ -11,10 +11,11 @@ Reference:
 
 import copy
 import math
+from typing import Optional, Tuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, Tuple
 
 
 def _get_clones(module, N):
@@ -34,7 +35,7 @@ def get_sine_pos_embed(
     pos_tensor: torch.Tensor,
     num_pos_feats: int = 128,
     temperature: int = 10000,
-    exchange_xy: bool = True
+    exchange_xy: bool = True,
 ) -> torch.Tensor:
     """
     Generate sinusoidal position embeddings
@@ -52,14 +53,18 @@ def get_sine_pos_embed(
     """
     scale = 2 * math.pi
     dim_t = torch.arange(num_pos_feats, dtype=torch.float32, device=pos_tensor.device)
-    dim_t = temperature ** (2 * torch.div(dim_t, 2, rounding_mode='floor') / num_pos_feats)
+    dim_t = temperature ** (
+        2 * torch.div(dim_t, 2, rounding_mode="floor") / num_pos_feats
+    )
 
     def get_sine_embed(pos, dim_t):
         # pos: (B, N)
         # dim_t: (num_pos_feats,)
         # output: (B, N, num_pos_feats)
         pos = pos[:, :, None] / dim_t  # (B, N, num_pos_feats)
-        pos = torch.stack([pos[:, :, 0::2].sin(), pos[:, :, 1::2].cos()], dim=3).flatten(2)
+        pos = torch.stack(
+            [pos[:, :, 0::2].sin(), pos[:, :, 1::2].cos()], dim=3
+        ).flatten(2)
         return pos
 
     if exchange_xy:
@@ -96,8 +101,8 @@ class MLP(nn.Module):
         hidden_dim: int,
         output_dim: int,
         num_layers: int,
-        activation: str = 'relu',
-        dropout: float = 0.0
+        activation: str = "relu",
+        dropout: float = 0.0,
     ):
         """
         Args:
@@ -115,9 +120,9 @@ class MLP(nn.Module):
             nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])
         )
 
-        if activation == 'relu':
+        if activation == "relu":
             self.activation = nn.ReLU(inplace=True)
-        elif activation == 'gelu':
+        elif activation == "gelu":
             self.activation = nn.GELU()
         else:
             raise ValueError(f"Unsupported activation: {activation}")
@@ -188,7 +193,13 @@ def bbox_xyxy_to_cxcywh(x: torch.Tensor) -> torch.Tensor:
     return torch.cat([(x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1], dim=-1)
 
 
-def sigmoid_focal_loss(logit: torch.Tensor, label: torch.Tensor, normalizer: float = 1.0, alpha: float = 0.25, gamma: float = 2.0) -> torch.Tensor:
+def sigmoid_focal_loss(
+    logit: torch.Tensor,
+    label: torch.Tensor,
+    normalizer: float = 1.0,
+    alpha: float = 0.25,
+    gamma: float = 2.0,
+) -> torch.Tensor:
     """
     Sigmoid focal loss for classification.
 
@@ -219,7 +230,7 @@ def varifocal_loss_with_logits(
     label: torch.Tensor,
     normalizer: float = 1.0,
     alpha: float = 0.75,
-    gamma: float = 2.0
+    gamma: float = 2.0,
 ) -> torch.Tensor:
     """
     Varifocal loss for classification with quality estimation.
@@ -237,8 +248,10 @@ def varifocal_loss_with_logits(
     """
     pred_score = torch.sigmoid(pred_logits)
     weight = alpha * pred_score.pow(gamma) * (1 - label) + gt_score * label
-    loss = F.binary_cross_entropy_with_logits(
-        pred_logits, gt_score, reduction='none') * weight
+    loss = (
+        F.binary_cross_entropy_with_logits(pred_logits, gt_score, reduction="none")
+        * weight
+    )
     return loss.mean(1).sum() / normalizer
 
 
@@ -249,8 +262,13 @@ def get_contrastive_denoising_training_group(
     class_embed: torch.Tensor,
     num_denoising: int = 100,
     label_noise_ratio: float = 0.5,
-    box_noise_scale: float = 1.0
-) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor], Optional[dict]]:
+    box_noise_scale: float = 1.0,
+) -> Tuple[
+    Optional[torch.Tensor],
+    Optional[torch.Tensor],
+    Optional[torch.Tensor],
+    Optional[dict],
+]:
     """
     Generate contrastive denoising training groups for RT-DETR
 
@@ -330,12 +348,18 @@ def get_contrastive_denoising_training_group(
         pad_gt_mask_flat = pad_gt_mask.flatten()
 
         # Half of bbox prob
-        mask = torch.rand(input_query_class.shape, device=device) < (label_noise_ratio * 0.5)
+        mask = torch.rand(input_query_class.shape, device=device) < (
+            label_noise_ratio * 0.5
+        )
         chosen_idx = torch.nonzero(mask.float() * pad_gt_mask_flat).squeeze(-1)
 
         # Randomly put a new one here
         new_label = torch.randint(
-            0, num_classes, chosen_idx.shape, dtype=input_query_class.dtype, device=device
+            0,
+            num_classes,
+            chosen_idx.shape,
+            dtype=input_query_class.dtype,
+            device=device,
         )
         input_query_class.scatter_(0, chosen_idx, new_label)
         input_query_class = input_query_class.reshape(bs, num_denoising)
@@ -347,9 +371,14 @@ def get_contrastive_denoising_training_group(
 
         diff = input_query_bbox[..., 2:].repeat(1, 1, 2) * 0.5 * box_noise_scale
 
-        rand_sign = torch.randint(0, 2, input_query_bbox.shape, device=device).float() * 2.0 - 1.0
+        rand_sign = (
+            torch.randint(0, 2, input_query_bbox.shape, device=device).float() * 2.0
+            - 1.0
+        )
         rand_part = torch.rand(input_query_bbox.shape, device=device)
-        rand_part = (rand_part + 1.0) * negative_gt_mask + rand_part * (1 - negative_gt_mask)
+        rand_part = (rand_part + 1.0) * negative_gt_mask + rand_part * (
+            1 - negative_gt_mask
+        )
         rand_part *= rand_sign
         known_bbox += rand_part * diff
         known_bbox = known_bbox.clamp(min=0.0, max=1.0)
@@ -357,9 +386,13 @@ def get_contrastive_denoising_training_group(
         input_query_bbox = inverse_sigmoid(input_query_bbox)
 
     # Get class embeddings
-    class_embed = torch.cat([class_embed, torch.zeros(1, class_embed.shape[-1], device=device)])
+    class_embed = torch.cat(
+        [class_embed, torch.zeros(1, class_embed.shape[-1], device=device)]
+    )
     input_query_class = torch.gather(
-        class_embed, 0, input_query_class.flatten().unsqueeze(-1).expand(-1, class_embed.shape[-1])
+        class_embed,
+        0,
+        input_query_class.flatten().unsqueeze(-1).expand(-1, class_embed.shape[-1]),
     ).reshape(bs, num_denoising, -1)
 
     # Create attention mask
@@ -374,27 +407,25 @@ def get_contrastive_denoising_training_group(
         if i == 0:
             attn_mask[
                 max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
-                max_gt_num * 2 * (i + 1) : num_denoising
+                max_gt_num * 2 * (i + 1) : num_denoising,
             ] = False
         if i == num_group - 1:
             attn_mask[
-                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
-                : max_gt_num * 2 * i
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1), : max_gt_num * 2 * i
             ] = False
         else:
             attn_mask[
                 max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
-                max_gt_num * 2 * (i + 1) : num_denoising
+                max_gt_num * 2 * (i + 1) : num_denoising,
             ] = False
             attn_mask[
-                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1),
-                : max_gt_num * 2 * i
+                max_gt_num * 2 * i : max_gt_num * 2 * (i + 1), : max_gt_num * 2 * i
             ] = False
 
     dn_meta = {
         "dn_positive_idx": dn_positive_idx,
         "dn_num_group": num_group,
-        "dn_num_split": [num_denoising, num_queries]
+        "dn_num_split": [num_denoising, num_queries],
     }
 
     return input_query_class, input_query_bbox, attn_mask, dn_meta
@@ -425,12 +456,16 @@ def get_encoder_memory_and_spatial_shapes(features):
     memory = torch.cat(memory_list, dim=1)  # (B, sum(H*W), C)
 
     # Create spatial shapes tensor
-    spatial_shapes = torch.tensor(spatial_shapes_list, dtype=torch.long, device=memory.device)  # (num_levels, 2)
+    spatial_shapes = torch.tensor(
+        spatial_shapes_list, dtype=torch.long, device=memory.device
+    )  # (num_levels, 2)
 
     # Create level start indices
-    level_start_index = torch.cat([
-        torch.zeros(1, dtype=torch.long, device=memory.device),
-        torch.cumsum(spatial_shapes.prod(dim=1)[:-1], dim=0)
-    ])  # (num_levels,)
+    level_start_index = torch.cat(
+        [
+            torch.zeros(1, dtype=torch.long, device=memory.device),
+            torch.cumsum(spatial_shapes.prod(dim=1)[:-1], dim=0),
+        ]
+    )  # (num_levels,)
 
     return memory, spatial_shapes, level_start_index

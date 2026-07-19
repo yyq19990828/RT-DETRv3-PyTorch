@@ -91,16 +91,19 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 基线为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。第一批先为 M1–M5 直接维护面建立 Ruff/Mypy 渐进门禁；这些审计数字和局部门禁都不代表整仓质量目标已完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 基线为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。Ruff 已扩展到全部活跃 Python 文件；Mypy、覆盖率、CUDA、性能和发布验收仍未完成。
 
 - [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
 - [ ] 目标训练吞吐不低于 Paddle 的 95%，峰值显存不超过 110%；无法达成时记录可定位瓶颈。
 - [ ] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
   - [x] 首批 Ruff format/lint 覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测；Mypy 首批 6 个 source file/目录通过。
-  - [ ] 将 Ruff/Mypy 门禁扩展到其余活跃模块并移除临时范围清单。
+  - [x] Ruff format/lint 扩展到全部活跃 Python 文件并移除临时范围清单。
+  - [ ] 将 Mypy 门禁扩展到其余活跃模块并清理剩余类型错误。
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
+  - [x] 增加 Python 3.9–3.12 非 Paddle CPU workflow，并在本机 UV 隔离环境验证锁文件安装和测试。
+  - [ ] 确认 GitHub 托管 CPU jobs 通过，并补充受控 CUDA job/证据。
 - [ ] 发布模型库、checksum、配置、许可说明和最终验证报告。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。

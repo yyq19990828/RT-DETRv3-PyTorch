@@ -14,10 +14,10 @@
 
 import os
 
-SIZE_UNIT = ['K', 'M', 'G', 'T']
-SHM_QUERY_CMD = 'df -h'
-SHM_KEY = 'shm'
-SHM_DEFAULT_MOUNT = '/dev/shm'
+SIZE_UNIT = ["K", "M", "G", "T"]
+SHM_QUERY_CMD = "df -h"
+SHM_KEY = "shm"
+SHM_DEFAULT_MOUNT = "/dev/shm"
 
 # [ shared memory size check ]
 # In detection models, image/target data occupies a lot of memory, and
@@ -34,20 +34,18 @@ SHM_DEFAULT_MOUNT = '/dev/shm'
 
 
 def _parse_size_in_M(size_str):
-    if size_str[-1] == 'B':
+    if size_str[-1] == "B":
         num, unit = size_str[:-2], size_str[-2]
     else:
         num, unit = size_str[:-1], size_str[-1]
-    assert unit in SIZE_UNIT, \
-            "unknown shm size unit {}".format(unit)
-    return float(num) * \
-            (1024 ** (SIZE_UNIT.index(unit) - 1))
+    assert unit in SIZE_UNIT, "unknown shm size unit {}".format(unit)
+    return float(num) * (1024 ** (SIZE_UNIT.index(unit) - 1))
 
 
 def _get_shared_memory_size_in_M():
     try:
         df_infos = os.popen(SHM_QUERY_CMD).readlines()
-    except:
+    except OSError:
         return None
     else:
         shm_infos = []

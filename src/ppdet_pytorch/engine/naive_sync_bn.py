@@ -21,14 +21,14 @@ Naive SyncBatchNorm conversion utility.
 Converts BatchNorm layers to SyncBatchNorm for distributed training.
 """
 
-import torch
-import torch.nn as nn
-import torch.distributed as dist
 import logging
+
+import torch.distributed as dist
+import torch.nn as nn
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['convert_syncbn']
+__all__ = ["convert_syncbn"]
 
 
 def convert_syncbn(model):

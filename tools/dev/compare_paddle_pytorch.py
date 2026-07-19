@@ -8,11 +8,11 @@ between Paddle and PyTorch implementations to identify:
 - Different APIs
 """
 
-import sys
-import inspect
-from pathlib import Path
-from typing import Dict, List, Set, Tuple
 import importlib.util
+import inspect
+import sys
+from pathlib import Path
+from typing import Dict, Set
 
 # Allow running this development script without installing either codebase.
 project_root = Path(__file__).resolve().parents[2]
@@ -24,14 +24,18 @@ def get_public_methods(cls) -> Set[str]:
     """Get all public methods of a class (excluding private and magic methods)"""
     methods = set()
     for name in dir(cls):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
         try:
             attr = getattr(cls, name)
             # Include methods and functions, but exclude classes and modules
-            if callable(attr) and not inspect.isclass(attr) and not inspect.ismodule(attr):
+            if (
+                callable(attr)
+                and not inspect.isclass(attr)
+                and not inspect.ismodule(attr)
+            ):
                 methods.add(name)
-        except:
+        except (AttributeError, TypeError):
             pass
     return methods
 
@@ -39,8 +43,9 @@ def get_public_methods(cls) -> Set[str]:
 def get_public_attributes(cls) -> Set[str]:
     """Get all public attributes/properties of a class"""
     return {
-        name for name in dir(cls)
-        if not name.startswith('_') and not callable(getattr(cls, name, None))
+        name
+        for name in dir(cls)
+        if not name.startswith("_") and not callable(getattr(cls, name, None))
     }
 
 
@@ -66,7 +71,7 @@ def compare_classes(paddle_cls, pytorch_cls, class_name: str) -> Dict:
         "common_methods": sorted(paddle_methods & pytorch_methods),
         "paddle_only_methods": sorted(paddle_methods - pytorch_methods),
         "pytorch_only_methods": sorted(pytorch_methods - paddle_methods),
-        "signature_diffs": []
+        "signature_diffs": [],
     }
 
     # Compare signatures of common methods
@@ -74,11 +79,9 @@ def compare_classes(paddle_cls, pytorch_cls, class_name: str) -> Dict:
         paddle_sig = get_method_signature(paddle_cls, method) if paddle_cls else ""
         pytorch_sig = get_method_signature(pytorch_cls, method) if pytorch_cls else ""
         if paddle_sig != pytorch_sig:
-            result["signature_diffs"].append({
-                "method": method,
-                "paddle": paddle_sig,
-                "pytorch": pytorch_sig
-            })
+            result["signature_diffs"].append(
+                {"method": method, "paddle": paddle_sig, "pytorch": pytorch_sig}
+            )
 
     return result
 
@@ -86,7 +89,7 @@ def compare_classes(paddle_cls, pytorch_cls, class_name: str) -> Dict:
 def safe_import_class(module_path: str, class_name: str):
     """Safely import a class, return None if fails"""
     try:
-        parts = module_path.rsplit('.', 1)
+        parts = module_path.rsplit(".", 1)
         if len(parts) == 2:
             module_name, attr_name = parts
         else:
@@ -108,7 +111,11 @@ def compare_datasets():
 
     datasets_to_compare = [
         ("COCODataSet", "ppdet.data.source.coco", "ppdet_pytorch.data.source.coco"),
-        ("DetDataset", "ppdet.data.source.dataset", "ppdet_pytorch.data.source.dataset"),
+        (
+            "DetDataset",
+            "ppdet.data.source.dataset",
+            "ppdet_pytorch.data.source.dataset",
+        ),
     ]
 
     results = []
@@ -184,16 +191,22 @@ def print_comparison_result(result: Dict):
     if not (result["paddle_exists"] and result["pytorch_exists"]):
         return
 
-    print(f"✅ Common methods ({len(result['common_methods'])}): {', '.join(result['common_methods'][:5])}" +
-          (f", ..." if len(result['common_methods']) > 5 else ""))
+    print(
+        f"✅ Common methods ({len(result['common_methods'])}): {', '.join(result['common_methods'][:5])}"
+        + (", ..." if len(result["common_methods"]) > 5 else "")
+    )
 
     if result["paddle_only_methods"]:
-        print(f"⚠️  Paddle-only methods ({len(result['paddle_only_methods'])}): {', '.join(result['paddle_only_methods'][:5])}" +
-              (f", ..." if len(result['paddle_only_methods']) > 5 else ""))
+        print(
+            f"⚠️  Paddle-only methods ({len(result['paddle_only_methods'])}): {', '.join(result['paddle_only_methods'][:5])}"
+            + (", ..." if len(result["paddle_only_methods"]) > 5 else "")
+        )
 
     if result["pytorch_only_methods"]:
-        print(f"ℹ️  PyTorch-only methods ({len(result['pytorch_only_methods'])}): {', '.join(result['pytorch_only_methods'][:5])}" +
-              (f", ..." if len(result['pytorch_only_methods']) > 5 else ""))
+        print(
+            f"ℹ️  PyTorch-only methods ({len(result['pytorch_only_methods'])}): {', '.join(result['pytorch_only_methods'][:5])}"
+            + (", ..." if len(result["pytorch_only_methods"]) > 5 else "")
+        )
 
     if result["signature_diffs"]:
         print(f"⚠️  Signature differences ({len(result['signature_diffs'])})")
@@ -212,11 +225,17 @@ def generate_summary(dataset_results, engine_results, metrics_results):
     all_results = dataset_results + engine_results + metrics_results
     total_classes = len(all_results)
     implemented = sum(1 for r in all_results if r["pytorch_exists"])
-    fully_compatible = sum(1 for r in all_results if r["pytorch_exists"] and not r["paddle_only_methods"])
+    fully_compatible = sum(
+        1 for r in all_results if r["pytorch_exists"] and not r["paddle_only_methods"]
+    )
 
     print(f"\nTotal classes compared: {total_classes}")
-    print(f"PyTorch implemented: {implemented}/{total_classes} ({implemented/total_classes*100:.1f}%)")
-    print(f"Fully compatible (no missing methods): {fully_compatible}/{total_classes} ({fully_compatible/total_classes*100:.1f}%)")
+    print(
+        f"PyTorch implemented: {implemented}/{total_classes} ({implemented / total_classes * 100:.1f}%)"
+    )
+    print(
+        f"Fully compatible (no missing methods): {fully_compatible}/{total_classes} ({fully_compatible / total_classes * 100:.1f}%)"
+    )
 
     print("\n⚠️  Missing features to implement:")
     for result in all_results:
@@ -229,7 +248,7 @@ def generate_summary(dataset_results, engine_results, metrics_results):
         "total_classes": total_classes,
         "implemented": implemented,
         "fully_compatible": fully_compatible,
-        "all_results": all_results
+        "all_results": all_results,
     }
 
 

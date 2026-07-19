@@ -17,40 +17,39 @@
 this code is based on https://github.com/open-mmlab/mmpose
 """
 
+import warnings
+
 import cv2
 import numpy as np
 import torch.nn.functional as F
-import warnings
 
 
 def get_affine_mat_kernel(h, w, s, inv=False):
     if w < h:
         w_ = s
-        h_ = int(np.ceil((s / w * h) / 64.) * 64)
+        h_ = int(np.ceil((s / w * h) / 64.0) * 64)
         scale_w = w
         scale_h = h_ / w_ * w
 
     else:
         h_ = s
-        w_ = int(np.ceil((s / h * w) / 64.) * 64)
+        w_ = int(np.ceil((s / h * w) / 64.0) * 64)
         scale_h = h
         scale_w = w_ / h_ * h
 
-    center = np.array([np.round(w / 2.), np.round(h / 2.)])
+    center = np.array([np.round(w / 2.0), np.round(h / 2.0)])
 
     size_resized = (w_, h_)
     trans = get_affine_transform(
-        center, np.array([scale_w, scale_h]), 0, size_resized, inv=inv)
+        center, np.array([scale_w, scale_h]), 0, size_resized, inv=inv
+    )
 
     return trans, size_resized
 
 
-def get_affine_transform(center,
-                         input_size,
-                         rot,
-                         output_size,
-                         shift=(0., 0.),
-                         inv=False):
+def get_affine_transform(
+    center, input_size, rot, output_size, shift=(0.0, 0.0), inv=False
+):
     """Get the affine transform matrix, given the center/scale/rot/output_size.
 
     Args:
@@ -80,8 +79,8 @@ def get_affine_transform(center,
     dst_h = output_size[1]
 
     rot_rad = np.pi * rot / 180
-    src_dir = rotate_point([0., src_w * -0.5], rot_rad)
-    dst_dir = np.array([0., dst_w * -0.5])
+    src_dir = rotate_point([0.0, src_w * -0.5], rot_rad)
+    dst_dir = np.array([0.0, dst_w * -0.5])
 
     src = np.zeros((3, 2), dtype=np.float32)
 
@@ -126,13 +125,17 @@ def get_warp_matrix(theta, size_input, size_dst, size_target):
     matrix[0, 0] = np.cos(theta) * scale_x
     matrix[0, 1] = -np.sin(theta) * scale_x
     matrix[0, 2] = scale_x * (
-        -0.5 * size_input[0] * np.cos(theta) + 0.5 * size_input[1] *
-        np.sin(theta) + 0.5 * size_target[0])
+        -0.5 * size_input[0] * np.cos(theta)
+        + 0.5 * size_input[1] * np.sin(theta)
+        + 0.5 * size_target[0]
+    )
     matrix[1, 0] = np.sin(theta) * scale_y
     matrix[1, 1] = np.cos(theta) * scale_y
     matrix[1, 2] = scale_y * (
-        -0.5 * size_input[0] * np.sin(theta) - 0.5 * size_input[1] *
-        np.cos(theta) + 0.5 * size_target[1])
+        -0.5 * size_input[0] * np.sin(theta)
+        - 0.5 * size_input[1] * np.cos(theta)
+        + 0.5 * size_target[1]
+    )
     return matrix
 
 
@@ -150,10 +153,8 @@ def _get_3rd_point(a, b):
     Returns:
         np.ndarray: The 3rd point.
     """
-    assert len(
-        a) == 2, 'input of _get_3rd_point should be point with length of 2'
-    assert len(
-        b) == 2, 'input of _get_3rd_point should be point with length of 2'
+    assert len(a) == 2, "input of _get_3rd_point should be point with length of 2"
+    assert len(b) == 2, "input of _get_3rd_point should be point with length of 2"
     direction = a - b
     third_pt = b + np.array([-direction[1], direction[0]], dtype=np.float32)
 
@@ -199,13 +200,13 @@ def warp_affine_joints(joints, mat):
     joints = np.array(joints)
     shape = joints.shape
     joints = joints.reshape(-1, 2)
-    return np.dot(np.concatenate(
-        (joints, joints[:, 0:1] * 0 + 1), axis=1),
-                  mat.T).reshape(shape)
+    return np.dot(
+        np.concatenate((joints, joints[:, 0:1] * 0 + 1), axis=1), mat.T
+    ).reshape(shape)
 
 
 def affine_transform(pt, t):
-    new_pt = np.array([pt[0], pt[1], 1.]).T
+    new_pt = np.array([pt[0], pt[1], 1.0]).T
     new_pt = np.dot(t, new_pt)
     return new_pt[:2]
 
@@ -220,11 +221,31 @@ def transform_preds(coords, center, scale, output_size):
 
 def oks_iou(g, d, a_g, a_d, sigmas=None, in_vis_thre=None):
     if not isinstance(sigmas, np.ndarray):
-        sigmas = np.array([
-            .26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07,
-            .87, .87, .89, .89
-        ]) / 10.0
-    vars = (sigmas * 2)**2
+        sigmas = (
+            np.array(
+                [
+                    0.26,
+                    0.25,
+                    0.25,
+                    0.35,
+                    0.35,
+                    0.79,
+                    0.79,
+                    0.72,
+                    0.72,
+                    0.62,
+                    0.62,
+                    1.07,
+                    1.07,
+                    0.87,
+                    0.87,
+                    0.89,
+                    0.89,
+                ]
+            )
+            / 10.0
+        )
+    vars = (sigmas * 2) ** 2
     xg = g[0::3]
     yg = g[1::3]
     vg = g[2::3]
@@ -262,10 +283,9 @@ def oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     if len(kpts_db) == 0:
         return []
 
-    scores = np.array([kpts_db[i]['score'] for i in range(len(kpts_db))])
-    kpts = np.array(
-        [kpts_db[i]['keypoints'].flatten() for i in range(len(kpts_db))])
-    areas = np.array([kpts_db[i]['area'] for i in range(len(kpts_db))])
+    scores = np.array([kpts_db[i]["score"] for i in range(len(kpts_db))])
+    kpts = np.array([kpts_db[i]["keypoints"].flatten() for i in range(len(kpts_db))])
+    areas = np.array([kpts_db[i]["area"] for i in range(len(kpts_db))])
 
     order = scores.argsort()[::-1]
 
@@ -274,8 +294,9 @@ def oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
         i = order[0]
         keep.append(i)
 
-        oks_ovr = oks_iou(kpts[i], kpts[order[1:]], areas[i], areas[order[1:]],
-                          sigmas, in_vis_thre)
+        oks_ovr = oks_iou(
+            kpts[i], kpts[order[1:]], areas[i], areas[order[1:]], sigmas, in_vis_thre
+        )
 
         inds = np.where(oks_ovr <= thresh)[0]
         order = order[inds + 1]
@@ -283,13 +304,13 @@ def oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     return keep
 
 
-def rescore(overlap, scores, thresh, type='gaussian'):
+def rescore(overlap, scores, thresh, type="gaussian"):
     assert overlap.shape[0] == scores.shape[0]
-    if type == 'linear':
+    if type == "linear":
         inds = np.where(overlap >= thresh)[0]
         scores[inds] = scores[inds] * (1 - overlap[inds])
     else:
-        scores = scores * np.exp(-overlap**2 / thresh)
+        scores = scores * np.exp(-(overlap**2) / thresh)
 
     return scores
 
@@ -313,10 +334,9 @@ def soft_oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     if len(kpts_db) == 0:
         return []
 
-    scores = np.array([kpts_db[i]['score'] for i in range(len(kpts_db))])
-    kpts = np.array(
-        [kpts_db[i]['keypoints'].flatten() for i in range(len(kpts_db))])
-    areas = np.array([kpts_db[i]['area'] for i in range(len(kpts_db))])
+    scores = np.array([kpts_db[i]["score"] for i in range(len(kpts_db))])
+    kpts = np.array([kpts_db[i]["keypoints"].flatten() for i in range(len(kpts_db))])
+    areas = np.array([kpts_db[i]["area"] for i in range(len(kpts_db))])
 
     order = scores.argsort()[::-1]
     scores = scores[order]
@@ -328,8 +348,9 @@ def soft_oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     while order.size > 0 and keep_cnt < max_dets:
         i = order[0]
 
-        oks_ovr = oks_iou(kpts[i], kpts[order[1:]], areas[i], areas[order[1:]],
-                          sigmas, in_vis_thre)
+        oks_ovr = oks_iou(
+            kpts[i], kpts[order[1:]], areas[i], areas[order[1:]], sigmas, in_vis_thre
+        )
 
         order = order[1:]
         scores = rescore(oks_ovr, scores[1:], thresh)
@@ -346,30 +367,35 @@ def soft_oks_nms(kpts_db, thresh, sigmas=None, in_vis_thre=None):
     return keep
 
 
-def resize(input,
-           size=None,
-           scale_factor=None,
-           mode='nearest',
-           align_corners=None,
-           warning=True):
+def resize(
+    input,
+    size=None,
+    scale_factor=None,
+    mode="nearest",
+    align_corners=None,
+    warning=True,
+):
     if warning:
         if size is not None and align_corners:
             input_h, input_w = tuple(int(x) for x in input.shape[2:])
             output_h, output_w = tuple(int(x) for x in size)
             if output_h > input_h or output_w > output_h:
-                if ((output_h > 1 and output_w > 1 and input_h > 1 and
-                     input_w > 1) and (output_h - 1) % (input_h - 1) and
-                    (output_w - 1) % (input_w - 1)):
+                if (
+                    (output_h > 1 and output_w > 1 and input_h > 1 and input_w > 1)
+                    and (output_h - 1) % (input_h - 1)
+                    and (output_w - 1) % (input_w - 1)
+                ):
                     warnings.warn(
-                        f'When align_corners={align_corners}, '
-                        'the output would more aligned if '
-                        f'input size {(input_h, input_w)} is `x+1` and '
-                        f'out size {(output_h, output_w)} is `nx+1`')
+                        f"When align_corners={align_corners}, "
+                        "the output would more aligned if "
+                        f"input size {(input_h, input_w)} is `x+1` and "
+                        f"out size {(output_h, output_w)} is `nx+1`"
+                    )
 
     return F.interpolate(input, size, scale_factor, mode, align_corners)
 
 
-def flip_back(output_flipped, flip_pairs, target_type='GaussianHeatmap'):
+def flip_back(output_flipped, flip_pairs, target_type="GaussianHeatmap"):
     """Flip the flipped heatmaps back to the original form.
     Note:
         - batch_size: N
@@ -385,15 +411,17 @@ def flip_back(output_flipped, flip_pairs, target_type='GaussianHeatmap'):
     Returns:
         np.ndarray: heatmaps that flipped back to the original image
     """
-    assert len(output_flipped.shape) == 4, \
-        'output_flipped should be [batch_size, num_keypoints, height, width]'
+    assert len(output_flipped.shape) == 4, (
+        "output_flipped should be [batch_size, num_keypoints, height, width]"
+    )
     shape_ori = output_flipped.shape
     channels = 1
-    if target_type.lower() == 'CombinedTarget'.lower():
+    if target_type.lower() == "CombinedTarget".lower():
         channels = 3
         output_flipped[:, 1::3, ...] = -output_flipped[:, 1::3, ...]
-    output_flipped = output_flipped.reshape((shape_ori[0], -1, channels,
-                                             shape_ori[2], shape_ori[3]))
+    output_flipped = output_flipped.reshape(
+        (shape_ori[0], -1, channels, shape_ori[2], shape_ori[3])
+    )
     output_flipped_back = output_flipped.clone()
 
     # Swap left-right parts
@@ -434,7 +462,8 @@ def _calc_distances(preds, targets, mask, normalize):
     # handle invalid values
     normalize[np.where(normalize <= 0)] = 1e6
     distances[_mask] = np.linalg.norm(
-        ((preds - targets) / normalize[:, None, :])[_mask], axis=-1)
+        ((preds - targets) / normalize[:, None, :])[_mask], axis=-1
+    )
     return distances.T
 
 

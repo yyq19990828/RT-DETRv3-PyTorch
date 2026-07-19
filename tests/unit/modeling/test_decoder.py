@@ -14,11 +14,12 @@ Following PaddlePaddle implementation for numerical equivalence.
 import pytest
 import torch
 import torch.nn as nn
+
 from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
+    MultiHeadAttention,
     RTDETRTransformerv3,
-    TransformerDecoderLayer,
     TransformerDecoder,
-    MultiHeadAttention
+    TransformerDecoderLayer,
 )
 from ppdet_pytorch.modeling.transformers.utils import MLP
 
@@ -123,7 +124,7 @@ class TestMultiHeadAttention:
 
         # Create additive mask (0 for valid, -inf for invalid)
         attn_mask = torch.zeros(2, 100, 300)
-        attn_mask[:, :, 200:] = float('-inf')  # Mask out last 100 positions
+        attn_mask[:, :, 200:] = float("-inf")  # Mask out last 100 positions
 
         output = attn(query, key, value, attn_mask)
 
@@ -154,11 +155,7 @@ class TestTransformerDecoderLayer:
     def test_forward_shape(self):
         """Test forward pass output shape"""
         layer = TransformerDecoderLayer(
-            d_model=256,
-            n_head=8,
-            dim_feedforward=1024,
-            n_levels=3,
-            n_points=4
+            d_model=256, n_head=8, dim_feedforward=1024, n_levels=3, n_points=4
         )
         layer.eval()
 
@@ -187,8 +184,12 @@ class TestTransformerDecoderLayer:
         query_pos_embed = torch.randn(2, 100, 256)
 
         output = layer(
-            tgt, ref_points, memory, spatial_shapes, level_start_index,
-            query_pos_embed=query_pos_embed
+            tgt,
+            ref_points,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            query_pos_embed=query_pos_embed,
         )
 
         assert output.shape == tgt.shape
@@ -209,8 +210,12 @@ class TestTransformerDecoderLayer:
         attn_mask[:, :50, 50:] = 1.0  # Mask half of the queries
 
         output = layer(
-            tgt, ref_points, memory, spatial_shapes, level_start_index,
-            attn_mask=attn_mask
+            tgt,
+            ref_points,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            attn_mask=attn_mask,
         )
 
         assert output.shape == tgt.shape
@@ -241,17 +246,10 @@ class TestTransformerDecoder:
         """Test forward pass output shapes during training"""
         # Create decoder following PaddlePaddle style (direct instantiation)
         decoder_layer = TransformerDecoderLayer(
-            d_model=256,
-            n_head=8,
-            dim_feedforward=1024,
-            n_levels=3,
-            n_points=4
+            d_model=256, n_head=8, dim_feedforward=1024, n_levels=3, n_points=4
         )
         decoder = TransformerDecoder(
-            hidden_dim=256,
-            decoder_layer=decoder_layer,
-            num_layers=6,
-            eval_idx=-1
+            hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1
         )
         decoder.train()
 
@@ -269,8 +267,14 @@ class TestTransformerDecoder:
 
         # Forward pass
         dec_out_bboxes, dec_out_logits = decoder(
-            tgt, ref_points_unact, memory, spatial_shapes, level_start_index,
-            bbox_head, score_head, query_pos_head
+            tgt,
+            ref_points_unact,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            bbox_head,
+            score_head,
+            query_pos_head,
         )
 
         # Check shapes: (num_layers, batch, num_queries, ...)
@@ -283,17 +287,13 @@ class TestTransformerDecoder:
         """Test forward pass output shapes during eval"""
         # Create decoder following PaddlePaddle style
         decoder_layer = TransformerDecoderLayer(
-            d_model=256,
-            n_head=8,
-            dim_feedforward=1024,
-            n_levels=3,
-            n_points=4
+            d_model=256, n_head=8, dim_feedforward=1024, n_levels=3, n_points=4
         )
         decoder = TransformerDecoder(
             hidden_dim=256,
             decoder_layer=decoder_layer,
             num_layers=6,
-            eval_idx=-1  # Use last layer
+            eval_idx=-1,  # Use last layer
         )
         decoder.eval()
 
@@ -308,8 +308,14 @@ class TestTransformerDecoder:
         query_pos_head = MLP(4, 512, 256, num_layers=2)
 
         dec_out_bboxes, dec_out_logits = decoder(
-            tgt, ref_points_unact, memory, spatial_shapes, level_start_index,
-            bbox_head, score_head, query_pos_head
+            tgt,
+            ref_points_unact,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            bbox_head,
+            score_head,
+            query_pos_head,
         )
 
         # In eval mode, only one layer output is returned
@@ -318,8 +324,12 @@ class TestTransformerDecoder:
 
     def test_iterative_refinement(self):
         """Test iterative bounding box refinement across layers"""
-        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
-        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1)
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256, n_head=8, n_levels=3, n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1
+        )
         decoder.train()
 
         tgt = torch.randn(2, 300, 256)
@@ -333,8 +343,14 @@ class TestTransformerDecoder:
         query_pos_head = MLP(4, 512, 256, num_layers=2)
 
         dec_out_bboxes, dec_out_logits = decoder(
-            tgt, ref_points_unact, memory, spatial_shapes, level_start_index,
-            bbox_head, score_head, query_pos_head
+            tgt,
+            ref_points_unact,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            bbox_head,
+            score_head,
+            query_pos_head,
         )
 
         # Check that we have predictions for all 6 layers
@@ -346,8 +362,12 @@ class TestTransformerDecoder:
 
     def test_gradient_flow(self):
         """Test gradient flow through entire decoder"""
-        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
-        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=3, eval_idx=-1)
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256, n_head=8, n_levels=3, n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256, decoder_layer=decoder_layer, num_layers=3, eval_idx=-1
+        )
         decoder.train()
 
         tgt = torch.randn(2, 100, 256, requires_grad=True)
@@ -361,8 +381,14 @@ class TestTransformerDecoder:
         query_pos_head = MLP(4, 512, 256, num_layers=2)
 
         dec_out_bboxes, dec_out_logits = decoder(
-            tgt, ref_points_unact, memory, spatial_shapes, level_start_index,
-            bbox_head, score_head, query_pos_head
+            tgt,
+            ref_points_unact,
+            memory,
+            spatial_shapes,
+            level_start_index,
+            bbox_head,
+            score_head,
+            query_pos_head,
         )
 
         loss = dec_out_bboxes.sum() + dec_out_logits.sum()
@@ -383,15 +409,12 @@ class TestDirectInstantiation:
             n_head=8,
             dim_feedforward=1024,
             dropout=0.1,
-            activation='relu',
+            activation="relu",
             n_levels=4,
-            n_points=4
+            n_points=4,
         )
         decoder = TransformerDecoder(
-            hidden_dim=256,
-            decoder_layer=decoder_layer,
-            num_layers=6,
-            eval_idx=-1
+            hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1
         )
 
         assert isinstance(decoder, TransformerDecoder)
@@ -401,8 +424,12 @@ class TestDirectInstantiation:
 
     def test_instantiate_with_defaults(self):
         """Test instantiating decoder with default values"""
-        decoder_layer = TransformerDecoderLayer(d_model=256, n_head=8, n_levels=3, n_points=4)
-        decoder = TransformerDecoder(hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1)
+        decoder_layer = TransformerDecoderLayer(
+            d_model=256, n_head=8, n_levels=3, n_points=4
+        )
+        decoder = TransformerDecoder(
+            hidden_dim=256, decoder_layer=decoder_layer, num_layers=6, eval_idx=-1
+        )
 
         assert isinstance(decoder, TransformerDecoder)
         assert decoder.num_layers == 6
@@ -445,7 +472,7 @@ class TestEdgeCases:
 
     def test_different_activations(self):
         """Test with different activation functions"""
-        for activation in ['relu', 'gelu']:
+        for activation in ["relu", "gelu"]:
             layer = TransformerDecoderLayer(
                 d_model=256, n_head=8, activation=activation, n_levels=3, n_points=4
             )
@@ -454,12 +481,14 @@ class TestEdgeCases:
             tgt = torch.randn(2, 100, 256)
             ref_points = torch.rand(2, 100, 3, 2)
             memory = torch.randn(2, 8400, 256)
-            spatial_shapes = torch.tensor([[80, 80], [40, 40], [20, 20]], dtype=torch.long)
+            spatial_shapes = torch.tensor(
+                [[80, 80], [40, 40], [20, 20]], dtype=torch.long
+            )
             level_start_index = torch.tensor([0, 6400, 8000], dtype=torch.long)
 
             output = layer(tgt, ref_points, memory, spatial_shapes, level_start_index)
             assert output.shape == (2, 100, 256)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

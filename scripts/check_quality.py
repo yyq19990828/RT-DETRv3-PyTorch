@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the incremental Ruff and Mypy quality gate."""
+"""Run repository-wide Ruff and incremental Mypy quality checks."""
 
 from __future__ import annotations
 
@@ -12,18 +12,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-RUFF_TARGETS = (
-    "scripts",
-    "src/ppdet_pytorch/cli",
-    "src/ppdet_pytorch/conversion",
-    "src/ppdet_pytorch/core",
-    "src/ppdet_pytorch/deploy",
-    "tests/unit/cli",
-    "tests/unit/conversion",
-    "tests/unit/core",
-    "tests/unit/deploy",
-    "tests/unit/scripts",
-)
+RUFF_TARGETS = (".",)
 MYPY_TARGETS = (
     "scripts/check_quality.py",
     "scripts/run_stability_experiment.py",
@@ -35,7 +24,7 @@ MYPY_TARGETS = (
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the repository's incremental Python quality gate."
+        description="Run repository-wide Ruff and incremental Mypy quality checks."
     )
     parser.add_argument(
         "--fix",

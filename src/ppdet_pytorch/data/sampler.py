@@ -26,9 +26,8 @@ class DistributedBatchSampler(BatchSampler):
         self.seed = int(seed)
         self._generator = None
         distributed = (
-            dist.is_initialized() or
-            num_replicas is not None or
-            rank is not None)
+            dist.is_initialized() or num_replicas is not None or rank is not None
+        )
         if distributed:
             sampler = DistributedSampler(
                 dataset,

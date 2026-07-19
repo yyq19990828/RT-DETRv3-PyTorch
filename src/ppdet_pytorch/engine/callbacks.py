@@ -21,20 +21,25 @@ Callbacks for training monitoring and checkpointing.
 Migrated from PaddlePaddle to maintain API compatibility.
 """
 
-import os
 import datetime
-from typing import Dict, List, Optional
+import os
+from typing import Dict, List
+
 import torch
 import torch.distributed as dist
 
-from ..utils.logger import setup_logger
 from ..utils.checkpoint import save_checkpoint
+from ..utils.logger import setup_logger
 
-logger = setup_logger('rtdetrv3.engine.callbacks')
+logger = setup_logger("rtdetrv3.engine.callbacks")
 
 __all__ = [
-    'Callback', 'ComposeCallback', 'LogPrinter', 'Checkpointer',
-    'LearningRateLogger', 'BestModelSaver'
+    "Callback",
+    "ComposeCallback",
+    "LogPrinter",
+    "Checkpointer",
+    "LearningRateLogger",
+    "BestModelSaver",
 ]
 
 
@@ -53,9 +58,11 @@ class Callback:
         self.trainer = trainer
 
         # Support log_ranks for distributed training
-        log_ranks = getattr(trainer.cfg, 'log_ranks', '0') if hasattr(trainer, 'cfg') else '0'
+        log_ranks = (
+            getattr(trainer.cfg, "log_ranks", "0") if hasattr(trainer, "cfg") else "0"
+        )
         if isinstance(log_ranks, str):
-            self.log_ranks = [int(i) for i in log_ranks.split(',')]
+            self.log_ranks = [int(i) for i in log_ranks.split(",")]
         elif isinstance(log_ranks, int):
             self.log_ranks = [log_ranks]
         else:
@@ -103,8 +110,9 @@ class ComposeCallback:
     def __init__(self, callbacks: List[Callback]):
         callbacks = [c for c in list(callbacks) if c is not None]
         for c in callbacks:
-            assert isinstance(c, Callback), \
+            assert isinstance(c, Callback), (
                 f"callback should be subclass of Callback, but got {type(c)}"
+            )
         self._callbacks = callbacks
 
     def on_step_begin(self, status: Dict):
@@ -141,7 +149,7 @@ class LogPrinter(Callback):
 
     def __init__(self, trainer):
         super(LogPrinter, self).__init__(trainer)
-        self.log_iter = getattr(trainer, 'log_interval', 50)
+        self.log_iter = getattr(trainer, "log_interval", 50)
         self._batch_time_total = 0.0
         self._batch_time_count = 0
 
@@ -155,45 +163,47 @@ class LogPrinter(Callback):
         if not self._is_log_rank():
             return
 
-        mode = status.get('mode', 'train')
+        mode = status.get("mode", "train")
 
-        if mode == 'train':
-            epoch_id = status.get('epoch_id', 0)
-            step_id = status.get('step_id', 0)
-            steps_per_epoch = status.get('steps_per_epoch', 1)
-            batch_time = float(status.get('batch_time', 0))
+        if mode == "train":
+            epoch_id = status.get("epoch_id", 0)
+            step_id = status.get("step_id", 0)
+            steps_per_epoch = status.get("steps_per_epoch", 1)
+            batch_time = float(status.get("batch_time", 0))
             if batch_time > 0:
                 self._batch_time_total += batch_time
                 self._batch_time_count += 1
 
             if step_id % self.log_iter == 0:
                 # Calculate ETA
-                total_epochs = getattr(self.trainer, 'end_epoch', 72)
+                total_epochs = getattr(self.trainer, "end_epoch", 72)
                 eta_steps = (total_epochs - epoch_id) * steps_per_epoch - step_id
                 average_batch_time = (
                     self._batch_time_total / self._batch_time_count
-                    if self._batch_time_count else 0.0)
+                    if self._batch_time_count
+                    else 0.0
+                )
                 eta_sec = eta_steps * average_batch_time
                 eta_str = str(datetime.timedelta(seconds=int(eta_sec)))
 
                 # Get metrics
-                loss = status.get('loss', 0)
-                learning_rate = status.get('learning_rate', 0)
-                data_time = status.get('data_time', 0)
+                loss = status.get("loss", 0)
+                learning_rate = status.get("learning_rate", 0)
+                data_time = status.get("data_time", 0)
 
                 # IPS (images per second)
-                batch_size = status.get('batch_size', 1)
+                batch_size = status.get("batch_size", 1)
                 ips = batch_size / batch_time if batch_time > 0 else 0
 
                 # Memory info
                 max_mem_str = ""
                 if torch.cuda.is_available():
-                    max_mem_reserved = torch.cuda.max_memory_reserved() // (1024 ** 2)
-                    max_mem_allocated = torch.cuda.max_memory_allocated() // (1024 ** 2)
+                    max_mem_reserved = torch.cuda.max_memory_reserved() // (1024**2)
+                    max_mem_allocated = torch.cuda.max_memory_allocated() // (1024**2)
                     max_mem_str = f", max_mem_reserved: {max_mem_reserved} MB, max_mem_allocated: {max_mem_allocated} MB"
 
                 # Format log message (compatible with Paddle format)
-                space_fmt = ':' + str(len(str(steps_per_epoch))) + 'd'
+                space_fmt = ":" + str(len(str(steps_per_epoch))) + "d"
                 fmt = (
                     f"Epoch: [{epoch_id}] "
                     f"[{step_id:{space_fmt[1:]}}/{steps_per_epoch}] "
@@ -207,8 +217,8 @@ class LogPrinter(Callback):
                 )
                 logger.info(fmt)
 
-        elif mode == 'eval':
-            step_id = status.get('step_id', 0)
+        elif mode == "eval":
+            step_id = status.get("step_id", 0)
             if step_id % 100 == 0:
                 logger.info(f"Eval iter: {step_id}")
 
@@ -217,13 +227,13 @@ class LogPrinter(Callback):
         if not self._is_log_rank():
             return
 
-        mode = status.get('mode', 'train')
+        mode = status.get("mode", "train")
 
-        if mode == 'eval':
-            sample_num = status.get('sample_num', 0)
-            cost_time = status.get('cost_time', 1)
+        if mode == "eval":
+            sample_num = status.get("sample_num", 0)
+            cost_time = status.get("cost_time", 1)
             fps = sample_num / cost_time if cost_time > 0 else 0
-            logger.info(f'Total sample number: {sample_num}, average FPS: {fps:.2f}')
+            logger.info(f"Total sample number: {sample_num}, average FPS: {fps:.2f}")
 
 
 class Checkpointer(Callback):
@@ -243,38 +253,45 @@ class Checkpointer(Callback):
         self.save_interval = int(save_interval)
         if self.save_interval < 1:
             raise ValueError("save_interval must be at least 1")
-        self.save_dir = getattr(trainer, 'save_dir', './output')
+        self.save_dir = getattr(trainer, "save_dir", "./output")
         if not dist.is_initialized() or dist.get_rank() == 0:
             os.makedirs(self.save_dir, exist_ok=True)
 
     def on_epoch_end(self, status: Dict):
         """Save checkpoint at epoch end"""
-        mode = status.get('mode', 'train')
-        if mode != 'train':
+        mode = status.get("mode", "train")
+        if mode != "train":
             return
 
-        epoch_id = status.get('epoch_id', 0)
-        total_epochs = getattr(self.trainer, 'end_epoch', 72)
+        epoch_id = status.get("epoch_id", 0)
+        total_epochs = getattr(self.trainer, "end_epoch", 72)
 
         # Save at specified intervals or at the last epoch
         if (epoch_id + 1) % self.save_interval == 0 or epoch_id == total_epochs - 1:
-            save_name = f"epoch_{epoch_id + 1}" if epoch_id != total_epochs - 1 else "model_final"
+            save_name = (
+                f"epoch_{epoch_id + 1}"
+                if epoch_id != total_epochs - 1
+                else "model_final"
+            )
             save_path = os.path.join(self.save_dir, f"{save_name}.pth")
 
             saved = save_checkpoint(
                 model=self.trainer.model,
                 optimizer=self.trainer.optimizer,
                 epoch=epoch_id + 1,
-                iteration=getattr(self.trainer, 'global_step', 0),
+                iteration=getattr(self.trainer, "global_step", 0),
                 save_path=save_path,
                 config=self.trainer._convert_cfg_to_dict(self.trainer.cfg),
-                scheduler=getattr(self.trainer, 'lr', None),
-                scaler=getattr(self.trainer, 'scaler', None),
-                ema=(self.trainer.ema
-                     if getattr(self.trainer, 'use_ema', False) else None),
+                scheduler=getattr(self.trainer, "lr", None),
+                scaler=getattr(self.trainer, "scaler", None),
+                ema=(
+                    self.trainer.ema
+                    if getattr(self.trainer, "use_ema", False)
+                    else None
+                ),
                 sampler_epoch=epoch_id + 1,
                 gather_distributed_rng=True,
-                loss=status.get('loss', 0),
+                loss=status.get("loss", 0),
             )
             if saved:
                 logger.info(f"Saved checkpoint: {save_path}")
@@ -290,12 +307,12 @@ class BestModelSaver(Callback):
         mode: 'max' or 'min' (whether higher or lower is better)
     """
 
-    def __init__(self, trainer, metric_name: str = 'mAP', mode: str = 'max'):
+    def __init__(self, trainer, metric_name: str = "mAP", mode: str = "max"):
         super(BestModelSaver, self).__init__(trainer)
         self.metric_name = metric_name
         self.mode = mode
-        self.best_metric = -float('inf') if mode == 'max' else float('inf')
-        self.save_dir = getattr(trainer, 'save_dir', './output')
+        self.best_metric = -float("inf") if mode == "max" else float("inf")
+        self.save_dir = getattr(trainer, "save_dir", "./output")
         if not dist.is_initialized() or dist.get_rank() == 0:
             os.makedirs(self.save_dir, exist_ok=True)
 
@@ -305,8 +322,8 @@ class BestModelSaver(Callback):
         if dist.is_initialized() and dist.get_rank() != 0:
             return
 
-        mode = status.get('mode', 'train')
-        if mode != 'eval':
+        mode = status.get("mode", "train")
+        if mode != "eval":
             return
 
         # Get metric value
@@ -316,7 +333,7 @@ class BestModelSaver(Callback):
 
         # Check if this is the best model
         is_best = False
-        if self.mode == 'max':
+        if self.mode == "max":
             if metric_value > self.best_metric:
                 is_best = True
                 self.best_metric = metric_value
@@ -331,18 +348,23 @@ class BestModelSaver(Callback):
             save_checkpoint(
                 model=self.trainer.model,
                 optimizer=self.trainer.optimizer,
-                epoch=status.get('epoch_id', 0) + 1,
-                iteration=getattr(self.trainer, 'global_step', 0),
+                epoch=status.get("epoch_id", 0) + 1,
+                iteration=getattr(self.trainer, "global_step", 0),
                 save_path=save_path,
                 config=self.trainer._convert_cfg_to_dict(self.trainer.cfg),
                 best_metric=self.best_metric,
-                scheduler=getattr(self.trainer, 'lr', None),
-                scaler=getattr(self.trainer, 'scaler', None),
-                ema=(self.trainer.ema
-                     if getattr(self.trainer, 'use_ema', False) else None),
-                sampler_epoch=status.get('epoch_id', 0) + 1,
+                scheduler=getattr(self.trainer, "lr", None),
+                scaler=getattr(self.trainer, "scaler", None),
+                ema=(
+                    self.trainer.ema
+                    if getattr(self.trainer, "use_ema", False)
+                    else None
+                ),
+                sampler_epoch=status.get("epoch_id", 0) + 1,
             )
-            logger.info(f"Saved best model with {self.metric_name}: {self.best_metric:.4f}")
+            logger.info(
+                f"Saved best model with {self.metric_name}: {self.best_metric:.4f}"
+            )
 
 
 class LearningRateLogger(Callback):
@@ -361,15 +383,15 @@ class LearningRateLogger(Callback):
         if not self._is_log_rank():
             return
 
-        mode = status.get('mode', 'train')
-        if mode != 'train':
+        mode = status.get("mode", "train")
+        if mode != "train":
             return
 
-        current_lr = status.get('learning_rate', 0)
+        current_lr = status.get("learning_rate", 0)
 
         # Log if LR changed significantly (more than 1e-8)
         if self.last_lr is None or abs(current_lr - self.last_lr) > 1e-8:
-            step_id = status.get('step_id', 0)
-            epoch_id = status.get('epoch_id', 0)
+            step_id = status.get("step_id", 0)
+            epoch_id = status.get("epoch_id", 0)
             logger.debug(f"Epoch {epoch_id}, Step {step_id}: LR = {current_lr:.8f}")
             self.last_lr = current_lr

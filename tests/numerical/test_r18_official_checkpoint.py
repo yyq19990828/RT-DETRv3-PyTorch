@@ -1,8 +1,8 @@
 """Opt-in numerical alignment for official RT-DETRv3 checkpoints."""
 
-from copy import deepcopy
 import hashlib
 import os
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +15,6 @@ from ppdet_pytorch.conversion.converter import WeightConverter
 from ppdet_pytorch.conversion.models import ConversionConfig
 from ppdet_pytorch.core.workspace import create as torch_create
 from ppdet_pytorch.core.workspace import load_config as torch_load_config
-
 
 pytestmark = [pytest.mark.numerical, pytest.mark.paddle, pytest.mark.slow]
 

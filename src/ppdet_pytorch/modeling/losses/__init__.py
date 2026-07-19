@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import iou_loss
-from . import detr_loss
-
-from .iou_loss import *
+from . import detr_loss, iou_loss
 from .detr_loss import *
+from .iou_loss import *

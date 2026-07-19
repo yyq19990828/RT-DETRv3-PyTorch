@@ -12,33 +12,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import copy
+import math
 import re
 import sys
-import math
-import torch
 
+import torch
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler, PolynomialLR, \
-                                    SequentialLR, LinearLR, CosineAnnealingLR
+from torch.optim.lr_scheduler import (
+    CosineAnnealingLR,
+    LinearLR,
+    LRScheduler,
+    PolynomialLR,
+    SequentialLR,
+)
 
 from ppdet_pytorch.core.workspace import register, serializable
-import copy
 
-from .adamw import AdamWDL, build_adamwdl
+from .adamw import build_adamwdl
 
-__all__ = ['LearningRate', 'OptimizerBuilder']
+__all__ = ["LearningRate", "OptimizerBuilder"]
 
 from ppdet_pytorch.utils.logger import setup_logger
+
 logger = setup_logger(__name__)
 
 
 # ============================================================================
 # PyTorch-specific schedulers to match PaddlePaddle's behavior
 # ============================================================================
+
 
 class PiecewiseLRScheduler(LRScheduler):
     """
@@ -52,10 +57,9 @@ class PiecewiseLRScheduler(LRScheduler):
         last_epoch: The index of last epoch
     """
 
-    def __init__(self, optimizer: Optimizer,
-                 milestones: list,
-                 gamma: list,
-                 last_epoch: int = -1):
+    def __init__(
+        self, optimizer: Optimizer, milestones: list, gamma: list, last_epoch: int = -1
+    ):
         self.milestones = sorted(milestones)
         self.gamma = gamma
         super().__init__(optimizer, last_epoch)
@@ -84,6 +88,7 @@ class PiecewiseLRScheduler(LRScheduler):
 # end
 # ============================================================================
 
+
 @serializable
 class CosineDecay(object):
     """
@@ -101,11 +106,9 @@ class CosineDecay(object):
         The scheduler binds to the optimizer and modifies its learning rate directly.
     """
 
-    def __init__(self,
-                 max_epochs=1000,
-                 use_warmup=True,
-                 min_lr_ratio=0.,
-                 last_plateau_epochs=0):
+    def __init__(
+        self, max_epochs=1000, use_warmup=True, min_lr_ratio=0.0, last_plateau_epochs=0
+    ):
         self.max_epochs = max_epochs
         self.use_warmup = use_warmup
         self.min_lr_ratio = min_lr_ratio
@@ -122,7 +125,7 @@ class CosineDecay(object):
         Returns:
             PyTorch LR scheduler or SequentialLR if last_plateau is used
         """
-        base_lr = optimizer.param_groups[0]['lr']
+        base_lr = optimizer.param_groups[0]["lr"]
         max_iters = self.max_epochs * int(step_per_epoch)
         min_lr = base_lr * self.min_lr_ratio
         last_plateau_iters = self.last_plateau_epochs * int(step_per_epoch)
@@ -130,10 +133,11 @@ class CosineDecay(object):
         if last_plateau_iters > 0:
             # Need to combine cosine + constant plateau
             from torch.optim.lr_scheduler import ConstantLR
+
             main_iters = max_iters - last_plateau_iters
             scheds = [
                 CosineAnnealingLR(optimizer, T_max=main_iters, eta_min=min_lr),
-                ConstantLR(optimizer, factor=1.0, total_iters=last_plateau_iters)
+                ConstantLR(optimizer, factor=1.0, total_iters=last_plateau_iters),
             ]
             return SequentialLR(optimizer, scheds, milestones=[main_iters])
         else:
@@ -158,11 +162,9 @@ class PiecewiseDecay(object):
         The scheduler binds to the optimizer and modifies its learning rate directly.
     """
 
-    def __init__(self,
-                 gamma=[0.1, 0.01],
-                 milestones=[8, 11],
-                 values=None,
-                 use_warmup=True):
+    def __init__(
+        self, gamma=[0.1, 0.01], milestones=[8, 11], values=None, use_warmup=True
+    ):
         super(PiecewiseDecay, self).__init__()
         if type(gamma) is not list:
             self.gamma = []
@@ -188,19 +190,22 @@ class PiecewiseDecay(object):
         # Paddle milestones are absolute global steps. SequentialLR starts the
         # decay scheduler at zero after warmup, so remove that offset here.
         milestones = [
-            max(0, int(step_per_epoch) * i - int(step_offset))
-            for i in self.milestones
+            max(0, int(step_per_epoch) * i - int(step_offset)) for i in self.milestones
         ]
 
         # Prepare gamma factors
         if self.values is not None:
             assert len(self.milestones) + 1 == len(self.values)
             # Convert absolute values to relative gamma factors
-            gamma_factors = [self.values[i+1] / self.values[0] for i in range(len(self.milestones))]
+            gamma_factors = [
+                self.values[i + 1] / self.values[0] for i in range(len(self.milestones))
+            ]
         else:
             gamma_factors = self.gamma
 
-        return PiecewiseLRScheduler(optimizer, milestones=milestones, gamma=gamma_factors)
+        return PiecewiseLRScheduler(
+            optimizer, milestones=milestones, gamma=gamma_factors
+        )
 
 
 @serializable
@@ -219,7 +224,7 @@ class LinearWarmup(object):
         Returns torch.optim.lr_scheduler.LinearLR directly.
     """
 
-    def __init__(self, steps=500, start_factor=1. / 3, epochs=None, epochs_first=True):
+    def __init__(self, steps=500, start_factor=1.0 / 3, epochs=None, epochs_first=True):
         super(LinearWarmup, self).__init__()
         self.steps = steps
         self.start_factor = start_factor
@@ -280,7 +285,9 @@ class ExpWarmup(object):
         Returns:
             torch.optim.lr_scheduler.PolynomialLR instance
         """
-        warmup_steps = self.epochs * step_per_epoch if self.epochs is not None else self.steps
+        warmup_steps = (
+            self.epochs * step_per_epoch if self.epochs is not None else self.steps
+        )
         warmup_steps = max(warmup_steps, 1)
 
         return PolynomialLR(optimizer, total_iters=warmup_steps, power=self.power)
@@ -303,11 +310,10 @@ class LearningRate(object):
         and only used for config compatibility. All schedulers will read the
         learning rate directly from the optimizer.
     """
-    __category__ = 'optim'
 
-    def __init__(self,
-                 base_lr=0.01,
-                 schedulers=[PiecewiseDecay(), LinearWarmup()]):
+    __category__ = "optim"
+
+    def __init__(self, base_lr=0.01, schedulers=[PiecewiseDecay(), LinearWarmup()]):
         super(LearningRate, self).__init__()
         self.base_lr = base_lr  # For config compatibility only
         self.schedulers = []
@@ -339,7 +345,9 @@ class LearningRate(object):
             Each scheduler class has a build_scheduler() method that returns PyTorch native schedulers.
         """
         assert len(self.schedulers) >= 1
-        assert optimizer is not None, "optimizer is required to create LR scheduler in PyTorch"
+        assert optimizer is not None, (
+            "optimizer is required to create LR scheduler in PyTorch"
+        )
 
         decay_config = self.schedulers[0]
 
@@ -348,17 +356,19 @@ class LearningRate(object):
             return decay_config.build_scheduler(optimizer, step_per_epoch)
 
         # With warmup: combine warmup + decay using SequentialLR
-        assert len(self.schedulers) >= 2, "Warmup config is required when use_warmup=True"
+        assert len(self.schedulers) >= 2, (
+            "Warmup config is required when use_warmup=True"
+        )
         warmup_config = self.schedulers[1]
 
         # Build warmup scheduler
         warmup_scheduler = warmup_config.build_scheduler(optimizer, step_per_epoch)
 
         # Calculate warmup steps for milestone
-        if hasattr(warmup_config, 'epochs') and warmup_config.epochs is not None:
+        if hasattr(warmup_config, "epochs") and warmup_config.epochs is not None:
             warmup_steps = warmup_config.epochs * step_per_epoch
         else:
-            warmup_steps = getattr(warmup_config, 'steps', 500)
+            warmup_steps = getattr(warmup_config, "steps", 500)
         warmup_steps = max(warmup_steps, 1)
 
         # Build decay scheduler. Piecewise milestones are absolute global
@@ -376,11 +386,13 @@ class LearningRate(object):
             )
 
         # Combine using SequentialLR
-        return SequentialLR(optimizer, [warmup_scheduler, decay_scheduler], milestones=[warmup_steps])
+        return SequentialLR(
+            optimizer, [warmup_scheduler, decay_scheduler], milestones=[warmup_steps]
+        )
 
 
 @register
-class OptimizerBuilder():
+class OptimizerBuilder:
     """
     Build optimizer for PyTorch models.
 
@@ -395,15 +407,16 @@ class OptimizerBuilder():
         base learning rate is set in the optimizer and retrieved by schedulers
         via optimizer.param_groups[0]['lr'].
     """
-    __category__ = 'optim'
 
-    def __init__(self,
-                 clip_grad_by_norm=None,
-                 clip_grad_by_value=None,
-                 regularizer={'type': 'L2',
-                              'factor': .0001},
-                 optimizer={'type': 'Momentum',
-                            'momentum': .9}):
+    __category__ = "optim"
+
+    def __init__(
+        self,
+        clip_grad_by_norm=None,
+        clip_grad_by_value=None,
+        regularizer={"type": "L2", "factor": 0.0001},
+        optimizer={"type": "Momentum", "momentum": 0.9},
+    ):
         self.clip_grad_by_norm = clip_grad_by_norm
         self.clip_grad_by_value = clip_grad_by_value
         self.regularizer = regularizer
@@ -424,27 +437,27 @@ class OptimizerBuilder():
 
         # Configure gradient clipping (stored for use during training)
         if self.clip_grad_by_norm is not None:
-            grad_clip = ('norm', self.clip_grad_by_norm)
+            grad_clip = ("norm", self.clip_grad_by_norm)
         elif self.clip_grad_by_value is not None:
             var = abs(self.clip_grad_by_value)
-            grad_clip = ('value', var)
+            grad_clip = ("value", var)
         else:
             grad_clip = None
 
         # Configure weight decay from regularizer
-        if self.regularizer and self.regularizer != 'None':
-            reg_type = self.regularizer['type'] + 'Decay'
-            reg_factor = self.regularizer['factor']
-            weight_decay = reg_factor if reg_type == 'L2Decay' else 0.0
+        if self.regularizer and self.regularizer != "None":
+            reg_type = self.regularizer["type"] + "Decay"
+            reg_factor = self.regularizer["factor"]
+            weight_decay = reg_factor if reg_type == "L2Decay" else 0.0
         else:
             weight_decay = 0.0
 
         # Parse optimizer config
         optim_args = self.optimizer.copy()
-        optim_type = optim_args.pop('type')
+        optim_type = optim_args.pop("type")
 
         # Handle custom AdamWDL optimizer
-        if optim_type == 'AdamWDL':
+        if optim_type == "AdamWDL":
             optimizer = build_adamwdl(model, lr=learning_rate, **optim_args)
             if grad_clip is not None:
                 optimizer._grad_clip = grad_clip
@@ -452,18 +465,20 @@ class OptimizerBuilder():
 
         # Add weight_decay for non-AdamW optimizers
         # AdamW handles weight decay differently via optimizer args
-        if optim_type != 'AdamW':
-            optim_args['weight_decay'] = weight_decay
+        if optim_type != "AdamW":
+            optim_args["weight_decay"] = weight_decay
 
         # Explicit config groups take precedence. Otherwise preserve Paddle's
         # per-parameter learning-rate multipliers as PyTorch parameter groups.
-        if 'param_groups' in optim_args:
-            params = self._build_param_groups(model, optim_args.pop('param_groups'))
+        if "param_groups" in optim_args:
+            params = self._build_param_groups(model, optim_args.pop("param_groups"))
         else:
             params = self._build_lr_multiplier_groups(model, learning_rate)
 
         # Create PyTorch optimizer
-        optimizer = self._create_optimizer(optim_type, params, learning_rate, optim_args)
+        optimizer = self._create_optimizer(
+            optim_type, params, learning_rate, optim_args
+        )
 
         # Attach gradient clipping info for training loop
         if grad_clip is not None:
@@ -477,16 +492,16 @@ class OptimizerBuilder():
         for param in model.parameters():
             if not param.requires_grad:
                 continue
-            multiplier = float(
-                getattr(param, '_optimizer_lr_multiplier', 1.0))
+            multiplier = float(getattr(param, "_optimizer_lr_multiplier", 1.0))
             if not math.isfinite(multiplier) or multiplier < 0:
                 raise ValueError(
-                    'Learning-rate multiplier must be finite and non-negative, '
-                    'but got {}'.format(multiplier))
+                    "Learning-rate multiplier must be finite and non-negative, "
+                    "but got {}".format(multiplier)
+                )
             grouped_params.setdefault(multiplier, []).append(param)
 
         if not grouped_params:
-            raise ValueError('Optimizer received no trainable parameters')
+            raise ValueError("Optimizer received no trainable parameters")
         if set(grouped_params) == {1.0}:
             return grouped_params[1.0]
 
@@ -498,63 +513,68 @@ class OptimizerBuilder():
             multipliers.insert(0, 1.0)
         return [
             {
-                'params': grouped_params[multiplier],
-                'lr': learning_rate * multiplier,
-                'lr_multiplier': multiplier,
+                "params": grouped_params[multiplier],
+                "lr": learning_rate * multiplier,
+                "lr_multiplier": multiplier,
             }
             for multiplier in multipliers
         ]
 
     def _build_param_groups(self, model, param_group_configs):
         """Build parameter groups with different hyperparameters."""
-        assert isinstance(param_group_configs, list), 'param_groups must be a list'
+        assert isinstance(param_group_configs, list), "param_groups must be a list"
 
         param_groups = []
         visited = []
 
         for group_config in param_group_configs:
-            assert isinstance(group_config, dict) and 'params' in group_config, \
+            assert isinstance(group_config, dict) and "params" in group_config, (
                 'Each param group must be a dict with "params" key'
-            assert isinstance(group_config['params'], list), \
+            )
+            assert isinstance(group_config["params"], list), (
                 'group["params"] must be a list of regex patterns'
+            )
 
             # Match parameters by regex patterns
             matched_params = {}
             for param_name, param in model.named_parameters():
                 if not param.requires_grad:
                     continue
-                for pattern in group_config['params']:
+                for pattern in group_config["params"]:
                     if re.search(pattern, param_name):
                         matched_params[param_name] = param
                         break
 
             # Create parameter group
             group = group_config.copy()
-            group['params'] = list(matched_params.values())
+            group["params"] = list(matched_params.values())
             param_groups.append(group)
             visited.extend(matched_params.keys())
 
         # Add remaining parameters not matched by any group
         remaining_params = [
-            p for n, p in model.named_parameters()
+            p
+            for n, p in model.named_parameters()
             if n not in visited and p.requires_grad
         ]
 
         trainable_params = [p for p in model.parameters() if p.requires_grad]
         if len(remaining_params) < len(trainable_params):
-            param_groups.append({'params': remaining_params})
+            param_groups.append({"params": remaining_params})
         elif len(remaining_params) > len(trainable_params):
-            raise RuntimeError('Parameter group matching error: some params matched multiple times')
+            raise RuntimeError(
+                "Parameter group matching error: some params matched multiple times"
+            )
 
         return param_groups
 
     def _create_optimizer(self, optim_type, params, learning_rate, optim_args):
         """Create PyTorch optimizer instance."""
         optimizer_map = {
-            'AdamW': torch.optim.AdamW,
-            'Adam': torch.optim.Adam,
-            'SGD': torch.optim.SGD,
-            'Momentum': torch.optim.SGD,  # Momentum is SGD with momentum
+            "AdamW": torch.optim.AdamW,
+            "Adam": torch.optim.Adam,
+            "SGD": torch.optim.SGD,
+            "Momentum": torch.optim.SGD,  # Momentum is SGD with momentum
         }
 
         if optim_type not in optimizer_map:

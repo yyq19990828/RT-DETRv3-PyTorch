@@ -1,6 +1,9 @@
 """
 Data transformation operators for RT-DETRv3 PyTorch
 """
+
+# Import order is semantic: batch operators extend the base operator registry.
+# ruff: noqa: I001
 # Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +20,15 @@ Data transformation operators for RT-DETRv3 PyTorch
 
 from . import operators
 from . import batch_operators
+
 # from . import keypoint_operators
 # from . import mot_operators
 # from . import rotated_operators
 # from . import keypoints_3d_operators
 # from . import culane_operators
-
 from .operators import *
 from .batch_operators import *
+
 # from .keypoint_operators import *
 # from .mot_operators import *
 # from .rotated_operators import *
@@ -32,7 +36,7 @@ from .batch_operators import *
 # from .culane_operators import *
 
 __all__ = []
-__all__ += registered_ops
+__all__ += operators.registered_ops
 # __all__ += keypoint_operators.__all__
 # __all__ += mot_operators.__all__
 # __all__ += culane_operators.__all__

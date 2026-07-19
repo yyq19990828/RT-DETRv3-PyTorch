@@ -15,16 +15,16 @@
 # The code is based on:
 # https://github.com/open-mmlab/mmdetection/blob/master/mmdet/core/bbox/assigners/atss_assigner.py
 # TODO check the pytorch implementation
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
+
 from ppdet_pytorch.utils.logger import setup_logger
+
 logger = setup_logger(__name__)
 
 
-def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
+def bbox_overlaps(bboxes1, bboxes2, mode="iou", is_aligned=False, eps=1e-6):
     """Calculate overlap between two set of bboxes.
     If ``is_aligned `` is ``False``, then calculate the overlaps between each
     bbox of bboxes1 and bboxes2, otherwise the overlaps between each aligned
@@ -43,11 +43,10 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     Returns:
         Tensor: shape (m, n) if ``is_aligned `` is False else shape (m,)
     """
-    assert mode in ['iou', 'iof', 'giou', 'diou'], 'Unsupported mode {}'.format(
-        mode)
+    assert mode in ["iou", "iof", "giou", "diou"], "Unsupported mode {}".format(mode)
     # Either the boxes are empty or the length of boxes's last dimenstion is 4
-    assert (bboxes1.shape[-1] == 4 or bboxes1.shape[0] == 0)
-    assert (bboxes2.shape[-1] == 4 or bboxes2.shape[0] == 0)
+    assert bboxes1.shape[-1] == 4 or bboxes1.shape[0] == 0
+    assert bboxes2.shape[-1] == 4 or bboxes2.shape[0] == 0
 
     # Batch dim must be the same
     # Batch dim: (B1, B2, ... Bn)
@@ -61,14 +60,12 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
 
     if rows * cols == 0:
         if is_aligned:
-            return np.random.random(batch_shape + (rows, ))
+            return np.random.random(batch_shape + (rows,))
         else:
             return np.random.random(batch_shape + (rows, cols))
 
-    area1 = (bboxes1[..., 2] - bboxes1[..., 0]) * (
-        bboxes1[..., 3] - bboxes1[..., 1])
-    area2 = (bboxes2[..., 2] - bboxes2[..., 0]) * (
-        bboxes2[..., 3] - bboxes2[..., 1])
+    area1 = (bboxes1[..., 2] - bboxes1[..., 0]) * (bboxes1[..., 3] - bboxes1[..., 1])
+    area2 = (bboxes2[..., 2] - bboxes2[..., 0]) * (bboxes2[..., 3] - bboxes2[..., 1])
 
     if is_aligned:
         lt = np.maximum(bboxes1[..., :2], bboxes2[..., :2])  # [B, rows, 2]
@@ -77,14 +74,14 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
         wh = (rb - lt).clip(min=0)  # [B, rows, 2]
         overlap = wh[..., 0] * wh[..., 1]
 
-        if mode in ['iou', 'giou']:
+        if mode in ["iou", "giou"]:
             union = area1 + area2 - overlap
         else:
             union = area1
-        if mode == 'giou':
+        if mode == "giou":
             enclosed_lt = np.minimum(bboxes1[..., :2], bboxes2[..., :2])
             enclosed_rb = np.maximum(bboxes1[..., 2:], bboxes2[..., 2:])
-        if mode == 'diou':
+        if mode == "diou":
             enclosed_lt = np.minimum(bboxes1[..., :2], bboxes2[..., :2])
             enclosed_rb = np.maximum(bboxes1[..., 2:], bboxes2[..., 2:])
             b1_x1, b1_y1 = bboxes1[..., 0], bboxes1[..., 1]
@@ -92,28 +89,34 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
             b2_x1, b2_y1 = bboxes2[..., 0], bboxes2[..., 1]
             b2_x2, b2_y2 = bboxes2[..., 2], bboxes2[..., 3]
     else:
-        lt = np.maximum(bboxes1[..., :, None, :2],
-                        bboxes2[..., None, :, :2])  # [B, rows, cols, 2]
-        rb = np.minimum(bboxes1[..., :, None, 2:],
-                        bboxes2[..., None, :, 2:])  # [B, rows, cols, 2]
+        lt = np.maximum(
+            bboxes1[..., :, None, :2], bboxes2[..., None, :, :2]
+        )  # [B, rows, cols, 2]
+        rb = np.minimum(
+            bboxes1[..., :, None, 2:], bboxes2[..., None, :, 2:]
+        )  # [B, rows, cols, 2]
 
         wh = (rb - lt).clip(min=0)  # [B, rows, cols, 2]
         overlap = wh[..., 0] * wh[..., 1]
 
-        if mode in ['iou', 'giou']:
+        if mode in ["iou", "giou"]:
             union = area1[..., None] + area2[..., None, :] - overlap
         else:
             union = area1[..., None]
-        if mode == 'giou':
-            enclosed_lt = np.minimum(bboxes1[..., :, None, :2],
-                                     bboxes2[..., None, :, :2])
-            enclosed_rb = np.maximum(bboxes1[..., :, None, 2:],
-                                     bboxes2[..., None, :, 2:])
-        if mode == 'diou':
-            enclosed_lt = np.minimum(bboxes1[..., :, None, :2],
-                                     bboxes2[..., None, :, :2])
-            enclosed_rb = np.maximum(bboxes1[..., :, None, 2:],
-                                     bboxes2[..., None, :, 2:])
+        if mode == "giou":
+            enclosed_lt = np.minimum(
+                bboxes1[..., :, None, :2], bboxes2[..., None, :, :2]
+            )
+            enclosed_rb = np.maximum(
+                bboxes1[..., :, None, 2:], bboxes2[..., None, :, 2:]
+            )
+        if mode == "diou":
+            enclosed_lt = np.minimum(
+                bboxes1[..., :, None, :2], bboxes2[..., None, :, :2]
+            )
+            enclosed_rb = np.maximum(
+                bboxes1[..., :, None, 2:], bboxes2[..., None, :, 2:]
+            )
             b1_x1, b1_y1 = bboxes1[..., :, None, 0], bboxes1[..., :, None, 1]
             b1_x2, b1_y2 = bboxes1[..., :, None, 2], bboxes1[..., :, None, 3]
             b2_x1, b2_y1 = bboxes2[..., None, :, 0], bboxes2[..., None, :, 1]
@@ -122,21 +125,21 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False, eps=1e-6):
     eps = np.array([eps])
     union = np.maximum(union, eps)
     ious = overlap / union
-    if mode in ['iou', 'iof']:
+    if mode in ["iou", "iof"]:
         return ious
     # calculate gious
-    if mode in ['giou']:
+    if mode in ["giou"]:
         enclose_wh = (enclosed_rb - enclosed_lt).clip(min=0)
         enclose_area = enclose_wh[..., 0] * enclose_wh[..., 1]
         enclose_area = np.maximum(enclose_area, eps)
         gious = ious - (enclose_area - union) / enclose_area
         return gious
-    if mode in ['diou']:
-        left = ((b2_x1 + b2_x2) - (b1_x1 + b1_x2))**2 / 4
-        right = ((b2_y1 + b2_y2) - (b1_y1 + b1_y2))**2 / 4
+    if mode in ["diou"]:
+        left = ((b2_x1 + b2_x2) - (b1_x1 + b1_x2)) ** 2 / 4
+        right = ((b2_y1 + b2_y2) - (b1_y1 + b1_y2)) ** 2 / 4
         rho2 = left + right
         enclose_wh = (enclosed_rb - enclosed_lt).clip(min=0)
-        enclose_c = enclose_wh[..., 0]**2 + enclose_wh[..., 1]**2
+        enclose_c = enclose_wh[..., 0] ** 2 + enclose_wh[..., 1] ** 2
         enclose_c = np.maximum(enclose_c, eps)
         dious = ious - rho2 / enclose_c
         return dious
@@ -184,12 +187,9 @@ class ATSSAssigner(object):
     def __init__(self, topk=9):
         self.topk = topk
 
-    def __call__(self,
-                 bboxes,
-                 num_level_bboxes,
-                 gt_bboxes,
-                 gt_bboxes_ignore=None,
-                 gt_labels=None):
+    def __call__(
+        self, bboxes, num_level_bboxes, gt_bboxes, gt_bboxes_ignore=None, gt_labels=None
+    ):
         """Assign gt to bboxes.
         The assignment is done in following steps
         1. compute iou between all bbox (bbox of all pyramid levels) and gt
@@ -214,18 +214,14 @@ class ATSSAssigner(object):
         num_gt, num_bboxes = gt_bboxes.shape[0], bboxes.shape[0]
 
         # assign 0 by default
-        assigned_gt_inds = np.zeros((num_bboxes, ), dtype=np.int64)
+        assigned_gt_inds = np.zeros((num_bboxes,), dtype=np.int64)
 
         if num_gt == 0 or num_bboxes == 0:
             # No ground truth or boxes, return empty assignment
-            max_overlaps = np.zeros((num_bboxes, ))
+            max_overlaps = np.zeros((num_bboxes,))
             if num_gt == 0:
                 # No truth, assign everything to background
                 assigned_gt_inds[:] = 0
-            if not np.any(gt_labels):
-                assigned_labels = None
-            else:
-                assigned_labels = -np.ones((num_bboxes, ), dtype=np.int64)
             return assigned_gt_inds, max_overlaps
 
         # compute iou between all bbox and gt
@@ -240,8 +236,8 @@ class ATSSAssigner(object):
         bboxes_points = np.stack((bboxes_cx, bboxes_cy), axis=1)
 
         distances = np.sqrt(
-            np.power((bboxes_points[:, None, :] - gt_points[None, :, :]), 2)
-            .sum(-1))
+            np.power((bboxes_points[:, None, :] - gt_points[None, :, :]), 2).sum(-1)
+        )
 
         # Selecting candidates based on the center distance
         candidate_idxs = []
@@ -253,7 +249,8 @@ class ATSSAssigner(object):
             distances_per_level = distances[start_idx:end_idx, :]
             selectable_k = min(self.topk, bboxes_per_level)
             _, topk_idxs_per_level = topk_(
-                distances_per_level, selectable_k, axis=0, largest=False)
+                distances_per_level, selectable_k, axis=0, largest=False
+            )
             candidate_idxs.append(topk_idxs_per_level + start_idx)
             start_idx = end_idx
         candidate_idxs = np.concatenate(candidate_idxs, axis=0)
@@ -271,9 +268,11 @@ class ATSSAssigner(object):
         for gt_idx in range(num_gt):
             candidate_idxs[:, gt_idx] += gt_idx * num_bboxes
         ep_bboxes_cx = np.broadcast_to(
-            bboxes_cx.reshape(1, -1), [num_gt, num_bboxes]).reshape(-1)
+            bboxes_cx.reshape(1, -1), [num_gt, num_bboxes]
+        ).reshape(-1)
         ep_bboxes_cy = np.broadcast_to(
-            bboxes_cy.reshape(1, -1), [num_gt, num_bboxes]).reshape(-1)
+            bboxes_cy.reshape(1, -1), [num_gt, num_bboxes]
+        ).reshape(-1)
         candidate_idxs = candidate_idxs.reshape(-1)
 
         # calculate the left, top, right, bottom distance between positive
@@ -294,17 +293,15 @@ class ATSSAssigner(object):
 
         max_overlaps = overlaps_inf.max(axis=1)
         argmax_overlaps = overlaps_inf.argmax(axis=1)
-        assigned_gt_inds[max_overlaps !=
-                         -np.inf] = argmax_overlaps[max_overlaps != -np.inf] + 1
+        assigned_gt_inds[max_overlaps != -np.inf] = (
+            argmax_overlaps[max_overlaps != -np.inf] + 1
+        )
 
         return assigned_gt_inds, max_overlaps
 
-    def get_vlr_region(self,
-                       bboxes,
-                       num_level_bboxes,
-                       gt_bboxes,
-                       gt_bboxes_ignore=None,
-                       gt_labels=None):
+    def get_vlr_region(
+        self, bboxes, num_level_bboxes, gt_bboxes, gt_bboxes_ignore=None, gt_labels=None
+    ):
         """get vlr region for ld distillation.
         Args:
             bboxes (np.array): Bounding boxes to be assigned, shape(n, 4).
@@ -322,23 +319,19 @@ class ATSSAssigner(object):
         overlaps = bbox_overlaps(bboxes, gt_bboxes)
 
         # compute diou between all bbox and gt
-        diou = bbox_overlaps(bboxes, gt_bboxes, mode='diou')
+        diou = bbox_overlaps(bboxes, gt_bboxes, mode="diou")
 
         # assign 0 by default
-        assigned_gt_inds = np.zeros((num_bboxes, ), dtype=np.int64)
+        assigned_gt_inds = np.zeros((num_bboxes,), dtype=np.int64)
 
         vlr_region_iou = (assigned_gt_inds + 0).astype(np.float32)
 
         if num_gt == 0 or num_bboxes == 0:
             # No ground truth or boxes, return empty assignment
-            max_overlaps = np.zeros((num_bboxes, ))
+            max_overlaps = np.zeros((num_bboxes,))
             if num_gt == 0:
                 # No truth, assign everything to background
                 assigned_gt_inds[:] = 0
-            if not np.any(gt_labels):
-                assigned_labels = None
-            else:
-                assigned_labels = -np.ones((num_bboxes, ), dtype=np.int64)
             return assigned_gt_inds, max_overlaps
 
         # compute center distance between all bbox and gt
@@ -351,8 +344,8 @@ class ATSSAssigner(object):
         bboxes_points = np.stack((bboxes_cx, bboxes_cy), axis=1)
 
         distances = np.sqrt(
-            np.power((bboxes_points[:, None, :] - gt_points[None, :, :]), 2)
-            .sum(-1))
+            np.power((bboxes_points[:, None, :] - gt_points[None, :, :]), 2).sum(-1)
+        )
 
         # Selecting candidates based on the center distance
         candidate_idxs = []
@@ -364,11 +357,13 @@ class ATSSAssigner(object):
             end_idx = start_idx + bboxes_per_level
             distances_per_level = distances[start_idx:end_idx, :]
             selectable_t = min(self.topk, bboxes_per_level)
-            selectable_k = bboxes_per_level  #k for all
+            selectable_k = bboxes_per_level  # k for all
             _, topt_idxs_per_level = topk_(
-                distances_per_level, selectable_t, axis=0, largest=False)
+                distances_per_level, selectable_t, axis=0, largest=False
+            )
             _, topk_idxs_per_level = topk_(
-                distances_per_level, selectable_k, axis=0, largest=False)
+                distances_per_level, selectable_k, axis=0, largest=False
+            )
             candidate_idxs_t.append(topt_idxs_per_level + start_idx)
             candidate_idxs.append(topk_idxs_per_level + start_idx)
             start_idx = end_idx
@@ -385,12 +380,14 @@ class ATSSAssigner(object):
 
         overlaps_mean_per_gt = candidate_overlaps_t.mean(0)
         overlaps_std_per_gt = candidate_overlaps_t.std(
-            0, ddof=1)  # NOTE: use Bessel correction
+            0, ddof=1
+        )  # NOTE: use Bessel correction
         overlaps_thr_per_gt = overlaps_mean_per_gt + overlaps_std_per_gt
 
-        # compute region        
+        # compute region
         is_pos = (t_diou < overlaps_thr_per_gt[None, :]) & (
-            t_diou >= 0.25 * overlaps_thr_per_gt[None, :])
+            t_diou >= 0.25 * overlaps_thr_per_gt[None, :]
+        )
 
         # limit the positive sample's center in gt
         for gt_idx in range(num_gt):
@@ -412,10 +409,12 @@ class ATSSAssigner(object):
         overlaps_inf = -np.inf * np.ones_like(overlaps).T.reshape(-1)
         overlaps_inf = overlaps_inf.reshape(num_gt, -1).T
 
-        assigned_gt_inds[max_overlaps !=
-                         -np.inf] = argmax_overlaps[max_overlaps != -np.inf] + 1
+        assigned_gt_inds[max_overlaps != -np.inf] = (
+            argmax_overlaps[max_overlaps != -np.inf] + 1
+        )
 
-        vlr_region_iou[max_overlaps !=
-                       -np.inf] = max_overlaps[max_overlaps != -np.inf] + 0
+        vlr_region_iou[max_overlaps != -np.inf] = (
+            max_overlaps[max_overlaps != -np.inf] + 0
+        )
 
         return vlr_region_iou

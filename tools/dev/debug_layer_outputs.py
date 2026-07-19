@@ -2,32 +2,42 @@
 """Debug layer-by-layer outputs to find where differences start"""
 
 import sys
-import torch
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import torch
 
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root / "src"))
 sys.path.insert(0, str(project_root / "third-party" / "RT-DETRv3-paddle"))
 
+
 def load_paddle_model():
     """Load Paddle model"""
     import paddle
-    from ppdet.core.workspace import load_config, create
+    from ppdet.core.workspace import create, load_config
 
-    cfg = load_config(str(project_root / "third-party/RT-DETRv3-paddle/configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"))
+    cfg = load_config(
+        str(
+            project_root
+            / "third-party/RT-DETRv3-paddle/configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"
+        )
+    )
     model = create(cfg.architecture)
 
     # Load weights
-    state = paddle.load(str(project_root / "pretrained_models/paddle/rtdetrv3_r18vd_6x_coco.pdparams"))
+    state = paddle.load(
+        str(project_root / "pretrained_models/paddle/rtdetrv3_r18vd_6x_coco.pdparams")
+    )
     model.set_state_dict(state)
     model.eval()
 
     return model
 
+
 def load_pytorch_model():
     """Load PyTorch model"""
-    from ppdet_pytorch.core.workspace import load_config, create
+    from ppdet_pytorch.core.workspace import create, load_config
 
     cfg = load_config(str(project_root / "configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"))
     model = create(cfg.architecture)
@@ -35,12 +45,13 @@ def load_pytorch_model():
     # Load weights
     checkpoint = torch.load(
         str(project_root / "pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth"),
-        map_location='cpu'
+        map_location="cpu",
     )
-    model.load_state_dict(checkpoint['model'], strict=False)
+    model.load_state_dict(checkpoint["model"], strict=False)
     model.eval()
 
     return model
+
 
 def compare_layer_output(paddle_out, torch_out, layer_name):
     """Compare outputs from Paddle and PyTorch"""
@@ -58,6 +69,7 @@ def compare_layer_output(paddle_out, torch_out, layer_name):
 
     # Convert to numpy
     import paddle
+
     if isinstance(paddle_out, paddle.Tensor):
         paddle_np = paddle_out.numpy()
     else:
@@ -82,11 +94,15 @@ def compare_layer_output(paddle_out, torch_out, layer_name):
         max_rel_diff = 0.0
 
     status = "✅" if max_abs_diff < 1e-3 else "❌"
-    print(f"{status} {layer_name}: shape={paddle_np.shape}, max_abs={max_abs_diff:.2e}, mean_abs={mean_abs_diff:.2e}, max_rel={max_rel_diff:.2e}")
+    print(
+        f"{status} {layer_name}: shape={paddle_np.shape}, max_abs={max_abs_diff:.2e}, mean_abs={mean_abs_diff:.2e}, max_rel={max_rel_diff:.2e}"
+    )
+
 
 def main():
     print("Loading models...")
     import paddle
+
     paddle_model = load_paddle_model()
     torch_model = load_pytorch_model()
 
@@ -98,11 +114,11 @@ def main():
     torch_input = torch.from_numpy(input_np)
 
     print("\nComparing layer outputs...")
-    print("="*80)
+    print("=" * 80)
 
     # Backbone
     with paddle.no_grad():
-        paddle_backbone_out = paddle_model.backbone({'image': paddle_input})
+        paddle_backbone_out = paddle_model.backbone({"image": paddle_input})
     with torch.no_grad():
         torch_backbone_out = torch_model.backbone(torch_input)
 
@@ -118,11 +134,19 @@ def main():
 
     # Transformer input_proj
     with paddle.no_grad():
-        paddle_input_proj_out = [proj(feat) for proj, feat in zip(paddle_model.transformer.input_proj, paddle_neck_out)]
+        paddle_input_proj_out = [
+            proj(feat)
+            for proj, feat in zip(paddle_model.transformer.input_proj, paddle_neck_out)
+        ]
     with torch.no_grad():
-        torch_input_proj_out = [proj(feat) for proj, feat in zip(torch_model.transformer.input_proj, torch_neck_out)]
+        torch_input_proj_out = [
+            proj(feat)
+            for proj, feat in zip(torch_model.transformer.input_proj, torch_neck_out)
+        ]
 
-    compare_layer_output(paddle_input_proj_out, torch_input_proj_out, "transformer.input_proj")
+    compare_layer_output(
+        paddle_input_proj_out, torch_input_proj_out, "transformer.input_proj"
+    )
 
     # Check first transformer decoder layer self_attn
     print("\n\nTesting first decoder layer self_attn...")
@@ -137,18 +161,21 @@ def main():
     torch_np = torch_param.detach().cpu().numpy()
 
     abs_diff = np.abs(paddle_np - torch_np)
-    print(f"in_proj_weight: paddle shape={paddle_np.shape}, torch shape={torch_np.shape}")
+    print(
+        f"in_proj_weight: paddle shape={paddle_np.shape}, torch shape={torch_np.shape}"
+    )
     print(f"  max_abs_diff={abs_diff.max():.2e}, mean_abs_diff={abs_diff.mean():.2e}")
 
     # Check if they're transposed
     if paddle_np.shape != torch_np.shape:
-        print(f"  ⚠️  Shape mismatch!")
+        print("  ⚠️  Shape mismatch!")
         torch_np_t = torch_np.T
         abs_diff_t = np.abs(paddle_np - torch_np_t)
         print(f"  After transpose: max_abs_diff={abs_diff_t.max():.2e}")
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Layer comparison complete")
+
 
 if __name__ == "__main__":
     main()

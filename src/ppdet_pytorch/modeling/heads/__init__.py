@@ -10,6 +10,6 @@ from .detr_head import DINOv3Head
 from .ppyoloe_head import PPYOLOEHead
 
 __all__ = [
-    'DINOv3Head',
-    'PPYOLOEHead',
+    "DINOv3Head",
+    "PPYOLOEHead",
 ]

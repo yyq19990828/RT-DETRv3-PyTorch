@@ -9,21 +9,24 @@ Licensed under the Apache License, Version 2.0.
 """
 
 import os
-import copy
-import numpy as np
 from typing import List, Optional
-try:
-    from collections.abc import Sequence
-except Exception:
-    from collections import Sequence
 
-from ppdet_pytorch.core.workspace import register, serializable
-from .dataset import DetDataset
+import numpy as np
+
+try:
+    pass
+except Exception:
+    pass
 
 import logging
+
+from ppdet_pytorch.core.workspace import register, serializable
+
+from .dataset import DetDataset
+
 logger = logging.getLogger(__name__)
 
-__all__ = ['LVISDataSet']
+__all__ = ["LVISDataSet"]
 
 
 @register
@@ -58,10 +61,10 @@ class LVISDataSet(DetDataset):
         load_crowd: bool = False,
         allow_empty: bool = False,
         empty_ratio: float = 1.0,
-        repeat: int = 1
+        repeat: int = 1,
     ):
         if data_fields is None:
-            data_fields = ['image']
+            data_fields = ["image"]
 
         super(LVISDataSet, self).__init__(
             dataset_dir=dataset_dir,
@@ -69,7 +72,7 @@ class LVISDataSet(DetDataset):
             anno_path=anno_path,
             data_fields=data_fields,
             sample_num=sample_num,
-            repeat=repeat
+            repeat=repeat,
         )
 
         # LVIS-specific parameters
@@ -99,9 +102,9 @@ class LVISDataSet(DetDataset):
             return records
 
         import random
+
         sample_num = min(
-            int(num * self.empty_ratio / (1 - self.empty_ratio)),
-            len(records)
+            int(num * self.empty_ratio / (1 - self.empty_ratio)), len(records)
         )
         records = random.sample(records, sample_num)
         return records
@@ -116,16 +119,13 @@ class LVISDataSet(DetDataset):
         anno_path = os.path.join(self.dataset_dir, self.anno_path)
         image_dir = os.path.join(self.dataset_dir, self.image_dir)
 
-        assert anno_path.endswith('.json'), \
-            f'Invalid LVIS annotation file: {anno_path}'
+        assert anno_path.endswith(".json"), f"Invalid LVIS annotation file: {anno_path}"
 
         # Load LVIS annotations
         try:
             from lvis import LVIS
         except ImportError:
-            raise ImportError(
-                "lvis-api not installed. Install with: pip install lvis"
-            )
+            raise ImportError("lvis-api not installed. Install with: pip install lvis")
 
         logger.info(f"Loading LVIS annotations from {anno_path}")
         lvis_ = LVIS(anno_path)
@@ -142,16 +142,16 @@ class LVISDataSet(DetDataset):
         # Build category mapping
         self.catid2clsid = {catid: i for i, catid in enumerate(cat_ids)}
         self.cname2cid = {
-            lvis_.load_cats([catid])[0]['name']: clsid
+            lvis_.load_cats([catid])[0]["name"]: clsid
             for catid, clsid in self.catid2clsid.items()
         }
 
         # Check if annotations exist
-        if 'annotations' not in lvis_.dataset:
+        if "annotations" not in lvis_.dataset:
             self.load_image_only = True
             logger.warning(
-                f'Annotation file: {anno_path} does not contain ground truth '
-                'and will load image information only.'
+                f"Annotation file: {anno_path} does not contain ground truth "
+                "and will load image information only."
             )
 
         # Iterate over images
@@ -159,37 +159,39 @@ class LVISDataSet(DetDataset):
             img_anno = lvis_.load_imgs([img_id])[0]
 
             # Parse image path (LVIS uses coco_url format)
-            im_fname = img_anno['coco_url'].replace(
-                'http://images.cocodataset.org/', ''
+            im_fname = img_anno["coco_url"].replace(
+                "http://images.cocodataset.org/", ""
             )
-            im_w = float(img_anno['width'])
-            im_h = float(img_anno['height'])
+            im_w = float(img_anno["width"])
+            im_h = float(img_anno["height"])
 
             im_path = os.path.join(image_dir, im_fname) if image_dir else im_fname
             is_empty = False
 
             # Validate image file
             if not os.path.exists(im_path):
-                logger.warning(
-                    f'Illegal image file: {im_path}, will be ignored'
-                )
+                logger.warning(f"Illegal image file: {im_path}, will be ignored")
                 continue
 
             # Validate dimensions
             if im_w < 0 or im_h < 0:
                 logger.warning(
-                    f'Illegal width: {im_w} or height: {im_h} in annotation, '
-                    f'im_id: {img_id} will be ignored'
+                    f"Illegal width: {im_w} or height: {im_h} in annotation, "
+                    f"im_id: {img_id} will be ignored"
                 )
                 continue
 
             # Build record dict
-            coco_rec = {
-                'im_file': im_path,
-                'im_id': np.array([img_id]),
-                'h': im_h,
-                'w': im_w,
-            } if 'image' in self.data_fields else {}
+            coco_rec = (
+                {
+                    "im_file": im_path,
+                    "im_id": np.array([img_id]),
+                    "h": im_h,
+                    "w": im_w,
+                }
+                if "image" in self.data_fields
+                else {}
+            )
 
             # Parse annotations if not load_image_only
             if not self.load_image_only:
@@ -200,34 +202,34 @@ class LVISDataSet(DetDataset):
 
                 for inst in instances:
                     # Skip ignored annotations
-                    if inst.get('ignore', False):
+                    if inst.get("ignore", False):
                         continue
 
                     # Skip annotations without bbox
-                    if 'bbox' not in inst.keys():
+                    if "bbox" not in inst.keys():
                         continue
                     else:
                         # Skip empty bboxes
-                        if not any(np.array(inst['bbox'])):
+                        if not any(np.array(inst["bbox"])):
                             continue
 
                     # Parse bbox (LVIS uses [x, y, w, h] format)
-                    x1, y1, box_w, box_h = inst['bbox']
+                    x1, y1, box_w, box_h = inst["bbox"]
                     x2 = x1 + box_w
                     y2 = y1 + box_h
                     eps = 1e-5
 
                     # Validate bbox
-                    if inst['area'] > 0 and x2 - x1 > eps and y2 - y1 > eps:
-                        inst['clean_bbox'] = [
+                    if inst["area"] > 0 and x2 - x1 > eps and y2 - y1 > eps:
+                        inst["clean_bbox"] = [
                             round(float(x), 3) for x in [x1, y1, x2, y2]
                         ]
                         bboxes.append(inst)
                     else:
                         logger.warning(
-                            f'Found an invalid bbox in annotations: '
-                            f'im_id: {img_id}, area: {float(inst["area"])}, '
-                            f'x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}.'
+                            f"Found an invalid bbox in annotations: "
+                            f"im_id: {img_id}, area: {float(inst['area'])}, "
+                            f"x1: {x1}, y1: {y1}, x2: {x2}, y2: {y2}."
                         )
 
                 num_bbox = len(bboxes)
@@ -249,17 +251,17 @@ class LVISDataSet(DetDataset):
                 has_track_id = False
 
                 for i, box in enumerate(bboxes):
-                    catid = box['category_id']
+                    catid = box["category_id"]
                     gt_class[i][0] = self.catid2clsid[catid]
-                    gt_bbox[i, :] = box['clean_bbox']
+                    gt_bbox[i, :] = box["clean_bbox"]
 
                     # Note: LVIS does not have iscrowd field like COCO
                     # Segmentation handling is commented out as in Paddle version
                     # (LVIS segmentation format differs from COCO)
 
                     # Track ID for multi-object tracking (preserved for compatibility)
-                    if 'track_id' in box:
-                        gt_track_id[i][0] = box['track_id']
+                    if "track_id" in box:
+                        gt_track_id[i][0] = box["track_id"]
                         has_track_id = True
 
                 # Check segmentation validity (preserved logic, though commented in Paddle)
@@ -268,14 +270,14 @@ class LVISDataSet(DetDataset):
 
                 # Build ground truth record
                 gt_rec = {
-                    'is_crowd': is_crowd,
-                    'gt_class': gt_class,
-                    'gt_bbox': gt_bbox,
-                    'gt_poly': gt_poly,
+                    "is_crowd": is_crowd,
+                    "gt_class": gt_class,
+                    "gt_bbox": gt_bbox,
+                    "gt_poly": gt_poly,
                 }
 
                 if has_track_id:
-                    gt_rec.update({'gt_track_id': gt_track_id})
+                    gt_rec.update({"gt_track_id": gt_track_id})
 
                 # Filter by data_fields
                 for k, v in gt_rec.items():
@@ -283,15 +285,17 @@ class LVISDataSet(DetDataset):
                         coco_rec[k] = v
 
                 # Semantic segmentation (unused, preserved for compatibility)
-                if self.load_semantic and 'semantic' in self.data_fields:
+                if self.load_semantic and "semantic" in self.data_fields:
                     seg_path = os.path.join(
-                        self.dataset_dir, 'stuffthingmaps', 'train2017',
-                        im_fname[:-3] + 'png'
+                        self.dataset_dir,
+                        "stuffthingmaps",
+                        "train2017",
+                        im_fname[:-3] + "png",
                     )
-                    coco_rec.update({'semantic': seg_path})
+                    coco_rec.update({"semantic": seg_path})
 
             logger.debug(
-                f'Load file: {im_path}, im_id: {img_id}, h: {im_h}, w: {im_w}.'
+                f"Load file: {im_path}, im_id: {img_id}, h: {im_h}, w: {im_w}."
             )
 
             # Separate empty and non-empty records
@@ -306,11 +310,11 @@ class LVISDataSet(DetDataset):
             if self.sample_num > 0 and ct >= self.sample_num:
                 break
 
-        assert ct > 0, f'Not found any LVIS record in {anno_path}'
+        assert ct > 0, f"Not found any LVIS record in {anno_path}"
 
         logger.info(
-            f'Load [{ct} samples valid, {len(img_ids) - ct} samples invalid] '
-            f'in file {anno_path}.'
+            f"Load [{ct} samples valid, {len(img_ids) - ct} samples invalid] "
+            f"in file {anno_path}."
         )
 
         # Sample and add empty records

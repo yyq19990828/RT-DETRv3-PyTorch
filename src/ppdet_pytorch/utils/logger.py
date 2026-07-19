@@ -7,11 +7,11 @@ while using PyTorch's distributed training APIs.
 import logging
 import os
 import sys
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 import torch.distributed as dist
 
-__all__ = ['setup_logger']
+__all__ = ["setup_logger"]
 
 logger_initialized = []
 
@@ -19,7 +19,7 @@ logger_initialized = []
 def setup_logger(
     name: str = "rtdetrv3",
     output: Optional[str] = None,
-    log_ranks: Union[str, int, List[int]] = "0"
+    log_ranks: Union[str, int, List[int]] = "0",
 ) -> logging.Logger:
     """
     Initialize logger and set its verbosity level to INFO.
@@ -44,12 +44,12 @@ def setup_logger(
 
     # Formatter matching PaddlePaddle format
     formatter = logging.Formatter(
-        "[%(asctime)s] %(name)s %(levelname)s: %(message)s",
-        datefmt="%m/%d %H:%M:%S")
+        "[%(asctime)s] %(name)s %(levelname)s: %(message)s", datefmt="%m/%d %H:%M:%S"
+    )
 
     # Parse log_ranks parameter
     if isinstance(log_ranks, str):
-        log_ranks = [int(i) for i in log_ranks.split(',')]
+        log_ranks = [int(i) for i in log_ranks.split(",")]
     elif isinstance(log_ranks, int):
         log_ranks = [log_ranks]
 
@@ -87,9 +87,12 @@ def setup_logger(
             filename = filename + ".rank{}".format(local_rank)
 
         # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
+        os.makedirs(
+            os.path.dirname(filename) if os.path.dirname(filename) else ".",
+            exist_ok=True,
+        )
 
-        fh = logging.FileHandler(filename, mode='a')
+        fh = logging.FileHandler(filename, mode="a")
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
         logger.addHandler(fh)

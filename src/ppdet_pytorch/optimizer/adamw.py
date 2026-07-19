@@ -12,14 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import torch
-from torch.optim import AdamW
 from functools import partial
-import re
+
+from torch.optim import AdamW
 
 
 def layerwise_lr_decay(decay_rate, name_dict, n_layers, param_name):
@@ -60,16 +57,22 @@ def layerwise_lr_decay(decay_rate, name_dict, n_layers, param_name):
     if not isinstance(static_name, str):
         static_name = str(static_name)
 
-    if 'blocks.' in static_name or 'layers.' in static_name:
-        idx_1 = static_name.find('blocks.')
-        idx_2 = static_name.find('layers.')
-        assert any([x >= 0 for x in [idx_1, idx_2]]), f'Cannot find blocks or layers in {static_name}'
+    if "blocks." in static_name or "layers." in static_name:
+        idx_1 = static_name.find("blocks.")
+        idx_2 = static_name.find("layers.")
+        assert any([x >= 0 for x in [idx_1, idx_2]]), (
+            f"Cannot find blocks or layers in {static_name}"
+        )
         idx = idx_1 if idx_1 >= 0 else idx_2
 
-        layer = int(static_name[idx:].split('.')[1])
+        layer = int(static_name[idx:].split(".")[1])
         ratio = decay_rate ** (n_layers - layer)
 
-    elif 'cls_token' in static_name or 'patch_embed' in static_name or 'pos_embed' in static_name:
+    elif (
+        "cls_token" in static_name
+        or "patch_embed" in static_name
+        or "pos_embed" in static_name
+    ):
         ratio = decay_rate ** (n_layers + 1)
 
     return ratio
@@ -148,25 +151,29 @@ class AdamWDL(AdamW):
         >>> adamwdl.zero_grad()
     """
 
-    def __init__(self,
-                 params,
-                 lr=1e-3,
-                 betas=(0.9, 0.999),
-                 eps=1e-8,
-                 weight_decay=1e-2,
-                 amsgrad=False,
-                 layerwise_decay=1.0,
-                 n_layers=12,
-                 set_param_lr_func=None,
-                 name_dict=None):
+    def __init__(
+        self,
+        params,
+        lr=1e-3,
+        betas=(0.9, 0.999),
+        eps=1e-8,
+        weight_decay=1e-2,
+        amsgrad=False,
+        layerwise_decay=1.0,
+        n_layers=12,
+        set_param_lr_func=None,
+        name_dict=None,
+    ):
         if not isinstance(layerwise_decay, (float, int)):
             raise TypeError("layerwise_decay should be float or int.")
 
         self.layerwise_decay = layerwise_decay
         self.n_layers = n_layers
-        self.set_param_lr_func = partial(
-            set_param_lr_func, layerwise_decay, name_dict,
-            n_layers) if set_param_lr_func is not None else None
+        self.set_param_lr_func = (
+            partial(set_param_lr_func, layerwise_decay, name_dict, n_layers)
+            if set_param_lr_func is not None
+            else None
+        )
         self.name_dict = name_dict if name_dict is not None else {}
         self.base_lr = lr
 
@@ -176,9 +183,7 @@ class AdamWDL(AdamW):
 
         # Check if params is already a list of parameter groups (dicts)
         is_param_groups = (
-            len(params) > 0 and
-            isinstance(params[0], dict) and
-            'params' in params[0]
+            len(params) > 0 and isinstance(params[0], dict) and "params" in params[0]
         )
 
         # If set_param_lr_func is provided, create parameter groups with custom learning rates
@@ -196,15 +201,15 @@ class AdamWDL(AdamW):
                 all_params = []
                 group_settings = []  # Store original group settings
                 for group in params:
-                    group_params = group['params']
+                    group_params = group["params"]
                     if not isinstance(group_params, list):
                         group_params = list(group_params)
                     for param in group_params:
                         all_params.append(param)
                         # Store group settings for this param
-                        group_settings.append({
-                            k: v for k, v in group.items() if k != 'params'
-                        })
+                        group_settings.append(
+                            {k: v for k, v in group.items() if k != "params"}
+                        )
                 params_to_process = all_params
             else:
                 params_to_process = params
@@ -223,9 +228,9 @@ class AdamWDL(AdamW):
 
                 # Merge original settings with new lr
                 group_dict = {
-                    'params': [param],
-                    'lr': lr * ratio,
-                    **settings  # Include weight_decay and other settings
+                    "params": [param],
+                    "lr": lr * ratio,
+                    **settings,  # Include weight_decay and other settings
                 }
                 param_groups.append(group_dict)
 
@@ -235,7 +240,8 @@ class AdamWDL(AdamW):
                 betas=betas,
                 eps=eps,
                 weight_decay=weight_decay,
-                amsgrad=amsgrad)
+                amsgrad=amsgrad,
+            )
         else:
             super(AdamWDL, self).__init__(
                 params,
@@ -243,18 +249,21 @@ class AdamWDL(AdamW):
                 betas=betas,
                 eps=eps,
                 weight_decay=weight_decay,
-                amsgrad=amsgrad)
+                amsgrad=amsgrad,
+            )
 
 
-def build_adamwdl(model,
-                  lr=1e-4,
-                  weight_decay=0.05,
-                  betas=(0.9, 0.999),
-                  layer_decay=0.65,
-                  num_layers=None,
-                  filter_bias_and_bn=True,
-                  skip_decay_names=None,
-                  set_param_lr_func='layerwise_lr_decay'):
+def build_adamwdl(
+    model,
+    lr=1e-4,
+    weight_decay=0.05,
+    betas=(0.9, 0.999),
+    layer_decay=0.65,
+    num_layers=None,
+    filter_bias_and_bn=True,
+    skip_decay_names=None,
+    set_param_lr_func="layerwise_lr_decay",
+):
     """
     Build AdamWDL optimizer with layer-wise learning rate decay.
 
@@ -286,7 +295,7 @@ def build_adamwdl(model,
 
             if filter_bias_and_bn:
                 # Skip decay for 1D parameters (biases, norms) and bias parameters
-                if len(param.shape) == 1 or name.endswith('.bias'):
+                if len(param.shape) == 1 or name.endswith(".bias"):
                     should_decay = False
 
             if skip_decay_names and should_decay:
@@ -297,20 +306,18 @@ def build_adamwdl(model,
             decay_dict[name] = should_decay
 
         # Create parameter groups based on decay_dict
-        decay_params = [p for n, p in model.named_parameters() if decay_dict.get(n, True)]
-        no_decay_params = [p for n, p in model.named_parameters() if not decay_dict.get(n, True)]
+        decay_params = [
+            p for n, p in model.named_parameters() if decay_dict.get(n, True)
+        ]
+        no_decay_params = [
+            p for n, p in model.named_parameters() if not decay_dict.get(n, True)
+        ]
 
         param_groups = []
         if decay_params:
-            param_groups.append({
-                'params': decay_params,
-                'weight_decay': weight_decay
-            })
+            param_groups.append({"params": decay_params, "weight_decay": weight_decay})
         if no_decay_params:
-            param_groups.append({
-                'params': no_decay_params,
-                'weight_decay': 0.0
-            })
+            param_groups.append({"params": no_decay_params, "weight_decay": 0.0})
 
         parameters = param_groups if param_groups else model.parameters()
     else:
@@ -318,11 +325,13 @@ def build_adamwdl(model,
 
     # Prepare optimizer arguments
     opt_args = {
-        'params': parameters,
-        'lr': lr,
-        'weight_decay': weight_decay if decay_dict is None else 0.0,  # Use 0.0 if already set in param_groups
-        'betas': betas,
-        'layerwise_decay': layer_decay,
+        "params": parameters,
+        "lr": lr,
+        "weight_decay": weight_decay
+        if decay_dict is None
+        else 0.0,  # Use 0.0 if already set in param_groups
+        "betas": betas,
+        "layerwise_decay": layer_decay,
     }
 
     # Set learning rate function
@@ -330,11 +339,11 @@ def build_adamwdl(model,
         set_param_lr_func = eval(set_param_lr_func)
 
     if set_param_lr_func is not None:
-        opt_args['set_param_lr_func'] = set_param_lr_func
+        opt_args["set_param_lr_func"] = set_param_lr_func
         # Create name dictionary for parameter lookup
         name_dict = dict(model.named_parameters())
-        opt_args['name_dict'] = name_dict
-        opt_args['n_layers'] = num_layers
+        opt_args["name_dict"] = name_dict
+        opt_args["n_layers"] = num_layers
 
     optimizer = AdamWDL(**opt_args)
 

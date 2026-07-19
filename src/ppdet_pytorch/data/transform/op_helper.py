@@ -14,23 +14,24 @@
 # this file contains helper methods for BBOX processing
 # TODO check the pytorch implementation
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
-import random
 import math
+import random
+
 import cv2
+import numpy as np
 
 
 def meet_emit_constraint(src_bbox, sample_bbox):
     center_x = (src_bbox[2] + src_bbox[0]) / 2
     center_y = (src_bbox[3] + src_bbox[1]) / 2
-    if center_x >= sample_bbox[0] and \
-            center_x <= sample_bbox[2] and \
-            center_y >= sample_bbox[1] and \
-            center_y <= sample_bbox[3]:
+    if (
+        center_x >= sample_bbox[0]
+        and center_x <= sample_bbox[2]
+        and center_y >= sample_bbox[1]
+        and center_y <= sample_bbox[3]
+    ):
         return True
     return False
 
@@ -45,7 +46,7 @@ def clip_bbox(src_bbox):
 
 def bbox_area(src_bbox):
     if src_bbox[2] < src_bbox[0] or src_bbox[3] < src_bbox[1]:
-        return 0.
+        return 0.0
     else:
         width = src_bbox[2] - src_bbox[0]
         height = src_bbox[3] - src_bbox[1]
@@ -53,17 +54,18 @@ def bbox_area(src_bbox):
 
 
 def is_overlap(object_bbox, sample_bbox):
-    if object_bbox[0] >= sample_bbox[2] or \
-       object_bbox[2] <= sample_bbox[0] or \
-       object_bbox[1] >= sample_bbox[3] or \
-       object_bbox[3] <= sample_bbox[1]:
+    if (
+        object_bbox[0] >= sample_bbox[2]
+        or object_bbox[2] <= sample_bbox[0]
+        or object_bbox[1] >= sample_bbox[3]
+        or object_bbox[3] <= sample_bbox[1]
+    ):
         return False
     else:
         return True
 
 
-def filter_and_process(sample_bbox, bboxes, labels, scores=None,
-                       keypoints=None):
+def filter_and_process(sample_bbox, bboxes, labels, scores=None, keypoints=None):
     new_bboxes = []
     new_labels = []
     new_scores = []
@@ -93,8 +95,7 @@ def filter_and_process(sample_bbox, bboxes, labels, scores=None,
                 for j in range(len(sample_keypoint)):
                     kp_len = sample_height if j % 2 else sample_width
                     sample_coord = sample_bbox[1] if j % 2 else sample_bbox[0]
-                    sample_keypoint[j] = (
-                        sample_keypoint[j] - sample_coord) / kp_len
+                    sample_keypoint[j] = (sample_keypoint[j] - sample_coord) / kp_len
                     sample_keypoint[j] = max(min(sample_keypoint[j], 1.0), 0.0)
                 new_keypoints.append(sample_keypoint)
                 new_kp_ignore.append(keypoints[1][i])
@@ -167,8 +168,9 @@ def generate_sample_bbox_square(sampler, image_width, image_height):
     return sampled_bbox
 
 
-def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
-                         resize_width):
+def data_anchor_sampling(
+    bbox_labels, image_width, image_height, scale_array, resize_width
+):
     num_gt = len(bbox_labels)
     # np.random.randint range: [low, high)
     rand_idx = np.random.randint(0, num_gt) if num_gt != 0 else 0
@@ -187,12 +189,14 @@ def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
 
         area = wid * hei
         for scale_ind in range(0, len(scale_array) - 1):
-            if area > scale_array[scale_ind] ** 2 and area < \
-                    scale_array[scale_ind + 1] ** 2:
+            if (
+                area > scale_array[scale_ind] ** 2
+                and area < scale_array[scale_ind + 1] ** 2
+            ):
                 range_size = scale_ind + 1
                 break
 
-        if area > scale_array[len(scale_array) - 2]**2:
+        if area > scale_array[len(scale_array) - 2] ** 2:
             range_size = len(scale_array) - 2
 
         scale_choose = 0.0
@@ -205,8 +209,9 @@ def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
 
         if rand_idx_size == range_size:
             min_resize_val = scale_array[rand_idx_size] / 2.0
-            max_resize_val = min(2.0 * scale_array[rand_idx_size],
-                                 2 * math.sqrt(wid * hei))
+            max_resize_val = min(
+                2.0 * scale_array[rand_idx_size], 2 * math.sqrt(wid * hei)
+            )
             scale_choose = random.uniform(min_resize_val, max_resize_val)
         else:
             min_resize_val = scale_array[rand_idx_size] / 2.0
@@ -219,18 +224,14 @@ def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
         h_off_orig = 0.0
         if sample_bbox_size < max(image_height, image_width):
             if wid <= sample_bbox_size:
-                w_off_orig = np.random.uniform(xmin + wid - sample_bbox_size,
-                                               xmin)
+                w_off_orig = np.random.uniform(xmin + wid - sample_bbox_size, xmin)
             else:
-                w_off_orig = np.random.uniform(xmin,
-                                               xmin + wid - sample_bbox_size)
+                w_off_orig = np.random.uniform(xmin, xmin + wid - sample_bbox_size)
 
             if hei <= sample_bbox_size:
-                h_off_orig = np.random.uniform(ymin + hei - sample_bbox_size,
-                                               ymin)
+                h_off_orig = np.random.uniform(ymin + hei - sample_bbox_size, ymin)
             else:
-                h_off_orig = np.random.uniform(ymin,
-                                               ymin + hei - sample_bbox_size)
+                h_off_orig = np.random.uniform(ymin, ymin + hei - sample_bbox_size)
 
         else:
             w_off_orig = np.random.uniform(image_width - sample_bbox_size, 0.0)
@@ -244,8 +245,10 @@ def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
         h_off = float(h_off_orig / image_height)
 
         sampled_bbox = [
-            w_off, h_off, w_off + float(sample_bbox_size / image_width),
-            h_off + float(sample_bbox_size / image_height)
+            w_off,
+            h_off,
+            w_off + float(sample_bbox_size / image_width),
+            h_off + float(sample_bbox_size / image_height),
         ]
         return sampled_bbox
     else:
@@ -253,32 +256,40 @@ def data_anchor_sampling(bbox_labels, image_width, image_height, scale_array,
 
 
 def jaccard_overlap(sample_bbox, object_bbox):
-    if sample_bbox[0] >= object_bbox[2] or \
-        sample_bbox[2] <= object_bbox[0] or \
-        sample_bbox[1] >= object_bbox[3] or \
-        sample_bbox[3] <= object_bbox[1]:
+    if (
+        sample_bbox[0] >= object_bbox[2]
+        or sample_bbox[2] <= object_bbox[0]
+        or sample_bbox[1] >= object_bbox[3]
+        or sample_bbox[3] <= object_bbox[1]
+    ):
         return 0
     intersect_xmin = max(sample_bbox[0], object_bbox[0])
     intersect_ymin = max(sample_bbox[1], object_bbox[1])
     intersect_xmax = min(sample_bbox[2], object_bbox[2])
     intersect_ymax = min(sample_bbox[3], object_bbox[3])
     intersect_size = (intersect_xmax - intersect_xmin) * (
-        intersect_ymax - intersect_ymin)
+        intersect_ymax - intersect_ymin
+    )
     sample_bbox_size = bbox_area(sample_bbox)
     object_bbox_size = bbox_area(object_bbox)
-    overlap = intersect_size / (
-        sample_bbox_size + object_bbox_size - intersect_size)
+    overlap = intersect_size / (sample_bbox_size + object_bbox_size - intersect_size)
     return overlap
 
 
 def intersect_bbox(bbox1, bbox2):
-    if bbox2[0] > bbox1[2] or bbox2[2] < bbox1[0] or \
-        bbox2[1] > bbox1[3] or bbox2[3] < bbox1[1]:
+    if (
+        bbox2[0] > bbox1[2]
+        or bbox2[2] < bbox1[0]
+        or bbox2[1] > bbox1[3]
+        or bbox2[3] < bbox1[1]
+    ):
         intersection_box = [0.0, 0.0, 0.0, 0.0]
     else:
         intersection_box = [
-            max(bbox1[0], bbox2[0]), max(bbox1[1], bbox2[1]),
-            min(bbox1[2], bbox2[2]), min(bbox1[3], bbox2[3])
+            max(bbox1[0], bbox2[0]),
+            max(bbox1[1], bbox2[1]),
+            min(bbox1[2], bbox2[2]),
+            min(bbox1[3], bbox2[3]),
         ]
     return intersection_box
 
@@ -291,27 +302,25 @@ def bbox_coverage(bbox1, bbox2):
         bbox1_size = bbox_area(bbox1)
         return intersect_size / bbox1_size
     else:
-        return 0.
+        return 0.0
 
 
-def satisfy_sample_constraint(sampler,
-                              sample_bbox,
-                              gt_bboxes,
-                              satisfy_all=False):
+def satisfy_sample_constraint(sampler, sample_bbox, gt_bboxes, satisfy_all=False):
     if sampler[6] == 0 and sampler[7] == 0:
         return True
     satisfied = []
     for i in range(len(gt_bboxes)):
         object_bbox = [
-            gt_bboxes[i][0], gt_bboxes[i][1], gt_bboxes[i][2], gt_bboxes[i][3]
+            gt_bboxes[i][0],
+            gt_bboxes[i][1],
+            gt_bboxes[i][2],
+            gt_bboxes[i][3],
         ]
         overlap = jaccard_overlap(sample_bbox, object_bbox)
-        if sampler[6] != 0 and \
-                overlap < sampler[6]:
+        if sampler[6] != 0 and overlap < sampler[6]:
             satisfied.append(False)
             continue
-        if sampler[7] != 0 and \
-                overlap > sampler[7]:
+        if sampler[7] != 0 and overlap > sampler[7]:
             satisfied.append(False)
             continue
         satisfied.append(True)
@@ -339,24 +348,23 @@ def satisfy_sample_constraint_coverage(sampler, sample_bbox, gt_bboxes):
     found = False
     for i in range(len(gt_bboxes)):
         object_bbox = [
-            gt_bboxes[i][0], gt_bboxes[i][1], gt_bboxes[i][2], gt_bboxes[i][3]
+            gt_bboxes[i][0],
+            gt_bboxes[i][1],
+            gt_bboxes[i][2],
+            gt_bboxes[i][3],
         ]
         if has_jaccard_overlap:
             overlap = jaccard_overlap(sample_bbox, object_bbox)
-            if sampler[6] != 0 and \
-                    overlap < sampler[6]:
+            if sampler[6] != 0 and overlap < sampler[6]:
                 continue
-            if sampler[7] != 0 and \
-                    overlap > sampler[7]:
+            if sampler[7] != 0 and overlap > sampler[7]:
                 continue
             found = True
         if has_object_coverage:
             object_coverage = bbox_coverage(object_bbox, sample_bbox)
-            if sampler[8] != 0 and \
-                    object_coverage < sampler[8]:
+            if sampler[8] != 0 and object_coverage < sampler[8]:
                 continue
-            if sampler[9] != 0 and \
-                    object_coverage > sampler[9]:
+            if sampler[9] != 0 and object_coverage > sampler[9]:
                 continue
             found = True
         if found:
@@ -364,8 +372,7 @@ def satisfy_sample_constraint_coverage(sampler, sample_bbox, gt_bboxes):
     return found
 
 
-def crop_image_sampling(img, sample_bbox, image_width, image_height,
-                        target_size):
+def crop_image_sampling(img, sample_bbox, image_width, image_height, target_size):
     # no clipping here
     xmin = int(sample_bbox[0] * image_width)
     xmax = int(sample_bbox[2] * image_width)
@@ -399,18 +406,17 @@ def crop_image_sampling(img, sample_bbox, image_width, image_height,
     cross_x2 = int(cross_xmin + cross_width)
 
     sample_img = np.zeros((height, width, 3))
-    sample_img[roi_y1: roi_y2, roi_x1: roi_x2] = \
-        img[cross_y1: cross_y2, cross_x1: cross_x2]
+    sample_img[roi_y1:roi_y2, roi_x1:roi_x2] = img[cross_y1:cross_y2, cross_x1:cross_x2]
 
     sample_img = cv2.resize(
-        sample_img, (target_size, target_size), interpolation=cv2.INTER_AREA)
+        sample_img, (target_size, target_size), interpolation=cv2.INTER_AREA
+    )
 
     return sample_img
 
 
 def is_poly(segm):
-    assert isinstance(segm, (list, dict)), \
-        "Invalid segm type: {}".format(type(segm))
+    assert isinstance(segm, (list, dict)), "Invalid segm type: {}".format(type(segm))
     return isinstance(segm, list)
 
 
@@ -418,7 +424,7 @@ def gaussian_radius(bbox_size, min_overlap):
     height, width = bbox_size
 
     a1 = 1
-    b1 = (height + width)
+    b1 = height + width
     c1 = width * height * (1 - min_overlap) / (1 + min_overlap)
     sq1 = np.sqrt(b1**2 - 4 * a1 * c1)
     radius1 = (b1 + sq1) / (2 * a1)
@@ -449,18 +455,18 @@ def draw_gaussian(heatmap, center, radius, k=1, delte=6):
     left, right = min(x, radius), min(width - x, radius + 1)
     top, bottom = min(y, radius), min(height - y, radius + 1)
 
-    masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
-    masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:
-                               radius + right]
+    masked_heatmap = heatmap[y - top : y + bottom, x - left : x + right]
+    masked_gaussian = gaussian[
+        radius - top : radius + bottom, radius - left : radius + right
+    ]
     np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
 
 
 def gaussian2D(shape, sigma_x=1, sigma_y=1):
-    m, n = [(ss - 1.) / 2. for ss in shape]
-    y, x = np.ogrid[-m:m + 1, -n:n + 1]
+    m, n = [(ss - 1.0) / 2.0 for ss in shape]
+    y, x = np.ogrid[-m : m + 1, -n : n + 1]
 
-    h = np.exp(-(x * x / (2 * sigma_x * sigma_x) + y * y / (2 * sigma_y *
-                                                            sigma_y)))
+    h = np.exp(-(x * x / (2 * sigma_x * sigma_x) + y * y / (2 * sigma_y * sigma_y)))
     h[h < np.finfo(h.dtype).eps * h.max()] = 0
     return h
 
@@ -471,7 +477,8 @@ def draw_umich_gaussian(heatmap, center, radius, k=1):
     """
     diameter = 2 * radius + 1
     gaussian = gaussian2D(
-        (diameter, diameter), sigma_x=diameter / 6, sigma_y=diameter / 6)
+        (diameter, diameter), sigma_x=diameter / 6, sigma_y=diameter / 6
+    )
 
     x, y = int(center[0]), int(center[1])
 
@@ -480,9 +487,10 @@ def draw_umich_gaussian(heatmap, center, radius, k=1):
     left, right = min(x, radius), min(width - x, radius + 1)
     top, bottom = min(y, radius), min(height - y, radius + 1)
 
-    masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
-    masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:
-                               radius + right]
+    masked_heatmap = heatmap[y - top : y + bottom, x - left : x + right]
+    masked_gaussian = gaussian[
+        radius - top : radius + bottom, radius - left : radius + right
+    ]
     if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0:
         np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
     return heatmap

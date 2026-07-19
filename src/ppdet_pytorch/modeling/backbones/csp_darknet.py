@@ -19,20 +19,15 @@ CSP-DarkNet Backbone Components - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/backbones/csp_darknet.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from ...core.workspace import register, serializable
 from ..batch_norm import ContiguousGradBatchNorm2d
 from ..initializer import conv_init_
-from ..shape_spec import ShapeSpec
 
-__all__ = ['BaseConv']
+__all__ = ["BaseConv"]
 
 
 class BaseConv(nn.Module):
@@ -48,14 +43,9 @@ class BaseConv(nn.Module):
         act (str): Activation function name. Default: 'silu'
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 ksize,
-                 stride,
-                 groups=1,
-                 bias=False,
-                 act="silu"):
+    def __init__(
+        self, in_channels, out_channels, ksize, stride, groups=1, bias=False, act="silu"
+    ):
         super(BaseConv, self).__init__()
         self.conv = nn.Conv2d(
             in_channels,
@@ -64,7 +54,8 @@ class BaseConv(nn.Module):
             stride=stride,
             padding=(ksize - 1) // 2,
             groups=groups,
-            bias=bias)
+            bias=bias,
+        )
         self.bn = ContiguousGradBatchNorm2d(out_channels)
 
         self._init_weights()

@@ -1,4 +1,3 @@
-
 # Copyright (c) 2021 PaddlePaddle Authors. All Rights Reserved.
 # Copyright (c) 2025 PyTorch Migration. All Rights Reserved.
 #
@@ -20,17 +19,13 @@ DETR Transformer - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/transformers/detr_transformer.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from .utils import _get_clones
 
-__all__ = ['TransformerEncoder']
+__all__ = ["TransformerEncoder"]
 
 
 class TransformerEncoder(nn.Module):

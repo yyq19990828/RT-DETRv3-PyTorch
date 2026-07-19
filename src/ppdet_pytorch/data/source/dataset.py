@@ -5,23 +5,25 @@ Migrated from PaddlePaddle RT-DETRv3 to PyTorch.
 Preserves all logic branches from Paddle version for future extensibility.
 """
 
-import os
 import copy
+import os
+from typing import Any, List, Optional
+
 import numpy as np
-from typing import List, Optional, Any, Dict
+
 try:
     from collections.abc import Sequence
 except Exception:
     from collections import Sequence
 
-import torch
-from torch.utils.data import Dataset
+import logging
+
 from pycocotools.coco import COCO
+from torch.utils.data import Dataset
 
 from ppdet_pytorch.core.workspace import register, serializable
 from ppdet_pytorch.data import source
 
-import logging
 logger = logging.getLogger(__name__)
 
 
@@ -51,15 +53,15 @@ class DetDataset(Dataset):
         sample_num: int = -1,
         use_default_label: Optional[bool] = None,
         repeat: int = 1,
-        **kwargs
+        **kwargs,
     ):
         super(DetDataset, self).__init__()
 
         # Core parameters
-        self.dataset_dir = dataset_dir if dataset_dir is not None else ''
+        self.dataset_dir = dataset_dir if dataset_dir is not None else ""
         self.anno_path = anno_path
-        self.image_dir = image_dir if image_dir is not None else ''
-        self.data_fields = data_fields if data_fields is not None else ['image']
+        self.image_dir = image_dir if image_dir is not None else ""
+        self.data_fields = data_fields if data_fields is not None else ["image"]
         self.sample_num = sample_num
         self.use_default_label = use_default_label  # Preserved for compatibility
         self.repeat = repeat
@@ -125,8 +127,7 @@ class DetDataset(Dataset):
         elif self.mosaic_epoch == 0 or self._epoch < self.mosaic_epoch:
             # Mosaic: combine 4 images in a 2x2 grid
             roidb = [roidb] + [
-                copy.deepcopy(self.roidbs[np.random.randint(n)])
-                for _ in range(4)
+                copy.deepcopy(self.roidbs[np.random.randint(n)]) for _ in range(4)
             ]
         elif self.pre_img_epoch == 0 or self._epoch < self.pre_img_epoch:
             # Previous image: for temporal detection (CenterTrack, MOT)
@@ -138,11 +139,11 @@ class DetDataset(Dataset):
         # Inject iteration and epoch info into records
         if isinstance(roidb, Sequence):
             for r in roidb:
-                r['curr_iter'] = self._curr_iter
-                r['curr_epoch'] = self._epoch
+                r["curr_iter"] = self._curr_iter
+                r["curr_epoch"] = self._epoch
         else:
-            roidb['curr_iter'] = self._curr_iter
-            roidb['curr_epoch'] = self._epoch
+            roidb["curr_iter"] = self._curr_iter
+            roidb["curr_epoch"] = self._epoch
 
         self._curr_iter += 1
 
@@ -151,16 +152,16 @@ class DetDataset(Dataset):
             assert isinstance(self.transform_schedulers, list)
             if isinstance(roidb, Sequence):
                 for r in roidb:
-                    r['transform_schedulers'] = self.transform_schedulers
+                    r["transform_schedulers"] = self.transform_schedulers
             else:
-                roidb['transform_schedulers'] = self.transform_schedulers
+                roidb["transform_schedulers"] = self.transform_schedulers
 
         # Apply transforms
         if self.transform is not None:
             return self.transform(roidb)
         else:
             return roidb
-    
+
     # TODO: implement download online dataset method of pytorch if needed
     def check_or_download_dataset(self):
         """
@@ -177,11 +178,11 @@ class DetDataset(Dataset):
 
     def set_kwargs(self, **kwargs):
         """Set augmentation scheduling parameters."""
-        self.mixup_epoch = kwargs.get('mixup_epoch', -1)
-        self.cutmix_epoch = kwargs.get('cutmix_epoch', -1)
-        self.mosaic_epoch = kwargs.get('mosaic_epoch', -1)
-        self.pre_img_epoch = kwargs.get('pre_img_epoch', -1)
-        self.transform_schedulers = kwargs.get('transform_schedulers', None)
+        self.mixup_epoch = kwargs.get("mixup_epoch", -1)
+        self.cutmix_epoch = kwargs.get("cutmix_epoch", -1)
+        self.mosaic_epoch = kwargs.get("mosaic_epoch", -1)
+        self.pre_img_epoch = kwargs.get("pre_img_epoch", -1)
+        self.transform_schedulers = kwargs.get("transform_schedulers", None)
 
     def set_transform(self, transform):
         """Set transform function."""
@@ -201,9 +202,7 @@ class DetDataset(Dataset):
 
         Must be implemented by subclasses.
         """
-        raise NotImplementedError(
-            "Need to implement parse_dataset method of Dataset"
-        )
+        raise NotImplementedError("Need to implement parse_dataset method of Dataset")
 
     def get_anno(self) -> Optional[str]:
         """Get full path to annotation file."""
@@ -212,7 +211,9 @@ class DetDataset(Dataset):
         return os.path.join(self.dataset_dir, self.anno_path)
 
 
-def _is_valid_file(f: str, extensions: tuple = ('.jpg', '.jpeg', '.png', '.bmp')) -> bool:
+def _is_valid_file(
+    f: str, extensions: tuple = (".jpg", ".jpeg", ".png", ".bmp")
+) -> bool:
     """Check if file has valid image extension."""
     return f.lower().endswith(extensions)
 
@@ -225,7 +226,7 @@ def _make_dataset(dir: str) -> List[str]:
     """
     dir = os.path.expanduser(dir)
     if not os.path.isdir(dir):
-        raise ValueError(f'{dir} should be a directory')
+        raise ValueError(f"{dir} should be a directory")
 
     images = []
     for root, _, fnames in sorted(os.walk(dir, followlinks=True)):
@@ -236,22 +237,26 @@ def _make_dataset(dir: str) -> List[str]:
 
     return images
 
+
 @register
 @serializable
 class ImageFolder(DetDataset):
-    def __init__(self,
-                 dataset_dir=None,
-                 image_dir=None,
-                 anno_path=None,
-                 sample_num=-1,
-                 use_default_label=None,
-                 **kwargs):
+    def __init__(
+        self,
+        dataset_dir=None,
+        image_dir=None,
+        anno_path=None,
+        sample_num=-1,
+        use_default_label=None,
+        **kwargs,
+    ):
         super(ImageFolder, self).__init__(
             dataset_dir,
             image_dir,
             anno_path,
             sample_num=sample_num,
-            use_default_label=use_default_label)
+            use_default_label=use_default_label,
+        )
         self._imid2path = {}
         self.roidbs = None
         self.sample_num = sample_num
@@ -267,7 +272,9 @@ class ImageFolder(DetDataset):
         else:
             return self.anno_path
 
-    def parse_dataset(self, ):
+    def parse_dataset(
+        self,
+    ):
         if not self.roidbs:
             self.roidbs = self._load_images()
 
@@ -283,7 +290,7 @@ class ImageFolder(DetDataset):
             elif os.path.isfile(im_dir) and _is_valid_file(im_dir):
                 images.append(im_dir)
         return images
-    
+
     def get_images(self):
         images_path = []
         coco = COCO(os.path.join(self.dataset_dir, self.anno_path))
@@ -300,25 +307,26 @@ class ImageFolder(DetDataset):
         anno_file = self.get_anno()
         coco = COCO(anno_file)
         for image in images:
-            assert image != '' and os.path.isfile(image), \
-                    "Image {} not found".format(image)
+            assert image != "" and os.path.isfile(image), "Image {} not found".format(
+                image
+            )
             if self.sample_num > 0 and ct >= self.sample_num:
                 break
             if do_eval:
                 image_id = self.get_image_id(image, coco)
                 ct = image_id
-            rec = {'im_id': np.array([ct]), 'im_file': image}
+            rec = {"im_id": np.array([ct]), "im_file": image}
             self._imid2path[ct] = image
             ct += 1
             records.append(rec)
         assert len(records) > 0, "No image file found"
         return records
-    
+
     def get_image_id(self, image, coco):
         image_ids = coco.getImgIds()
         for image_id in image_ids:
             img_info = coco.loadImgs(image_id)[0]
-            if img_info['file_name'] in image:
+            if img_info["file_name"] in image:
                 return image_id
             else:
                 continue
@@ -330,19 +338,17 @@ class ImageFolder(DetDataset):
         self.image_dir = images
         self.roidbs = self._load_images(do_eval=do_eval)
 
-    def set_slice_images(self,
-                         images,
-                         slice_size=[640, 640],
-                         overlap_ratio=[0.25, 0.25]):
+    def set_slice_images(
+        self, images, slice_size=[640, 640], overlap_ratio=[0.25, 0.25]
+    ):
         self.image_dir = images
         ori_records = self._load_images()
         try:
             import sahi
-            from sahi.slicing import slice_image
         except Exception as e:
             logger.error(
-                'sahi not found, plaese install sahi. '
-                'for example: `pip install sahi`, see https://github.com/obss/sahi.'
+                "sahi not found, plaese install sahi. "
+                "for example: `pip install sahi`, see https://github.com/obss/sahi."
             )
             raise e
 
@@ -351,37 +357,41 @@ class ImageFolder(DetDataset):
         ct_sub = 0
         records = []
         for i, ori_rec in enumerate(ori_records):
-            im_path = ori_rec['im_file']
+            im_path = ori_rec["im_file"]
             slice_image_result = sahi.slicing.slice_image(
                 image=im_path,
                 slice_height=slice_size[0],
                 slice_width=slice_size[1],
                 overlap_height_ratio=overlap_ratio[0],
-                overlap_width_ratio=overlap_ratio[1])
+                overlap_width_ratio=overlap_ratio[1],
+            )
 
             sub_img_num = len(slice_image_result)
             for _ind in range(sub_img_num):
                 im = slice_image_result.images[_ind]
-                rec = {
-                    'image': im,
-                    'im_id': np.array([sub_img_ids + _ind]),
-                    'h': im.shape[0],
-                    'w': im.shape[1],
-                    'ori_im_id': np.array([ori_rec['im_id'][0]]),
-                    'st_pix': np.array(
-                        slice_image_result.starting_pixels[_ind],
-                        dtype=np.float32),
-                    'is_last': 1 if _ind == sub_img_num - 1 else 0,
-                } if 'image' in self.data_fields else {}
+                rec = (
+                    {
+                        "image": im,
+                        "im_id": np.array([sub_img_ids + _ind]),
+                        "h": im.shape[0],
+                        "w": im.shape[1],
+                        "ori_im_id": np.array([ori_rec["im_id"][0]]),
+                        "st_pix": np.array(
+                            slice_image_result.starting_pixels[_ind], dtype=np.float32
+                        ),
+                        "is_last": 1 if _ind == sub_img_num - 1 else 0,
+                    }
+                    if "image" in self.data_fields
+                    else {}
+                )
                 records.append(rec)
             ct_sub += sub_img_num
             ct += 1
-        logger.info('{} samples and slice to {} sub_samples.'.format(ct,
-                                                                     ct_sub))
+        logger.info("{} samples and slice to {} sub_samples.".format(ct, ct_sub))
         self.roidbs = records
 
     def get_label_list(self):
-        # Only VOC dataset needs label list in ImageFold 
+        # Only VOC dataset needs label list in ImageFold
         return self.anno_path
 
 

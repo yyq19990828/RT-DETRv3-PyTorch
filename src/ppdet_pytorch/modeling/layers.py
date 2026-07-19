@@ -19,20 +19,19 @@ Layers Module - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/layers.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.ops as ops
-from typing import Optional
 
 from ppdet_pytorch.core.workspace import register, serializable
 
-__all__ = ['MultiClassNMS', 'MultiHeadAttention']
+__all__ = ["MultiClassNMS", "MultiHeadAttention"]
 
 
 @register
@@ -59,7 +58,7 @@ class MultiHeadAttention(nn.Module):
         dropout: float = 0.0,
         kdim: Optional[int] = None,
         vdim: Optional[int] = None,
-        need_weights: bool = False
+        need_weights: bool = False,
     ):
         super().__init__()
         self.embed_dim = embed_dim
@@ -72,7 +71,9 @@ class MultiHeadAttention(nn.Module):
         self.need_weights = need_weights
 
         self.head_dim = embed_dim // num_heads
-        assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
+        assert self.head_dim * num_heads == self.embed_dim, (
+            "embed_dim must be divisible by num_heads"
+        )
 
         # Use fused in_proj_weight and in_proj_bias to match Paddle's parameter naming
         if self._qkv_same_embed_dim:
@@ -94,24 +95,24 @@ class MultiHeadAttention(nn.Module):
     def _reset_parameters(self):
         if self._qkv_same_embed_dim:
             nn.init.xavier_uniform_(self.in_proj_weight)
-            nn.init.constant_(self.in_proj_bias, 0.)
+            nn.init.constant_(self.in_proj_bias, 0.0)
         else:
             nn.init.xavier_uniform_(self.q_proj.weight)
             nn.init.xavier_uniform_(self.k_proj.weight)
             nn.init.xavier_uniform_(self.v_proj.weight)
-            nn.init.constant_(self.q_proj.bias, 0.)
-            nn.init.constant_(self.k_proj.bias, 0.)
-            nn.init.constant_(self.v_proj.bias, 0.)
+            nn.init.constant_(self.q_proj.bias, 0.0)
+            nn.init.constant_(self.k_proj.bias, 0.0)
+            nn.init.constant_(self.v_proj.bias, 0.0)
 
         nn.init.xavier_uniform_(self.out_proj.weight)
-        nn.init.constant_(self.out_proj.bias, 0.)
+        nn.init.constant_(self.out_proj.bias, 0.0)
 
     def forward(
         self,
         query: torch.Tensor,
         key: torch.Tensor,
         value: torch.Tensor,
-        attn_mask: Optional[torch.Tensor] = None
+        attn_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -168,6 +169,7 @@ class MultiHeadAttention(nn.Module):
 
         return output
 
+
 @register
 @serializable
 class MultiClassNMS(object):
@@ -190,17 +192,19 @@ class MultiClassNMS(object):
         cpu (bool): Whether force to use CPU. Default: False
     """
 
-    def __init__(self,
-                 score_threshold=.05,
-                 nms_top_k=-1,
-                 keep_top_k=100,
-                 nms_threshold=.5,
-                 normalized=True,
-                 nms_eta=1.0,
-                 return_index=False,
-                 return_rois_num=True,
-                 trt=False,
-                 cpu=False):
+    def __init__(
+        self,
+        score_threshold=0.05,
+        nms_top_k=-1,
+        keep_top_k=100,
+        nms_threshold=0.5,
+        normalized=True,
+        nms_eta=1.0,
+        return_index=False,
+        return_rois_num=True,
+        trt=False,
+        cpu=False,
+    ):
         super(MultiClassNMS, self).__init__()
         self.score_threshold = score_threshold
         self.nms_top_k = nms_top_k
@@ -238,7 +242,6 @@ class MultiClassNMS(object):
             score = score.cpu()
 
         batch_size = bboxes.shape[0]
-        num_boxes = bboxes.shape[1]
         num_classes = score.shape[1]
 
         # Filter by score threshold and apply NMS
@@ -273,7 +276,9 @@ class MultiClassNMS(object):
 
                 # Apply NMS
                 if filtered_boxes.shape[0] > 0:
-                    keep_indices = ops.nms(filtered_boxes, filtered_scores, self.nms_threshold)
+                    keep_indices = ops.nms(
+                        filtered_boxes, filtered_scores, self.nms_threshold
+                    )
                     nms_boxes = filtered_boxes[keep_indices]
                     nms_scores = filtered_scores[keep_indices]
 
@@ -282,7 +287,7 @@ class MultiClassNMS(object):
                         (nms_boxes.shape[0], 1),
                         class_idx,
                         dtype=torch.float32,
-                        device=nms_boxes.device
+                        device=nms_boxes.device,
                     )
                     scores_col = nms_scores.unsqueeze(1)
                     class_outputs = torch.cat([labels, scores_col, nms_boxes], dim=1)
@@ -299,7 +304,9 @@ class MultiClassNMS(object):
                     batch_outputs = batch_outputs[topk_indices]
 
                 all_outputs.append(batch_outputs)
-                all_bbox_num.append(torch.tensor(batch_outputs.shape[0], dtype=torch.int32))
+                all_bbox_num.append(
+                    torch.tensor(batch_outputs.shape[0], dtype=torch.int32)
+                )
             else:
                 # No detections for this batch
                 all_bbox_num.append(torch.tensor(0, dtype=torch.int32))
@@ -310,8 +317,11 @@ class MultiClassNMS(object):
         else:
             bbox = torch.zeros((0, 6), dtype=torch.float32, device=original_device)
 
-        bbox_num = torch.stack(all_bbox_num) if all_bbox_num else torch.zeros(
-            batch_size, dtype=torch.int32, device=original_device)
+        bbox_num = (
+            torch.stack(all_bbox_num)
+            if all_bbox_num
+            else torch.zeros(batch_size, dtype=torch.int32, device=original_device)
+        )
 
         # Move back to original device
         if self.cpu:

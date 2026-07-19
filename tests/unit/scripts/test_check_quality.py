@@ -24,7 +24,9 @@ def test_build_commands_use_ruff_for_format_and_lint(monkeypatch):
     commands = script.build_commands(fix=False)
 
     assert commands[0][1:3] == ["format", "--check"]
+    assert commands[0][-1] == "."
     assert commands[1][1] == "check"
+    assert commands[1][-1] == "."
     assert commands[2][0].endswith("mypy")
     assert "tests/legacy" not in commands[0]
 

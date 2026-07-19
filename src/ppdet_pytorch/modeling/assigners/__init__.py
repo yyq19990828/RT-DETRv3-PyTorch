@@ -13,12 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import utils
-from . import atss_assigner
-from . import task_aligned_assigner
-
-from .utils import *
+from . import atss_assigner, task_aligned_assigner, utils
 from .atss_assigner import *
 from .task_aligned_assigner import *
+from .utils import *
 
 __all__ = utils.__all__ + atss_assigner.__all__ + task_aligned_assigner.__all__

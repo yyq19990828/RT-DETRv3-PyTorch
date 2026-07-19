@@ -231,18 +231,14 @@ def test_assigner_empty_targets_and_padding_preserve_cuda_device():
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA is required")
 def test_auxiliary_head_classification_losses_are_amp_safe():
-    logits = torch.tensor(
-        [[0.2, -0.4], [0.7, -0.1]], device="cuda", requires_grad=True
-    )
+    logits = torch.tensor([[0.2, -0.4], [0.7, -0.1]], device="cuda", requires_grad=True)
     labels = torch.tensor([[1.0, 0.0], [0.0, 1.0]], device="cuda")
     gt_scores = labels * 0.8
 
     with torch.autocast("cuda"):
         scores = torch.sigmoid(logits)
         loss = PPYOLOEHead._focal_loss(scores, labels)
-        loss = loss + PPYOLOEHead._varifocal_loss(
-            scores, gt_scores, labels
-        )
+        loss = loss + PPYOLOEHead._varifocal_loss(scores, gt_scores, labels)
     loss.backward()
 
     assert loss.dtype == torch.float32

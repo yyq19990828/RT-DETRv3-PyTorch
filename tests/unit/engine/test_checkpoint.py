@@ -18,10 +18,10 @@ from ppdet_pytorch.optimizer.optimizer import (
 from ppdet_pytorch.utils import checkpoint as checkpoint_utils
 from ppdet_pytorch.utils.checkpoint import (
     capture_rng_state,
+    convert_to_dict,
     load_checkpoint,
     save_checkpoint,
 )
-from ppdet_pytorch.utils.checkpoint import convert_to_dict
 
 
 class _ResumeModel(nn.Module):

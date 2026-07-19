@@ -2,6 +2,5 @@
 
 from ppdet_pytorch.cli.infer import main
 
-
 if __name__ == "__main__":
     main()

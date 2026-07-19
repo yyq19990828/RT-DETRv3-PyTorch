@@ -1,8 +1,8 @@
-from copy import deepcopy
 import json
+from copy import deepcopy
 
-from PIL import Image
 import pytest
+from PIL import Image
 
 from ppdet_pytorch.core.config.schema import SchemaDict
 from ppdet_pytorch.core.workspace import global_config

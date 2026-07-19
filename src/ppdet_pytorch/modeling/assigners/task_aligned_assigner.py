@@ -21,9 +21,7 @@ TOOD: Task-aligned One-stage Object Detection
 Reference: ppdet/modeling/assigners/task_aligned_assigner.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import torch
 import torch.nn as nn
@@ -31,13 +29,16 @@ import torch.nn.functional as F
 
 from ...core.workspace import register
 from ..bbox_utils import batch_iou_similarity
-from .utils import (gather_topk_anchors, check_points_inside_bboxes,
-                    compute_max_iou_anchor)
+from .utils import (
+    check_points_inside_bboxes,
+    compute_max_iou_anchor,
+    gather_topk_anchors,
+)
 
-__all__ = ['TaskAlignedAssigner']
+__all__ = ["TaskAlignedAssigner"]
 
 
-def is_close_gt(anchor, gt, stride_lst, max_dist=2.0, alpha=2.):
+def is_close_gt(anchor, gt, stride_lst, max_dist=2.0, alpha=2.0):
     """Calculate distance ratio of box1 and box2 in batch for larger stride
         anchors dist/stride to promote the survive of large distance match
     Args:
@@ -47,36 +48,34 @@ def is_close_gt(anchor, gt, stride_lst, max_dist=2.0, alpha=2.):
         dist (Tensor): dist ratio between box1 and box2 with the shape [N, M1, M2]
     """
     center1 = anchor.unsqueeze(0)
-    center2 = (gt[..., :2] + gt[..., -2:]) / 2.
+    center2 = (gt[..., :2] + gt[..., -2:]) / 2.0
     center1 = center1.unsqueeze(1)  # [N, M1, 2] -> [N, 1, M1, 2]
     center2 = center2.unsqueeze(2)  # [N, M2, 2] -> [N, M2, 1, 2]
 
-    stride = torch.cat([
-        torch.full(
-            [x],
-            32 / pow(2, idx),
-            dtype=anchor.dtype,
-            device=anchor.device)
-        for idx, x in enumerate(stride_lst)
-    ]).unsqueeze(0).unsqueeze(0)
+    stride = (
+        torch.cat(
+            [
+                torch.full(
+                    [x], 32 / pow(2, idx), dtype=anchor.dtype, device=anchor.device
+                )
+                for idx, x in enumerate(stride_lst)
+            ]
+        )
+        .unsqueeze(0)
+        .unsqueeze(0)
+    )
     dist = torch.linalg.norm(center1 - center2, ord=2, dim=-1) / stride
     dist_ratio = dist.clone()
-    dist_ratio[dist < max_dist] = 1.
-    dist_ratio[dist >= max_dist] = 0.
+    dist_ratio[dist < max_dist] = 1.0
+    dist_ratio[dist >= max_dist] = 0.0
     return dist_ratio
 
 
 @register
 class TaskAlignedAssigner(nn.Module):
-    """TOOD: Task-aligned One-stage Object Detection
-    """
+    """TOOD: Task-aligned One-stage Object Detection"""
 
-    def __init__(self,
-                 topk=13,
-                 alpha=1.0,
-                 beta=6.0,
-                 eps=1e-9,
-                 is_close_gt=False):
+    def __init__(self, topk=13, alpha=1.0, beta=6.0, eps=1e-9, is_close_gt=False):
         super(TaskAlignedAssigner, self).__init__()
         self.topk = topk
         self.alpha = alpha
@@ -85,17 +84,19 @@ class TaskAlignedAssigner(nn.Module):
         self.is_close_gt = is_close_gt
 
     @torch.no_grad()
-    def forward(self,
-                pred_scores,
-                pred_bboxes,
-                anchor_points,
-                num_anchors_list,
-                gt_labels,
-                gt_bboxes,
-                pad_gt_mask,
-                bg_index,
-                gt_segms=None,
-                gt_scores=None):
+    def forward(
+        self,
+        pred_scores,
+        pred_bboxes,
+        anchor_points,
+        num_anchors_list,
+        gt_labels,
+        gt_bboxes,
+        pad_gt_mask,
+        bg_index,
+        gt_segms=None,
+        gt_scores=None,
+    ):
         """This code is based on
             https://github.com/fcjian/TOOD/blob/master/mmdet/core/bbox/assigners/task_aligned_assigner.py
 
@@ -122,8 +123,7 @@ class TaskAlignedAssigner(nn.Module):
             assigned_scores (Tensor): (B, L, C)
         """
         assert pred_scores.ndim == pred_bboxes.ndim
-        assert gt_labels.ndim == gt_bboxes.ndim and \
-               gt_bboxes.ndim == 3
+        assert gt_labels.ndim == gt_bboxes.ndim and gt_bboxes.ndim == 3
 
         batch_size, num_anchors, num_classes = pred_scores.shape
         _, num_max_boxes, _ = gt_bboxes.shape
@@ -134,15 +134,18 @@ class TaskAlignedAssigner(nn.Module):
                 [batch_size, num_anchors],
                 bg_index,
                 dtype=torch.int32,
-                device=gt_labels.device)
+                device=gt_labels.device,
+            )
             assigned_bboxes = torch.zeros(
                 [batch_size, num_anchors, 4],
                 dtype=gt_bboxes.dtype,
-                device=gt_bboxes.device)
+                device=gt_bboxes.device,
+            )
             assigned_scores = torch.zeros(
                 [batch_size, num_anchors, num_classes],
                 dtype=pred_scores.dtype,
-                device=pred_scores.device)
+                device=pred_scores.device,
+            )
             return assigned_labels, assigned_bboxes, assigned_scores
 
         # compute iou between gt and pred bbox, [B, n, L]
@@ -150,16 +153,14 @@ class TaskAlignedAssigner(nn.Module):
         # gather pred bboxes class score
         pred_scores = pred_scores.permute(0, 2, 1)
         batch_ind = torch.arange(
-            end=batch_size,
-            dtype=gt_labels.dtype,
-            device=gt_labels.device).unsqueeze(-1)
+            end=batch_size, dtype=gt_labels.dtype, device=gt_labels.device
+        ).unsqueeze(-1)
         gt_labels_ind = torch.stack(
-            [batch_ind.tile([1, num_max_boxes]), gt_labels.squeeze(-1)],
-            dim=-1)
+            [batch_ind.tile([1, num_max_boxes]), gt_labels.squeeze(-1)], dim=-1
+        )
         bbox_cls_scores = pred_scores[gt_labels_ind[:, :, 0], gt_labels_ind[:, :, 1]]
         # compute alignment metrics, [B, n, L]
-        alignment_metrics = bbox_cls_scores.pow(self.alpha) * ious.pow(
-            self.beta)
+        alignment_metrics = bbox_cls_scores.pow(self.alpha) * ious.pow(self.beta)
 
         # check the positive sample's center in gt, [B, n, L]
         if self.is_close_gt:
@@ -170,7 +171,8 @@ class TaskAlignedAssigner(nn.Module):
         # select topk largest alignment metrics pred bbox as candidates
         # for each gt, [B, n, L]
         is_in_topk = gather_topk_anchors(
-            alignment_metrics * is_in_gts, self.topk, topk_mask=pad_gt_mask)
+            alignment_metrics * is_in_gts, self.topk, topk_mask=pad_gt_mask
+        )
 
         # select positive sample, [B, n, L]
         mask_positive = is_in_topk * is_in_gts * pad_gt_mask
@@ -180,28 +182,35 @@ class TaskAlignedAssigner(nn.Module):
         mask_positive_sum = mask_positive.sum(dim=-2)
         if mask_positive_sum.max() > 1:
             mask_multiple_gts = (mask_positive_sum.unsqueeze(1) > 1).tile(
-                [1, num_max_boxes, 1])
+                [1, num_max_boxes, 1]
+            )
             is_max_iou = compute_max_iou_anchor(ious)
-            mask_positive = torch.where(mask_multiple_gts, is_max_iou,
-                                         mask_positive)
+            mask_positive = torch.where(mask_multiple_gts, is_max_iou, mask_positive)
             mask_positive_sum = mask_positive.sum(dim=-2)
         assigned_gt_index = mask_positive.argmax(dim=-2)
 
         # assigned target
-        assigned_gt_index = assigned_gt_index + (batch_ind * num_max_boxes).to(assigned_gt_index.dtype)
+        assigned_gt_index = assigned_gt_index + (batch_ind * num_max_boxes).to(
+            assigned_gt_index.dtype
+        )
         assigned_labels = torch.index_select(
-            gt_labels.flatten(), 0, assigned_gt_index.flatten())
+            gt_labels.flatten(), 0, assigned_gt_index.flatten()
+        )
         assigned_labels = assigned_labels.reshape([batch_size, num_anchors])
         assigned_labels = torch.where(
-            mask_positive_sum > 0, assigned_labels,
-            torch.full_like(assigned_labels, bg_index))
+            mask_positive_sum > 0,
+            assigned_labels,
+            torch.full_like(assigned_labels, bg_index),
+        )
 
         assigned_bboxes = torch.index_select(
-            gt_bboxes.reshape(-1, 4), 0, assigned_gt_index.flatten())
+            gt_bboxes.reshape(-1, 4), 0, assigned_gt_index.flatten()
+        )
         assigned_bboxes = assigned_bboxes.reshape([batch_size, num_anchors, 4])
 
-        assigned_scores = F.one_hot(
-            assigned_labels, num_classes + 1).to(gt_bboxes.dtype)
+        assigned_scores = F.one_hot(assigned_labels, num_classes + 1).to(
+            gt_bboxes.dtype
+        )
         ind = list(range(num_classes + 1))
         ind.remove(bg_index)
         assigned_scores = torch.index_select(
@@ -213,8 +222,11 @@ class TaskAlignedAssigner(nn.Module):
         alignment_metrics *= mask_positive
         max_metrics_per_instance = alignment_metrics.max(dim=-1, keepdim=True)[0]
         max_ious_per_instance = (ious * mask_positive).max(dim=-1, keepdim=True)[0]
-        alignment_metrics = alignment_metrics / (
-            max_metrics_per_instance + self.eps) * max_ious_per_instance
+        alignment_metrics = (
+            alignment_metrics
+            / (max_metrics_per_instance + self.eps)
+            * max_ious_per_instance
+        )
         alignment_metrics = alignment_metrics.max(-2)[0].unsqueeze(-1)
         assigned_scores = assigned_scores * alignment_metrics
 

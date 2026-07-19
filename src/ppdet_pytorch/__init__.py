@@ -22,14 +22,14 @@ Example:
     >>> model = create(model_cfg)
 """
 
-from .core import workspace
 # Import modeling to trigger all registrations
 from . import modeling
+from .core import workspace
 
-__version__ = '0.1.0'
+__version__ = "0.1.0"
 
 __all__ = [
-    'workspace',
-    'modeling',
-    '__version__',
+    "workspace",
+    "modeling",
+    "__version__",
 ]

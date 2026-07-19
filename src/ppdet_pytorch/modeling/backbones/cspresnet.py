@@ -26,7 +26,7 @@ import torch.nn.functional as F
 
 from ..batch_norm import ContiguousGradBatchNorm2d
 
-__all__ = ['ConvBNLayer', 'RepVggBlock']
+__all__ = ["ConvBNLayer", "RepVggBlock"]
 
 
 def get_act_fn(act):
@@ -35,14 +35,14 @@ def get_act_fn(act):
         return nn.Identity()
     elif isinstance(act, (str, dict)):
         if isinstance(act, dict):
-            act = act.get('name', 'relu')
-        if act == 'relu':
+            act = act.get("name", "relu")
+        if act == "relu":
             return nn.ReLU()
-        elif act == 'swish' or act == 'silu':
+        elif act == "swish" or act == "silu":
             return nn.SiLU()
-        elif act == 'leaky_relu':
+        elif act == "leaky_relu":
             return nn.LeakyReLU(0.1)
-        elif act == 'hardsigmoid':
+        elif act == "hardsigmoid":
             return nn.Hardsigmoid()
         else:
             raise ValueError(f"Unsupported activation: {act}")
@@ -54,14 +54,9 @@ def get_act_fn(act):
 class ConvBNLayer(nn.Module):
     """Convolution + BatchNorm + Activation layer"""
 
-    def __init__(self,
-                 ch_in,
-                 ch_out,
-                 filter_size=3,
-                 stride=1,
-                 groups=1,
-                 padding=0,
-                 act=None):
+    def __init__(
+        self, ch_in, ch_out, filter_size=3, stride=1, groups=1, padding=0, act=None
+    ):
         super(ConvBNLayer, self).__init__()
 
         self.conv = nn.Conv2d(
@@ -71,7 +66,8 @@ class ConvBNLayer(nn.Module):
             stride=stride,
             padding=padding,
             groups=groups,
-            bias=False)
+            bias=False,
+        )
 
         self.bn = ContiguousGradBatchNorm2d(ch_out)
         self.act = get_act_fn(act)
@@ -86,15 +82,13 @@ class ConvBNLayer(nn.Module):
 class RepVggBlock(nn.Module):
     """RepVGG Block with 3x3 and 1x1 branches"""
 
-    def __init__(self, ch_in, ch_out, act='relu', alpha=False):
+    def __init__(self, ch_in, ch_out, act="relu", alpha=False):
         super(RepVggBlock, self).__init__()
         self.ch_in = ch_in
         self.ch_out = ch_out
 
-        self.conv1 = ConvBNLayer(
-            ch_in, ch_out, 3, stride=1, padding=1, act=None)
-        self.conv2 = ConvBNLayer(
-            ch_in, ch_out, 1, stride=1, padding=0, act=None)
+        self.conv1 = ConvBNLayer(ch_in, ch_out, 3, stride=1, padding=1, act=None)
+        self.conv2 = ConvBNLayer(ch_in, ch_out, 1, stride=1, padding=0, act=None)
 
         self.act = get_act_fn(act)
 
@@ -104,7 +98,7 @@ class RepVggBlock(nn.Module):
             self.alpha = None
 
     def forward(self, x):
-        if hasattr(self, 'conv'):
+        if hasattr(self, "conv"):
             y = self.conv(x)
         else:
             if self.alpha is not None:
@@ -116,20 +110,21 @@ class RepVggBlock(nn.Module):
 
     def convert_to_deploy(self):
         """Convert to deployment mode by fusing branches"""
-        if not hasattr(self, 'conv'):
+        if not hasattr(self, "conv"):
             self.conv = nn.Conv2d(
                 in_channels=self.ch_in,
                 out_channels=self.ch_out,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                groups=1)
+                groups=1,
+            )
 
         kernel, bias = self.get_equivalent_kernel_bias()
         self.conv.weight.data = kernel
         self.conv.bias = nn.Parameter(bias)
-        delattr(self, 'conv1')
-        delattr(self, 'conv2')
+        delattr(self, "conv1")
+        delattr(self, "conv2")
 
     def get_equivalent_kernel_bias(self):
         """Get equivalent kernel and bias for deployment"""
@@ -137,11 +132,11 @@ class RepVggBlock(nn.Module):
         kernel1x1, bias1x1 = self._fuse_bn_tensor(self.conv2)
 
         if self.alpha is not None:
-            return kernel3x3 + self.alpha * self._pad_1x1_to_3x3_tensor(kernel1x1), \
-                   bias3x3 + self.alpha * bias1x1
+            return kernel3x3 + self.alpha * self._pad_1x1_to_3x3_tensor(
+                kernel1x1
+            ), bias3x3 + self.alpha * bias1x1
         else:
-            return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1), \
-                   bias3x3 + bias1x1
+            return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1), bias3x3 + bias1x1
 
     def _pad_1x1_to_3x3_tensor(self, kernel1x1):
         """Pad 1x1 kernel to 3x3"""

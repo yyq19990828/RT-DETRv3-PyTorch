@@ -24,7 +24,6 @@ Reference: third-party/RT-DETRv3-paddle/ppdet/modeling/backbones/resnet.py
 
 import math
 from numbers import Integral
-from typing import List, Dict, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -32,11 +31,11 @@ import torch.nn.functional as F
 from torchvision.ops import DeformConv2d
 
 from ...core.workspace import register, serializable
-from .name_adapter import NameAdapter
 from ..batch_norm import ContiguousGradBatchNorm2d
 from ..shape_spec import ShapeSpec
+from .name_adapter import NameAdapter
 
-__all__ = ['ResNet', 'Res5Head', 'Blocks', 'BasicBlock', 'BottleNeck']
+__all__ = ["ResNet", "Res5Head", "Blocks", "BasicBlock", "BottleNeck"]
 
 ResNet_cfg = {
     18: [2, 2, 2, 2],
@@ -54,18 +53,21 @@ class ConvNormLayer(nn.Module):
     This is the fundamental building block in PaddleDetection's ResNet,
     combining Conv2D, BatchNorm, and optional activation in one module.
     """
-    def __init__(self,
-                 ch_in,
-                 ch_out,
-                 filter_size,
-                 stride,
-                 groups=1,
-                 act=None,
-                 norm_type='bn',
-                 norm_decay=0.,
-                 freeze_norm=True,
-                 lr=1.0,
-                 dcn_v2=False):
+
+    def __init__(
+        self,
+        ch_in,
+        ch_out,
+        filter_size,
+        stride,
+        groups=1,
+        act=None,
+        norm_type="bn",
+        norm_decay=0.0,
+        freeze_norm=True,
+        lr=1.0,
+        dcn_v2=False,
+    ):
         """
         Args:
             ch_in (int): Input channels
@@ -81,7 +83,7 @@ class ConvNormLayer(nn.Module):
             dcn_v2 (bool): Use Deformable Convolution V2
         """
         super(ConvNormLayer, self).__init__()
-        assert norm_type in ['bn', 'sync_bn']
+        assert norm_type in ["bn", "sync_bn"]
         self.norm_type = norm_type
         self.act = act
         self.dcn_v2 = dcn_v2
@@ -94,9 +96,10 @@ class ConvNormLayer(nn.Module):
                 stride=stride,
                 padding=(filter_size - 1) // 2,
                 groups=groups,
-                bias=False)
+                bias=False,
+            )
         else:
-            # use torchvision.ops to implement DCN v2 
+            # use torchvision.ops to implement DCN v2
             self.offset_channel = 2 * filter_size**2
             self.mask_channel = filter_size**2
 
@@ -106,10 +109,11 @@ class ConvNormLayer(nn.Module):
                 kernel_size=filter_size,
                 stride=stride,
                 padding=(filter_size - 1) // 2,
-                bias=True)
+                bias=True,
+            )
             # Initialize offset conv to zero
-            nn.init.constant_(self.conv_offset.weight, 0.)
-            nn.init.constant_(self.conv_offset.bias, 0.)
+            nn.init.constant_(self.conv_offset.weight, 0.0)
+            nn.init.constant_(self.conv_offset.bias, 0.0)
 
             # Use standard conv as DCN is not implemented
             self.conv = DeformConv2d(
@@ -119,14 +123,16 @@ class ConvNormLayer(nn.Module):
                 stride=stride,
                 padding=(filter_size - 1) // 2,
                 groups=groups,
-                bias=False)
+                bias=False,
+            )
 
         # Normalization layer
-        if norm_type in ['sync_bn', 'bn']:
+        if norm_type in ["sync_bn", "bn"]:
             self.norm = ContiguousGradBatchNorm2d(
                 ch_out,
                 momentum=0.1,  # PyTorch default, equivalent to Paddle
-                eps=1e-05)
+                eps=1e-05,
+            )
 
         # Paddle's ParamAttr carries the stage learning-rate multiplier on the
         # parameter itself. Keep the same information for OptimizerBuilder to
@@ -156,18 +162,18 @@ class ConvNormLayer(nn.Module):
         else:
             # DCN v2 forward
             offset_mask = self.conv_offset(inputs)
-            offset = offset_mask[:, :self.offset_channel, :, :]
-            mask = offset_mask[:, self.offset_channel:, :, :]
+            offset = offset_mask[:, : self.offset_channel, :, :]
+            mask = offset_mask[:, self.offset_channel :, :, :]
             mask = torch.sigmoid(mask)
             out = self.conv(inputs, offset, mask=mask)
 
-        if self.norm_type in ['bn', 'sync_bn']:
+        if self.norm_type in ["bn", "sync_bn"]:
             out = self.norm(out)
 
         if self.act:
-            if self.act == 'relu':
+            if self.act == "relu":
                 out = F.relu(out)
-            elif self.act == 'sigmoid':
+            elif self.act == "sigmoid":
                 out = torch.sigmoid(out)
             else:
                 # Support other activations
@@ -178,22 +184,19 @@ class ConvNormLayer(nn.Module):
 
 class SELayer(nn.Module):
     """Squeeze-and-Excitation Layer"""
+
     def __init__(self, ch, reduction_ratio=16):
         super(SELayer, self).__init__()
         self.pool = nn.AdaptiveAvgPool2d(1)
         c_ = ch // reduction_ratio
 
         stdv = 1.0 / math.sqrt(ch)
-        self.squeeze = nn.Linear(
-            ch, c_,
-            bias=True)
+        self.squeeze = nn.Linear(ch, c_, bias=True)
         # Initialize with uniform distribution
         nn.init.uniform_(self.squeeze.weight, -stdv, stdv)
 
         stdv = 1.0 / math.sqrt(c_)
-        self.extract = nn.Linear(
-            c_, ch,
-            bias=True)
+        self.extract = nn.Linear(c_, ch, bias=True)
         nn.init.uniform_(self.extract.weight, -stdv, stdv)
 
     def forward(self, inputs):
@@ -216,22 +219,25 @@ class BasicBlock(nn.Module):
         x -> conv3x3 -> BN -> ReLU -> conv3x3 -> BN -> (+) -> ReLU
         |___________________________________________________|
     """
+
     expansion = 1
 
-    def __init__(self,
-                 ch_in,
-                 ch_out,
-                 stride,
-                 shortcut,
-                 variant='b',
-                 groups=1,
-                 base_width=64,
-                 lr=1.0,
-                 norm_type='bn',
-                 norm_decay=0.,
-                 freeze_norm=True,
-                 dcn_v2=False,
-                 std_senet=False):
+    def __init__(
+        self,
+        ch_in,
+        ch_out,
+        stride,
+        shortcut,
+        variant="b",
+        groups=1,
+        base_width=64,
+        lr=1.0,
+        norm_type="bn",
+        norm_decay=0.0,
+        freeze_norm=True,
+        dcn_v2=False,
+        std_senet=False,
+    ):
         """
         Args:
             ch_in (int): Input channels
@@ -249,19 +255,21 @@ class BasicBlock(nn.Module):
             std_senet (bool): Use SE layer
         """
         super(BasicBlock, self).__init__()
-        assert groups == 1 and base_width == 64, 'BasicBlock only supports groups=1 and base_width=64'
+        assert groups == 1 and base_width == 64, (
+            "BasicBlock only supports groups=1 and base_width=64"
+        )
 
         self.shortcut = shortcut
         if not shortcut:
-            if variant == 'd' and stride == 2:
+            if variant == "d" and stride == 2:
                 # ResNet-vd: AvgPool + 1x1 conv
                 self.short = nn.Sequential()
                 self.short.add_module(
-                    'pool',
-                    nn.AvgPool2d(
-                        kernel_size=2, stride=2, padding=0, ceil_mode=True))
+                    "pool",
+                    nn.AvgPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True),
+                )
                 self.short.add_module(
-                    'conv',
+                    "conv",
                     ConvNormLayer(
                         ch_in=ch_in,
                         ch_out=ch_out,
@@ -270,7 +278,9 @@ class BasicBlock(nn.Module):
                         norm_type=norm_type,
                         norm_decay=norm_decay,
                         freeze_norm=freeze_norm,
-                        lr=lr))
+                        lr=lr,
+                    ),
+                )
             else:
                 # Standard: 1x1 conv with stride
                 self.short = ConvNormLayer(
@@ -281,18 +291,20 @@ class BasicBlock(nn.Module):
                     norm_type=norm_type,
                     norm_decay=norm_decay,
                     freeze_norm=freeze_norm,
-                    lr=lr)
+                    lr=lr,
+                )
 
         self.branch2a = ConvNormLayer(
             ch_in=ch_in,
             ch_out=ch_out,
             filter_size=3,
             stride=stride,
-            act='relu',
+            act="relu",
             norm_type=norm_type,
             norm_decay=norm_decay,
             freeze_norm=freeze_norm,
-            lr=lr)
+            lr=lr,
+        )
 
         self.branch2b = ConvNormLayer(
             ch_in=ch_out,
@@ -304,7 +316,8 @@ class BasicBlock(nn.Module):
             norm_decay=norm_decay,
             freeze_norm=freeze_norm,
             lr=lr,
-            dcn_v2=dcn_v2)
+            dcn_v2=dcn_v2,
+        )
 
         self.std_senet = std_senet
         if self.std_senet:
@@ -336,22 +349,25 @@ class BottleNeck(nn.Module):
         x -> conv1x1 -> BN -> ReLU -> conv3x3 -> BN -> ReLU -> conv1x1 -> BN -> (+) -> ReLU
         |_________________________________________________________________________|
     """
+
     expansion = 4
 
-    def __init__(self,
-                 ch_in,
-                 ch_out,
-                 stride,
-                 shortcut,
-                 variant='b',
-                 groups=1,
-                 base_width=4,
-                 lr=1.0,
-                 norm_type='bn',
-                 norm_decay=0.,
-                 freeze_norm=True,
-                 dcn_v2=False,
-                 std_senet=False):
+    def __init__(
+        self,
+        ch_in,
+        ch_out,
+        stride,
+        shortcut,
+        variant="b",
+        groups=1,
+        base_width=4,
+        lr=1.0,
+        norm_type="bn",
+        norm_decay=0.0,
+        freeze_norm=True,
+        dcn_v2=False,
+        std_senet=False,
+    ):
         """
         Args:
             ch_in (int): Input channels
@@ -371,13 +387,13 @@ class BottleNeck(nn.Module):
         super(BottleNeck, self).__init__()
 
         # Variant 'a': stride in first conv, variant 'b'/'c'/'d': stride in second conv
-        if variant == 'a':
+        if variant == "a":
             stride1, stride2 = stride, 1
         else:
             stride1, stride2 = 1, stride
 
         # ResNeXt width calculation
-        width = int(ch_out * (base_width / 64.)) * groups
+        width = int(ch_out * (base_width / 64.0)) * groups
 
         # 1x1 conv (channel reduction)
         self.branch2a = ConvNormLayer(
@@ -386,11 +402,12 @@ class BottleNeck(nn.Module):
             filter_size=1,
             stride=stride1,
             groups=1,
-            act='relu',
+            act="relu",
             norm_type=norm_type,
             norm_decay=norm_decay,
             freeze_norm=freeze_norm,
-            lr=lr)
+            lr=lr,
+        )
 
         # 3x3 conv (with optional stride)
         self.branch2b = ConvNormLayer(
@@ -399,12 +416,13 @@ class BottleNeck(nn.Module):
             filter_size=3,
             stride=stride2,
             groups=groups,
-            act='relu',
+            act="relu",
             norm_type=norm_type,
             norm_decay=norm_decay,
             freeze_norm=freeze_norm,
             lr=lr,
-            dcn_v2=dcn_v2)
+            dcn_v2=dcn_v2,
+        )
 
         # 1x1 conv (channel expansion)
         self.branch2c = ConvNormLayer(
@@ -416,19 +434,20 @@ class BottleNeck(nn.Module):
             norm_type=norm_type,
             norm_decay=norm_decay,
             freeze_norm=freeze_norm,
-            lr=lr)
+            lr=lr,
+        )
 
         self.shortcut = shortcut
         if not shortcut:
-            if variant == 'd' and stride == 2:
+            if variant == "d" and stride == 2:
                 # ResNet-vd: AvgPool + 1x1 conv
                 self.short = nn.Sequential()
                 self.short.add_module(
-                    'pool',
-                    nn.AvgPool2d(
-                        kernel_size=2, stride=2, padding=0, ceil_mode=True))
+                    "pool",
+                    nn.AvgPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True),
+                )
                 self.short.add_module(
-                    'conv',
+                    "conv",
                     ConvNormLayer(
                         ch_in=ch_in,
                         ch_out=ch_out * self.expansion,
@@ -437,7 +456,9 @@ class BottleNeck(nn.Module):
                         norm_type=norm_type,
                         norm_decay=norm_decay,
                         freeze_norm=freeze_norm,
-                        lr=lr))
+                        lr=lr,
+                    ),
+                )
             else:
                 # Standard: 1x1 conv with stride
                 self.short = ConvNormLayer(
@@ -448,7 +469,8 @@ class BottleNeck(nn.Module):
                     norm_type=norm_type,
                     norm_decay=norm_decay,
                     freeze_norm=freeze_norm,
-                    lr=lr)
+                    lr=lr,
+                )
 
         self.std_senet = std_senet
         if self.std_senet:
@@ -477,22 +499,25 @@ class Blocks(nn.Module):
     """
     Container for multiple residual blocks forming one stage
     """
-    def __init__(self,
-                 block,
-                 ch_in,
-                 ch_out,
-                 count,
-                 name_adapter,
-                 stage_num,
-                 variant='b',
-                 groups=1,
-                 base_width=64,
-                 lr=1.0,
-                 norm_type='bn',
-                 norm_decay=0.,
-                 freeze_norm=True,
-                 dcn_v2=False,
-                 std_senet=False):
+
+    def __init__(
+        self,
+        block,
+        ch_in,
+        ch_out,
+        count,
+        name_adapter,
+        stage_num,
+        variant="b",
+        groups=1,
+        base_width=64,
+        lr=1.0,
+        norm_type="bn",
+        norm_decay=0.0,
+        freeze_norm=True,
+        dcn_v2=False,
+        std_senet=False,
+    ):
         """
         Args:
             block: Block class (BasicBlock or BottleNeck)
@@ -532,7 +557,8 @@ class Blocks(nn.Module):
                 norm_decay=norm_decay,
                 freeze_norm=freeze_norm,
                 dcn_v2=dcn_v2,
-                std_senet=std_senet)
+                std_senet=std_senet,
+            )
 
             # Register with custom name (like Paddle's add_sublayer)
             self.add_module(conv_name, layer)
@@ -560,24 +586,27 @@ class ResNet(nn.Module):
     This is a strict PyTorch port of PaddlePaddle's ResNet implementation,
     maintaining full parameter and behavioral compatibility.
     """
-    __shared__ = ['norm_type']
 
-    def __init__(self,
-                 depth=50,
-                 ch_in=64,
-                 variant='b',
-                 lr_mult_list=[1.0, 1.0, 1.0, 1.0],
-                 groups=1,
-                 base_width=64,
-                 norm_type='bn',
-                 norm_decay=0,
-                 freeze_norm=True,
-                 freeze_at=0,
-                 return_idx=[0, 1, 2, 3],
-                 dcn_v2_stages=[-1],
-                 num_stages=4,
-                 std_senet=False,
-                 freeze_stem_only=False):
+    __shared__ = ["norm_type"]
+
+    def __init__(
+        self,
+        depth=50,
+        ch_in=64,
+        variant="b",
+        lr_mult_list=[1.0, 1.0, 1.0, 1.0],
+        groups=1,
+        base_width=64,
+        norm_type="bn",
+        norm_decay=0,
+        freeze_norm=True,
+        freeze_at=0,
+        return_idx=[0, 1, 2, 3],
+        dcn_v2_stages=[-1],
+        num_stages=4,
+        std_senet=False,
+        freeze_stem_only=False,
+    ):
         """
         Args:
             depth (int): ResNet depth (18, 34, 50, 101, 152)
@@ -604,7 +633,7 @@ class ResNet(nn.Module):
         """
         super(ResNet, self).__init__()
 
-        self._model_type = 'ResNet' if groups == 1 else 'ResNeXt'
+        self._model_type = "ResNet" if groups == 1 else "ResNeXt"
         assert num_stages >= 1 and num_stages <= 4
 
         self.depth = depth
@@ -618,15 +647,17 @@ class ResNet(nn.Module):
 
         if isinstance(return_idx, Integral):
             return_idx = [return_idx]
-        assert max(return_idx) < num_stages, \
-            'the maximum return index must smaller than num_stages, ' \
-            'but received maximum return index is {} and num_stages ' \
-            'is {}'.format(max(return_idx), num_stages)
+        assert max(return_idx) < num_stages, (
+            "the maximum return index must smaller than num_stages, "
+            "but received maximum return index is {} and num_stages "
+            "is {}".format(max(return_idx), num_stages)
+        )
         self.return_idx = return_idx
         self.num_stages = num_stages
 
-        assert len(lr_mult_list) == 4, \
+        assert len(lr_mult_list) == 4, (
             "lr_mult_list length must be 4 but got {}".format(len(lr_mult_list))
+        )
 
         if isinstance(dcn_v2_stages, Integral):
             dcn_v2_stages = [dcn_v2_stages]
@@ -636,7 +667,7 @@ class ResNet(nn.Module):
         block_nums = ResNet_cfg[depth]
 
         # Stem layers (conv1)
-        if variant in ['c', 'd']:
+        if variant in ["c", "d"]:
             # ResNet-vd: Three 3x3 convs
             conv_def = [
                 [3, ch_in // 2, 3, 2, "conv1_1"],
@@ -657,11 +688,13 @@ class ResNet(nn.Module):
                     filter_size=k,
                     stride=s,
                     groups=1,
-                    act='relu',
+                    act="relu",
                     norm_type=norm_type,
                     norm_decay=norm_decay,
                     freeze_norm=freeze_norm,
-                    lr=1.0))
+                    lr=1.0,
+                ),
+            )
 
         self.ch_in = ch_in
         ch_out_list = [64, 128, 256, 512]
@@ -679,7 +712,9 @@ class ResNet(nn.Module):
         for i in range(num_stages):
             lr_mult = lr_mult_list[i]
             stage_num = i + 2
-            res_name = "res{}".format(stage_num)  # Generate "res2", "res3", "res4", "res5"
+            res_name = "res{}".format(
+                stage_num
+            )  # Generate "res2", "res3", "res4", "res5"
 
             res_layer = Blocks(
                 block,
@@ -696,7 +731,8 @@ class ResNet(nn.Module):
                 norm_decay=norm_decay,
                 freeze_norm=freeze_norm,
                 dcn_v2=(i in self.dcn_v2_stages),
-                std_senet=std_senet)
+                std_senet=std_senet,
+            )
 
             # Register sublayer with custom name (like Paddle's add_sublayer)
             self.add_module(res_name, res_layer)
@@ -724,9 +760,7 @@ class ResNet(nn.Module):
             List of ShapeSpec objects
         """
         return [
-            ShapeSpec(
-                channels=self._out_channels[i],
-                stride=self._out_strides[i])
+            ShapeSpec(channels=self._out_channels[i], stride=self._out_strides[i])
             for i in self.return_idx
         ]
 
@@ -743,7 +777,7 @@ class ResNet(nn.Module):
         """
         # Handle both dict input (PaddlePaddle style) and tensor input
         if isinstance(inputs, dict):
-            x = inputs['image']
+            x = inputs["image"]
         else:
             x = inputs
 
@@ -766,6 +800,7 @@ class Res5Head(nn.Module):
     """
     ResNet Stage 5 Head for ROI feature extraction
     """
+
     def __init__(self, depth=50):
         super(Res5Head, self).__init__()
 
@@ -778,19 +813,13 @@ class Res5Head(nn.Module):
 
         block = BottleNeck if depth >= 50 else BasicBlock
         self.res5 = Blocks(
-            block,
-            feat_in,
-            feat_out,
-            count=3,
-            name_adapter=na,
-            stage_num=5)
+            block, feat_in, feat_out, count=3, name_adapter=na, stage_num=5
+        )
         self.feat_out = feat_out if depth < 50 else feat_out * 4
 
     @property
     def out_shape(self):
-        return [ShapeSpec(
-            channels=self.feat_out,
-            stride=16)]
+        return [ShapeSpec(channels=self.feat_out, stride=16)]
 
     def forward(self, roi_feat, stage=0):
         y = self.res5(roi_feat)

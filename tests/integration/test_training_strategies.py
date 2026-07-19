@@ -9,16 +9,12 @@ This test validates that Trainer can:
 5. Configure optimizer and learning rate scheduler from config
 """
 
-import sys
 from pathlib import Path
-
-# Add project root to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 import torch
 import torch.nn as nn
 import yaml
+
 from ppdet_pytorch.optimizer.ema import ModelEMA
 
 
@@ -35,12 +31,13 @@ def test_ema_integration():
         model.bias.data.zero_()
 
     # Create EMA with CPU device and "normal" decay type (fixed decay)
-    ema = ModelEMA(model, decay=0.9, ema_decay_type="normal", device='cpu')
+    ema = ModelEMA(model, decay=0.9, ema_decay_type="normal", device="cpu")
 
     # Initial EMA state should match model
-    ema_weight_before = ema.state_dict['weight'].clone()
-    assert torch.allclose(ema_weight_before, torch.zeros_like(ema_weight_before)), \
+    ema_weight_before = ema.state_dict["weight"].clone()
+    assert torch.allclose(ema_weight_before, torch.zeros_like(ema_weight_before)), (
         "Initial EMA should be zero"
+    )
 
     # Update model weights
     with torch.no_grad():
@@ -50,12 +47,15 @@ def test_ema_integration():
     ema.update(model)
 
     # EMA should have updated
-    ema_weight_after = ema.state_dict['weight']
+    ema_weight_after = ema.state_dict["weight"]
     assert ema.step == 1, "EMA step should increment"
-    assert not torch.allclose(ema_weight_after, ema_weight_before), \
+    assert not torch.allclose(ema_weight_after, ema_weight_before), (
         "EMA weight should have changed after update"
+    )
 
-    print(f"✅ EMA can be applied and updates correctly (step: {ema.step}, weight changed: {ema_weight_after[0,0].item():.4f})")
+    print(
+        f"✅ EMA can be applied and updates correctly (step: {ema.step}, weight changed: {ema_weight_after[0, 0].item():.4f})"
+    )
 
 
 def test_amp_integration():
@@ -94,8 +94,6 @@ def test_gradient_clipping():
 
     # Create a model with large gradients
     model = nn.Linear(10, 10)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-
     # Create dummy data that will produce large gradients
     x = torch.randn(2, 10) * 10.0
     target = torch.randn(2, 10)
@@ -111,11 +109,13 @@ def test_gradient_clipping():
         if p.grad is not None:
             param_norm = p.grad.data.norm(2)
             total_norm += param_norm.item() ** 2
-    grad_norm_before = total_norm ** 0.5
+    grad_norm_before = total_norm**0.5
 
     # Apply gradient clipping (returns total norm BEFORE clipping)
     max_norm = 0.1
-    total_norm_returned = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)
+    total_norm_returned = torch.nn.utils.clip_grad_norm_(
+        model.parameters(), max_norm=max_norm
+    )
 
     # Calculate actual norm after clipping
     total_norm_after = 0.0
@@ -123,14 +123,18 @@ def test_gradient_clipping():
         if p.grad is not None:
             param_norm = p.grad.data.norm(2)
             total_norm_after += param_norm.item() ** 2
-    grad_norm_after = total_norm_after ** 0.5
+    grad_norm_after = total_norm_after**0.5
 
-    assert grad_norm_after <= max_norm + 0.001, \
+    assert grad_norm_after <= max_norm + 0.001, (
         f"Gradient norm after clipping {grad_norm_after} should be <= {max_norm}"
-    assert total_norm_returned >= grad_norm_after, \
+    )
+    assert total_norm_returned >= grad_norm_after, (
         "Returned norm should be >= clipped norm"
+    )
 
-    print(f"✅ Gradient clipping works (norm: {grad_norm_before:.4f} -> {grad_norm_after:.4f})")
+    print(
+        f"✅ Gradient clipping works (norm: {grad_norm_before:.4f} -> {grad_norm_after:.4f})"
+    )
 
 
 def test_syncbn_conversion():
@@ -156,7 +160,9 @@ def test_syncbn_conversion():
     model_sync = nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     # Check converted type
-    assert isinstance(model_sync.bn, nn.SyncBatchNorm), "Should be converted to SyncBatchNorm"
+    assert isinstance(model_sync.bn, nn.SyncBatchNorm), (
+        "Should be converted to SyncBatchNorm"
+    )
 
     print("✅ SyncBatchNorm conversion works")
 
@@ -166,7 +172,9 @@ def test_optimizer_from_config():
     print("\n--- Test 5: Optimizer from Config ---")
 
     # Load config
-    config_path = Path(__file__).parent.parent / "configs" / "test_training_strategies.yml"
+    config_path = (
+        Path(__file__).parent.parent / "configs" / "test_training_strategies.yml"
+    )
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
@@ -179,16 +187,22 @@ def test_optimizer_from_config():
         optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=cfg["LearningRate"]["base_lr"],
-            weight_decay=opt_cfg["weight_decay"]
+            weight_decay=opt_cfg["weight_decay"],
         )
     else:
         raise ValueError(f"Unknown optimizer type: {opt_cfg['type']}")
 
     assert isinstance(optimizer, torch.optim.AdamW), "Should create AdamW optimizer"
-    assert optimizer.defaults['lr'] == cfg["LearningRate"]["base_lr"], "LR should match config"
-    assert optimizer.defaults['weight_decay'] == opt_cfg["weight_decay"], "Weight decay should match config"
+    assert optimizer.defaults["lr"] == cfg["LearningRate"]["base_lr"], (
+        "LR should match config"
+    )
+    assert optimizer.defaults["weight_decay"] == opt_cfg["weight_decay"], (
+        "Weight decay should match config"
+    )
 
-    print(f"✅ Optimizer created from config (type: {opt_cfg['type']}, lr: {optimizer.defaults['lr']})")
+    print(
+        f"✅ Optimizer created from config (type: {opt_cfg['type']}, lr: {optimizer.defaults['lr']})"
+    )
 
 
 def test_lr_scheduler_from_config():
@@ -196,7 +210,9 @@ def test_lr_scheduler_from_config():
     print("\n--- Test 6: LR Scheduler from Config ---")
 
     # Load config
-    config_path = Path(__file__).parent.parent / "configs" / "test_training_strategies.yml"
+    config_path = (
+        Path(__file__).parent.parent / "configs" / "test_training_strategies.yml"
+    )
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
 
@@ -212,20 +228,22 @@ def test_lr_scheduler_from_config():
             scheduler = torch.optim.lr_scheduler.LinearLR(
                 optimizer,
                 start_factor=sched_cfg["start_factor"],
-                total_iters=sched_cfg["steps"]
+                total_iters=sched_cfg["steps"],
             )
             schedulers.append(scheduler)
         elif sched_cfg["name"] == "CosineAnnealingLR":
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer,
-                T_max=sched_cfg["T_max"],
-                eta_min=sched_cfg.get("eta_min", 0)
+                optimizer, T_max=sched_cfg["T_max"], eta_min=sched_cfg.get("eta_min", 0)
             )
             schedulers.append(scheduler)
 
     assert len(schedulers) == 2, "Should create 2 schedulers"
-    assert isinstance(schedulers[0], torch.optim.lr_scheduler.LinearLR), "First should be LinearLR"
-    assert isinstance(schedulers[1], torch.optim.lr_scheduler.CosineAnnealingLR), "Second should be CosineAnnealingLR"
+    assert isinstance(schedulers[0], torch.optim.lr_scheduler.LinearLR), (
+        "First should be LinearLR"
+    )
+    assert isinstance(schedulers[1], torch.optim.lr_scheduler.CosineAnnealingLR), (
+        "Second should be CosineAnnealingLR"
+    )
 
     print(f"✅ LR schedulers created from config ({len(schedulers)} schedulers)")
 
@@ -237,19 +255,19 @@ def test_ema_decay_types():
     model = nn.Linear(10, 10)
 
     # Test exponential decay (default)
-    ema_exp = ModelEMA(model, decay=0.9999, ema_decay_type="exponential", device='cpu')
+    ema_exp = ModelEMA(model, decay=0.9999, ema_decay_type="exponential", device="cpu")
     assert ema_exp.decay == 0.9999, "Exponential decay should use fixed decay"
     print("✅ Exponential decay EMA created")
 
     # Test threshold decay
-    ema_thresh = ModelEMA(model, decay=0.9999, ema_decay_type="threshold", device='cpu')
+    ema_thresh = ModelEMA(model, decay=0.9999, ema_decay_type="threshold", device="cpu")
     # Threshold decay adjusts based on number of updates
-    assert hasattr(ema_thresh, 'step'), "Threshold decay should track steps"
+    assert hasattr(ema_thresh, "step"), "Threshold decay should track steps"
     print("✅ Threshold decay EMA created")
 
     # Test normal decay
-    ema_normal = ModelEMA(model, decay=0.9999, ema_decay_type="normal", device='cpu')
-    assert hasattr(ema_normal, 'step'), "Normal decay should track steps"
+    ema_normal = ModelEMA(model, decay=0.9999, ema_decay_type="normal", device="cpu")
+    assert hasattr(ema_normal, "step"), "Normal decay should track steps"
     print("✅ Normal decay EMA created")
 
 
@@ -262,7 +280,7 @@ def test_config_toggle_strategies():
         "use_ema": True,
         "amp": True,
         "norm_type": "sync_bn",
-        "clip_grad_by_norm": 0.1
+        "clip_grad_by_norm": 0.1,
     }
 
     assert config_enabled["use_ema"] is True
@@ -276,7 +294,7 @@ def test_config_toggle_strategies():
         "use_ema": False,
         "amp": False,
         "norm_type": "bn",
-        "clip_grad_by_norm": 0
+        "clip_grad_by_norm": 0,
     }
 
     assert config_disabled["use_ema"] is False

@@ -9,18 +9,19 @@ Tests the complete end-to-end conversion process including:
 """
 
 import json
+from pathlib import Path
+
 import pytest
 import torch
-from pathlib import Path
 
 from ppdet_pytorch.conversion.converter import WeightConverter
 from ppdet_pytorch.conversion.models import ConversionConfig, ConversionStatus
-
 
 pytestmark = pytest.mark.paddle
 paddle = pytest.importorskip(
     "paddle", reason="requires the PaddlePaddle development extra"
 )
+
 
 @pytest.mark.integration
 class TestFullConversion:
@@ -54,9 +55,7 @@ class TestFullConversion:
 
         # Create converter with configuration
         config = ConversionConfig(
-            strict_mode=False,
-            export_mapping=False,
-            log_level="INFO"
+            strict_mode=False, export_mapping=False, log_level="INFO"
         )
         converter = WeightConverter(config)
 
@@ -64,7 +63,7 @@ class TestFullConversion:
         session = converter.convert(
             input_path=sample_checkpoint_path,
             output_path=str(output_path),
-            target_model_state_dict=None
+            target_model_state_dict=None,
         )
 
         # Verify session completed successfully
@@ -124,7 +123,7 @@ class TestFullConversion:
             strict_mode=False,
             export_mapping=True,
             export_mapping_path=str(mapping_path),
-            log_level="INFO"
+            log_level="INFO",
         )
         converter = WeightConverter(config)
 
@@ -132,7 +131,7 @@ class TestFullConversion:
         session = converter.convert(
             input_path=sample_checkpoint_path,
             output_path=str(output_path),
-            target_model_state_dict=None
+            target_model_state_dict=None,
         )
 
         # Verify conversion succeeded
@@ -142,7 +141,7 @@ class TestFullConversion:
         assert mapping_path.exists()
 
         # Load and verify mapping content
-        with open(mapping_path, 'r') as f:
+        with open(mapping_path, "r") as f:
             mapping_data = json.load(f)
 
         # Verify mapping structure
@@ -183,26 +182,22 @@ class TestFullConversion:
         manual_mapping_file = tmp_path / "manual_mapping.json"
         manual_mappings = {
             "version": "1.0",
-            "mappings": {
-                "backbone.conv1.w_0": "backbone.conv1.custom_weight"
-            }
+            "mappings": {"backbone.conv1.w_0": "backbone.conv1.custom_weight"},
         }
 
-        with open(manual_mapping_file, 'w') as f:
+        with open(manual_mapping_file, "w") as f:
             json.dump(manual_mappings, f)
 
         # Setup conversion
         output_path = tmp_path / "converted.pth"
         config = ConversionConfig(
-            manual_mapping_file=str(manual_mapping_file),
-            strict_mode=False
+            manual_mapping_file=str(manual_mapping_file), strict_mode=False
         )
         converter = WeightConverter(config)
 
         # Run conversion
         session = converter.convert(
-            input_path=sample_checkpoint_path,
-            output_path=str(output_path)
+            input_path=sample_checkpoint_path, output_path=str(output_path)
         )
 
         # Verify conversion succeeded
@@ -227,9 +222,8 @@ class TestFullConversion:
         config = ConversionConfig(strict_mode=False)
         converter = WeightConverter(config)
 
-        session = converter.convert(
-            input_path=sample_checkpoint_path,
-            output_path=str(output_path)
+        converter.convert(
+            input_path=sample_checkpoint_path, output_path=str(output_path)
         )
 
         # Load converted checkpoint
@@ -266,7 +260,7 @@ class TestFullConversion:
                     paddle_values,
                     rtol=1e-6,
                     atol=1e-6,
-                    err_msg=f"Values mismatch for {paddle_name} -> {torch_name}"
+                    err_msg=f"Values mismatch for {paddle_name} -> {torch_name}",
                 )
                 verified_count += 1
 
@@ -283,8 +277,7 @@ class TestFullConversion:
 
         with pytest.raises(FileNotFoundError):
             converter.convert(
-                input_path="nonexistent.pdparams",
-                output_path=str(output_path)
+                input_path="nonexistent.pdparams", output_path=str(output_path)
             )
 
     def test_conversion_with_shape_mismatches(self, sample_checkpoint_path, tmp_path):
@@ -296,7 +289,9 @@ class TestFullConversion:
 
         # Create a target model with intentional shape mismatch
         target_state_dict = {
-            "backbone.conv1.weight": torch.randn(32, 3, 7, 7),  # Wrong number of filters
+            "backbone.conv1.weight": torch.randn(
+                32, 3, 7, 7
+            ),  # Wrong number of filters
             "backbone.bn1.running_mean": torch.randn(64),
         }
 
@@ -309,14 +304,16 @@ class TestFullConversion:
         session = converter.convert(
             input_path=sample_checkpoint_path,
             output_path=str(output_path),
-            target_model_state_dict=target_state_dict
+            target_model_state_dict=target_state_dict,
         )
 
         # Should complete but with some skipped parameters
         assert session.status == ConversionStatus.COMPLETED
         assert session.statistics.skipped_count > 0 or session.warnings
 
-    def test_batch_conversion_continues_on_failure(self, sample_checkpoint_path, tmp_path):
+    def test_batch_conversion_continues_on_failure(
+        self, sample_checkpoint_path, tmp_path
+    ):
         """A broken checkpoint does not prevent later batch items from converting."""
         broken_checkpoint = tmp_path / "broken.pdparams"
         broken_checkpoint.write_bytes(b"not a paddle checkpoint")

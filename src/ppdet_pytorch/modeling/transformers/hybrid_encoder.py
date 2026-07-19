@@ -19,26 +19,23 @@ Hybrid Encoder - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/transformers/hybrid_encoder.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from ...core.workspace import register, serializable
-from ..ops import get_act_fn
-from ..batch_norm import ContiguousGradBatchNorm2d
-from ..shape_spec import ShapeSpec
 from ..backbones.csp_darknet import BaseConv
 from ..backbones.cspresnet import RepVggBlock
-from .detr_transformer import TransformerEncoder
-from ..initializer import xavier_uniform_, linear_init_
+from ..batch_norm import ContiguousGradBatchNorm2d
+from ..initializer import linear_init_
 from ..layers import MultiHeadAttention
+from ..ops import get_act_fn
+from ..shape_spec import ShapeSpec
+from .detr_transformer import TransformerEncoder
 
-__all__ = ['HybridEncoder', 'MaskHybridEncoder', 'TransformerLayer', 'CSPRepLayer']
+__all__ = ["HybridEncoder", "MaskHybridEncoder", "TransformerLayer", "CSPRepLayer"]
 
 
 class CSPRepLayer(nn.Module):
@@ -53,32 +50,33 @@ class CSPRepLayer(nn.Module):
         act (str): Activation function. Default: 'silu'
     """
 
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 num_blocks=3,
-                 expansion=1.0,
-                 bias=False,
-                 act="silu"):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        num_blocks=3,
+        expansion=1.0,
+        bias=False,
+        act="silu",
+    ):
         super(CSPRepLayer, self).__init__()
         hidden_channels = int(out_channels * expansion)
         self.conv1 = BaseConv(
-            in_channels, hidden_channels, ksize=1, stride=1, bias=bias, act=act)
+            in_channels, hidden_channels, ksize=1, stride=1, bias=bias, act=act
+        )
         self.conv2 = BaseConv(
-            in_channels, hidden_channels, ksize=1, stride=1, bias=bias, act=act)
-        self.bottlenecks = nn.Sequential(*[
-            RepVggBlock(
-                hidden_channels, hidden_channels, act=act)
-            for _ in range(num_blocks)
-        ])
+            in_channels, hidden_channels, ksize=1, stride=1, bias=bias, act=act
+        )
+        self.bottlenecks = nn.Sequential(
+            *[
+                RepVggBlock(hidden_channels, hidden_channels, act=act)
+                for _ in range(num_blocks)
+            ]
+        )
         if hidden_channels != out_channels:
             self.conv3 = BaseConv(
-                hidden_channels,
-                out_channels,
-                ksize=1,
-                stride=1,
-                bias=bias,
-                act=act)
+                hidden_channels, out_channels, ksize=1, stride=1, bias=bias, act=act
+            )
         else:
             self.conv3 = nn.Identity()
 
@@ -104,15 +102,17 @@ class TransformerLayer(nn.Module):
         normalize_before (bool): Whether to normalize before attention. Default: False
     """
 
-    def __init__(self,
-                 d_model,
-                 nhead,
-                 dim_feedforward=1024,
-                 dropout=0.,
-                 activation="relu",
-                 attn_dropout=None,
-                 act_dropout=None,
-                 normalize_before=False):
+    def __init__(
+        self,
+        d_model,
+        nhead,
+        dim_feedforward=1024,
+        dropout=0.0,
+        activation="relu",
+        attn_dropout=None,
+        act_dropout=None,
+        normalize_before=False,
+    ):
         super(TransformerLayer, self).__init__()
         attn_dropout = dropout if attn_dropout is None else attn_dropout
         act_dropout = dropout if act_dropout is None else act_dropout
@@ -180,22 +180,24 @@ class HybridEncoder(nn.Module):
         eval_size (tuple|None): Evaluation size for caching position embeddings. Default: None
     """
 
-    __shared__ = ['depth_mult', 'act', 'trt', 'eval_size']
-    __inject__ = ['encoder_layer']
+    __shared__ = ["depth_mult", "act", "trt", "eval_size"]
+    __inject__ = ["encoder_layer"]
 
-    def __init__(self,
-                 in_channels=[512, 1024, 2048],
-                 feat_strides=[8, 16, 32],
-                 hidden_dim=256,
-                 use_encoder_idx=[2],
-                 num_encoder_layers=1,
-                 encoder_layer='TransformerLayer',
-                 pe_temperature=10000,
-                 expansion=1.0,
-                 depth_mult=1.0,
-                 act='silu',
-                 trt=False,
-                 eval_size=None):
+    def __init__(
+        self,
+        in_channels=[512, 1024, 2048],
+        feat_strides=[8, 16, 32],
+        hidden_dim=256,
+        use_encoder_idx=[2],
+        num_encoder_layers=1,
+        encoder_layer="TransformerLayer",
+        pe_temperature=10000,
+        expansion=1.0,
+        depth_mult=1.0,
+        act="silu",
+        trt=False,
+        eval_size=None,
+    ):
         super(HybridEncoder, self).__init__()
         self.in_channels = in_channels
         self.feat_strides = feat_strides
@@ -210,48 +212,55 @@ class HybridEncoder(nn.Module):
         for in_channel in in_channels:
             self.input_proj.append(
                 nn.Sequential(
-                    nn.Conv2d(
-                        in_channel, hidden_dim, kernel_size=1, bias=False),
-                    ContiguousGradBatchNorm2d(hidden_dim)))
+                    nn.Conv2d(in_channel, hidden_dim, kernel_size=1, bias=False),
+                    ContiguousGradBatchNorm2d(hidden_dim),
+                )
+            )
 
         # encoder transformer
-        self.encoder = nn.ModuleList([
-            TransformerEncoder(encoder_layer, num_encoder_layers)
-            for _ in range(len(use_encoder_idx))
-        ])
+        self.encoder = nn.ModuleList(
+            [
+                TransformerEncoder(encoder_layer, num_encoder_layers)
+                for _ in range(len(use_encoder_idx))
+            ]
+        )
 
-        act = get_act_fn(
-            act, trt=trt) if act is None or isinstance(act,
-                                                       (str, dict)) else act
+        act = (
+            get_act_fn(act, trt=trt)
+            if act is None or isinstance(act, (str, dict))
+            else act
+        )
         # top-down fpn
         self.lateral_convs = nn.ModuleList()
         self.fpn_blocks = nn.ModuleList()
         for idx in range(len(in_channels) - 1, 0, -1):
-            self.lateral_convs.append(
-                BaseConv(
-                    hidden_dim, hidden_dim, 1, 1, act=act))
+            self.lateral_convs.append(BaseConv(hidden_dim, hidden_dim, 1, 1, act=act))
             self.fpn_blocks.append(
                 CSPRepLayer(
                     hidden_dim * 2,
                     hidden_dim,
                     round(3 * depth_mult),
                     act=act,
-                    expansion=expansion))
+                    expansion=expansion,
+                )
+            )
 
         # bottom-up pan
         self.downsample_convs = nn.ModuleList()
         self.pan_blocks = nn.ModuleList()
         for idx in range(len(in_channels) - 1):
             self.downsample_convs.append(
-                BaseConv(
-                    hidden_dim, hidden_dim, 3, stride=2, act=act))
+                BaseConv(hidden_dim, hidden_dim, 3, stride=2, act=act)
+            )
             self.pan_blocks.append(
                 CSPRepLayer(
                     hidden_dim * 2,
                     hidden_dim,
                     round(3 * depth_mult),
                     act=act,
-                    expansion=expansion))
+                    expansion=expansion,
+                )
+            )
 
         self._reset_parameters()
 
@@ -260,15 +269,15 @@ class HybridEncoder(nn.Module):
             for idx in self.use_encoder_idx:
                 stride = self.feat_strides[idx]
                 pos_embed = self.build_2d_sincos_position_embedding(
-                    self.eval_size[1] // stride, self.eval_size[0] // stride,
-                    self.hidden_dim, self.pe_temperature)
-                setattr(self, f'pos_embed{idx}', pos_embed)
+                    self.eval_size[1] // stride,
+                    self.eval_size[0] // stride,
+                    self.hidden_dim,
+                    self.pe_temperature,
+                )
+                setattr(self, f"pos_embed{idx}", pos_embed)
 
     @staticmethod
-    def build_2d_sincos_position_embedding(w,
-                                           h,
-                                           embed_dim=256,
-                                           temperature=10000.):
+    def build_2d_sincos_position_embedding(w, h, embed_dim=256, temperature=10000.0):
         """Build 2D sinusoidal position embedding
 
         Args:
@@ -282,22 +291,21 @@ class HybridEncoder(nn.Module):
         """
         grid_w = torch.arange(int(w), dtype=torch.float32)
         grid_h = torch.arange(int(h), dtype=torch.float32)
-        grid_w, grid_h = torch.meshgrid(grid_w, grid_h, indexing='ij')
-        assert embed_dim % 4 == 0, \
-            'Embed dimension must be divisible by 4 for 2D sin-cos position embedding'
+        grid_w, grid_h = torch.meshgrid(grid_w, grid_h, indexing="ij")
+        assert embed_dim % 4 == 0, (
+            "Embed dimension must be divisible by 4 for 2D sin-cos position embedding"
+        )
         pos_dim = embed_dim // 4
         omega = torch.arange(pos_dim, dtype=torch.float32) / pos_dim
-        omega = 1. / (temperature**omega)
+        omega = 1.0 / (temperature**omega)
 
         out_w = grid_w.flatten()[:, None] @ omega[None]
         out_h = grid_h.flatten()[:, None] @ omega[None]
 
         return torch.cat(
-            [
-                torch.sin(out_w), torch.cos(out_w), torch.sin(out_h),
-                torch.cos(out_h)
-            ],
-            dim=1)[None, :, :]
+            [torch.sin(out_w), torch.cos(out_w), torch.sin(out_h), torch.cos(out_h)],
+            dim=1,
+        )[None, :, :]
 
     def forward(self, feats, for_mot=False, is_teacher=False):
         assert len(feats) == len(self.in_channels)
@@ -312,29 +320,29 @@ class HybridEncoder(nn.Module):
                 src_flatten = proj_feats[enc_ind].flatten(2).permute(0, 2, 1)
                 if self.training or self.eval_size is None or is_teacher:
                     pos_embed = self.build_2d_sincos_position_embedding(
-                        w, h, self.hidden_dim, self.pe_temperature)
+                        w, h, self.hidden_dim, self.pe_temperature
+                    )
                     pos_embed = pos_embed.to(src_flatten.device)
                 else:
-                    pos_embed = getattr(self, f'pos_embed{enc_ind}', None)
+                    pos_embed = getattr(self, f"pos_embed{enc_ind}", None)
                     if pos_embed is not None:
                         pos_embed = pos_embed.to(src_flatten.device)
                 memory = self.encoder[i](src_flatten, pos_embed=pos_embed)
                 proj_feats[enc_ind] = memory.permute(0, 2, 1).reshape(
-                    -1, self.hidden_dim, h, w)
+                    -1, self.hidden_dim, h, w
+                )
 
         # top-down fpn
         inner_outs = [proj_feats[-1]]
         for idx in range(len(self.in_channels) - 1, 0, -1):
             feat_heigh = inner_outs[0]
             feat_low = proj_feats[idx - 1]
-            feat_heigh = self.lateral_convs[len(self.in_channels) - 1 - idx](
-                feat_heigh)
+            feat_heigh = self.lateral_convs[len(self.in_channels) - 1 - idx](feat_heigh)
             inner_outs[0] = feat_heigh
-            upsample_feat = F.interpolate(
-                feat_heigh, scale_factor=2., mode="nearest")
+            upsample_feat = F.interpolate(feat_heigh, scale_factor=2.0, mode="nearest")
             inner_out = self.fpn_blocks[len(self.in_channels) - 1 - idx](
-                torch.cat(
-                    [upsample_feat, feat_low], dim=1))
+                torch.cat([upsample_feat, feat_low], dim=1)
+            )
             inner_outs.insert(0, inner_out)
 
         # bottom-up pan
@@ -343,8 +351,7 @@ class HybridEncoder(nn.Module):
             feat_low = outs[-1]
             feat_height = inner_outs[idx + 1]
             downsample_feat = self.downsample_convs[idx](feat_low)
-            out = self.pan_blocks[idx](torch.cat(
-                [downsample_feat, feat_height], dim=1))
+            out = self.pan_blocks[idx](torch.cat([downsample_feat, feat_height], dim=1))
             outs.append(out)
 
         return outs
@@ -352,15 +359,14 @@ class HybridEncoder(nn.Module):
     @classmethod
     def from_config(cls, cfg, input_shape):
         return {
-            'in_channels': [i.channels for i in input_shape],
-            'feat_strides': [i.stride for i in input_shape]
+            "in_channels": [i.channels for i in input_shape],
+            "feat_strides": [i.stride for i in input_shape],
         }
 
     @property
     def out_shape(self):
         return [
-            ShapeSpec(
-                channels=self.hidden_dim, stride=self.feat_strides[idx])
+            ShapeSpec(channels=self.hidden_dim, stride=self.feat_strides[idx])
             for idx in range(len(self.in_channels))
         ]
 
@@ -374,26 +380,28 @@ class MaskHybridEncoder(HybridEncoder):
     for instance segmentation tasks.
     """
 
-    __shared__ = ['depth_mult', 'act', 'trt', 'eval_size', 'num_prototypes']
-    __inject__ = ['encoder_layer']
+    __shared__ = ["depth_mult", "act", "trt", "eval_size", "num_prototypes"]
+    __inject__ = ["encoder_layer"]
 
-    def __init__(self,
-                 in_channels=[256, 512, 1024, 2048],
-                 feat_strides=[4, 8, 16, 32],
-                 hidden_dim=256,
-                 use_encoder_idx=[3],
-                 num_encoder_layers=1,
-                 encoder_layer='TransformerLayer',
-                 num_prototypes=32,
-                 pe_temperature=10000,
-                 expansion=1.0,
-                 depth_mult=1.0,
-                 mask_feat_channels=[64, 64],
-                 act='silu',
-                 trt=False,
-                 eval_size=None):
+    def __init__(
+        self,
+        in_channels=[256, 512, 1024, 2048],
+        feat_strides=[4, 8, 16, 32],
+        hidden_dim=256,
+        use_encoder_idx=[3],
+        num_encoder_layers=1,
+        encoder_layer="TransformerLayer",
+        num_prototypes=32,
+        pe_temperature=10000,
+        expansion=1.0,
+        depth_mult=1.0,
+        mask_feat_channels=[64, 64],
+        act="silu",
+        trt=False,
+        eval_size=None,
+    ):
         assert len(in_channels) == len(feat_strides)
-        x4_feat_dim = in_channels.pop(0)
+        in_channels.pop(0)
         x4_feat_stride = feat_strides.pop(0)
         use_encoder_idx = [i - 1 for i in use_encoder_idx]
         assert x4_feat_stride == 4
@@ -410,7 +418,8 @@ class MaskHybridEncoder(HybridEncoder):
             depth_mult=depth_mult,
             act=act,
             trt=trt,
-            eval_size=eval_size)
+            eval_size=eval_size,
+        )
 
         # Mask feature head components would go here
         # Not implemented for now as it's not used in basic RT-DETRv3
@@ -419,7 +428,8 @@ class MaskHybridEncoder(HybridEncoder):
         # x4_feat = feats.pop(0)  # Not used in current implementation
 
         enc_feats = super(MaskHybridEncoder, self).forward(
-            feats, for_mot=for_mot, is_teacher=is_teacher)
+            feats, for_mot=for_mot, is_teacher=is_teacher
+        )
 
         # Mask feature processing would go here
         # For now just return encoder features

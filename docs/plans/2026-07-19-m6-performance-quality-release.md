@@ -31,7 +31,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 ## 实施步骤
 
 - [x] 建立 Ruff/Mypy 统一质量命令；第一批覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测，并记录未覆盖范围。
-- [ ] 将 Ruff 格式/lint 和 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除临时范围清单。
+- [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
+- [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
 - [ ] 生成模块级覆盖率报告，区分已迁移核心合同与尚未支持的继承代码，逐步建立可执行阈值。
 - [ ] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke；CUDA 用独立受控 job/自托管证据。
 - [ ] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
@@ -50,10 +51,11 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 - [x] `uv run --extra quality python scripts/check_quality.py` 通过，并明确输出 Ruff format、Ruff lint 和 Mypy 三个步骤。
 - [x] 第一批范围经 Ruff 实际格式化后，定向测试与默认全量测试通过。
+- [x] Ruff 全活跃范围经格式化、lint 和默认全量测试验证通过。
 - [ ] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
 - [ ] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
 - [ ] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
-- [ ] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
+- [x] wheel 安装后五个 CLI help、Infer、Eval 和 Export smoke 可重复。
 
 ## 决策记录
 
@@ -63,7 +65,11 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 第一批质量门禁只覆盖 M1–M5 直接维护面 | 全仓当前有 128 个格式文件和 293 个 lint 项，一次性机械改写不利于审计 |
 | 2026-07-19 | Mypy 与 Ruff 分工，不把类型检查并入 lint | Ruff 不替代静态类型语义；当前全包 123 项需要渐进清理 |
 | 2026-07-19 | 全包 45% 只作为覆盖率基线 | 大量继承但未支持模块拉低数字，后续必须同时报告全包和已迁移核心范围 |
+| 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
+| 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
 
 ## 完成记录
 
-进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。Ruff format/lint 门禁覆盖 41 个文件，其中 20 个在本批实际重排，并应用 24 个安全 lint 修复；Mypy 对 6 个 source file/目录通过。定向质量范围测试为 `132 passed`，最终默认全量测试为 `241 passed, 8 skipped, 6 warnings in 9.56s`。测试缓存、Ruff/Mypy 缓存和覆盖率临时文件随后清理；其余活跃模块、CI、覆盖率阈值、性能和发布候选仍未完成。
+进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。Mypy 仍只对 6 个 source file/目录通过，初始全包 123 项尚未清完。
+
+同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。GitHub 托管 runner 结果仍需在推送后确认；覆盖率阈值、完整 Mypy、CUDA CI、性能和发布候选仍未完成。

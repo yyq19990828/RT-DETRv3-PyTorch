@@ -186,7 +186,7 @@ def test_training_step_orders_clip_optimizer_scheduler_and_ema():
     trainer.use_amp = False
     trainer.use_ema = True
     trainer._compose_callback = None
-    trainer._clip_gradients = lambda: (events.append("clip") or torch.tensor(1.0))
+    trainer._clip_gradients = lambda: events.append("clip") or torch.tensor(1.0)
 
     trainer._train_epoch(epoch_id=0)
 
@@ -232,8 +232,7 @@ def test_gradient_accumulation_uses_no_sync_only_before_update_boundary(
     monkeypatch,
 ):
     events = []
-    monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.DDP", _NoSyncModel)
+    monkeypatch.setattr("ppdet_pytorch.engine.trainer.DDP", _NoSyncModel)
     trainer = Trainer.__new__(Trainer)
     trainer.model = _NoSyncModel(events)
     trainer.optimizer = _RecordingSGD(trainer.model.parameters(), events)
@@ -278,10 +277,13 @@ def test_gradient_accumulation_uses_no_sync_only_before_update_boundary(
 
     reference = _NoSyncModel([])
     reference_optimizer = torch.optim.SGD(reference.parameters(), lr=0.1)
-    first_group_loss = sum(
-        (reference.weight * value).square()
-        for value in (torch.tensor(1.0), torch.tensor(3.0))
-    ) / 2
+    first_group_loss = (
+        sum(
+            (reference.weight * value).square()
+            for value in (torch.tensor(1.0), torch.tensor(3.0))
+        )
+        / 2
+    )
     first_group_loss.backward()
     reference_optimizer.step()
     reference_optimizer.zero_grad()
@@ -289,21 +291,23 @@ def test_gradient_accumulation_uses_no_sync_only_before_update_boundary(
     reference_optimizer.step()
 
     assert trainer.model.weight.item() == pytest.approx(
-        reference.weight.item(), abs=1e-7)
+        reference.weight.item(), abs=1e-7
+    )
 
 
 def test_distributed_reported_loss_is_world_size_mean(monkeypatch):
     monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.dist.is_initialized", lambda: True)
-    monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.dist.get_world_size", lambda: 2)
+        "ppdet_pytorch.engine.trainer.dist.is_initialized", lambda: True
+    )
+    monkeypatch.setattr("ppdet_pytorch.engine.trainer.dist.get_world_size", lambda: 2)
 
     def add_remote_rank_loss(value, op):
         assert op == torch.distributed.ReduceOp.SUM
         value.add_(3.0)
 
     monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.dist.all_reduce", add_remote_rank_loss)
+        "ppdet_pytorch.engine.trainer.dist.all_reduce", add_remote_rank_loss
+    )
 
     local_loss = torch.tensor(1.0, requires_grad=True)
     reported_loss = Trainer._reduce_loss_for_logging(local_loss)

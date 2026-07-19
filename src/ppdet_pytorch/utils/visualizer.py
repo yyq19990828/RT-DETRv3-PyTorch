@@ -21,15 +21,13 @@ Visualization utilities for detection results.
 Paddle-compatible visualization functions.
 """
 
-import os
-import json
 import logging
+
 import numpy as np
-from typing import Optional, Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['visualize_results', 'save_result']
+__all__ = ["visualize_results", "save_result"]
 
 
 def visualize_results(
@@ -41,7 +39,7 @@ def visualize_results(
     pose3d_res,
     im_id,
     catid2name,
-    threshold=0.5
+    threshold=0.5,
 ):
     """
     Visualize bbox and mask results (Paddle compatible API).
@@ -61,8 +59,7 @@ def visualize_results(
         Visualized image
     """
     try:
-        from PIL import Image, ImageDraw, ImageFont
-        import cv2
+        from PIL import Image
     except ImportError:
         logger.warning("PIL or cv2 not available, skipping visualization")
         return image
@@ -71,7 +68,6 @@ def visualize_results(
     if isinstance(image, np.ndarray):
         if image.dtype != np.uint8:
             image = (image * 255).astype(np.uint8)
-        from PIL import Image
         image = Image.fromarray(image)
 
     # Draw bounding boxes
@@ -92,7 +88,7 @@ def visualize_results(
 
     # Draw 3D pose
     if pose3d_res is not None:
-        pose3d = np.array(pose3d_res[0]['pose3d']) * 1000
+        pose3d = np.array(pose3d_res[0]["pose3d"]) * 1000
         image = draw_pose3d(image, pose3d, visual_thread=threshold)
 
     return image
@@ -123,7 +119,7 @@ def draw_bbox(image, im_id, catid2name, bboxes, threshold):
     # Use default font
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 18)
-    except:
+    except OSError:
         font = ImageFont.load_default()
 
     # Generate colors for categories
@@ -131,10 +127,10 @@ def draw_bbox(image, im_id, catid2name, bboxes, threshold):
     color_list = _colormap(rgb=True)[:40]
 
     for dt in np.array(bboxes):
-        if im_id != dt['image_id']:
+        if im_id != dt["image_id"]:
             continue
 
-        catid, bbox, score = dt['category_id'], dt['bbox'], dt['score']
+        catid, bbox, score = dt["category_id"], dt["bbox"], dt["score"]
 
         if score < threshold:
             continue
@@ -174,8 +170,8 @@ def draw_mask(image, im_id, segms, threshold, alpha=0.7):
         Image with masks drawn
     """
     try:
-        from PIL import Image
         import pycocotools.mask as mask_util
+        from PIL import Image
     except ImportError:
         logger.warning("pycocotools not available")
         return image
@@ -184,13 +180,13 @@ def draw_mask(image, im_id, segms, threshold, alpha=0.7):
     w_ratio = 0.4
     color_list = _colormap(rgb=True)
 
-    img_array = np.array(image).astype('float32')
+    img_array = np.array(image).astype("float32")
 
     for dt in np.array(segms):
-        if im_id != dt['image_id']:
+        if im_id != dt["image_id"]:
             continue
 
-        segm, score = dt['segmentation'], dt['score']
+        segm, score = dt["segmentation"], dt["score"]
         if score < threshold:
             continue
 
@@ -206,7 +202,8 @@ def draw_mask(image, im_id, segms, threshold, alpha=0.7):
         img_array[idx[0], idx[1], :] += alpha * color_mask
 
     from PIL import Image
-    return Image.fromarray(img_array.astype('uint8'))
+
+    return Image.fromarray(img_array.astype("uint8"))
 
 
 def draw_segm(image, im_id, catid2name, segms, threshold):
@@ -271,22 +268,23 @@ def save_result(save_path, results, catid2name, threshold):
     """
     img_id = int(results.get("im_id", 0))
 
-    with open(save_path, 'w') as f:
+    with open(save_path, "w") as f:
         if "bbox_res" in results:
             for dt in results["bbox_res"]:
-                catid, bbox, score = dt['category_id'], dt['bbox'], dt['score']
+                catid, bbox, score = dt["category_id"], dt["bbox"], dt["score"]
                 if score < threshold:
                     continue
                 # each bbox result as a line
                 # for rbox: classname score x1 y1 x2 y2 x3 y3 x4 y4
                 # for bbox: classname score x1 y1 w h
-                bbox_pred = '{} {} '.format(catid2name[catid], score) + ' '.join(
-                    [str(e) for e in bbox])
-                f.write(bbox_pred + '\n')
+                bbox_pred = "{} {} ".format(catid2name[catid], score) + " ".join(
+                    [str(e) for e in bbox]
+                )
+                f.write(bbox_pred + "\n")
         elif "keypoint_res" in results:
             for dt in results["keypoint_res"]:
-                kpts = dt['keypoints']
-                scores = dt['score']
+                kpts = dt["keypoints"]
+                scores = dt["score"]
                 keypoint_pred = [img_id, scores, kpts]
                 print(keypoint_pred, file=f)
         else:
@@ -303,88 +301,254 @@ def _colormap(rgb=False):
     Returns:
         Colormap array
     """
-    color_list = np.array([
-        0.000, 0.447, 0.741,
-        0.850, 0.325, 0.098,
-        0.929, 0.694, 0.125,
-        0.494, 0.184, 0.556,
-        0.466, 0.674, 0.188,
-        0.301, 0.745, 0.933,
-        0.635, 0.078, 0.184,
-        0.300, 0.300, 0.300,
-        0.600, 0.600, 0.600,
-        1.000, 0.000, 0.000,
-        1.000, 0.500, 0.000,
-        0.749, 0.749, 0.000,
-        0.000, 1.000, 0.000,
-        0.000, 0.000, 1.000,
-        0.667, 0.000, 1.000,
-        0.333, 0.333, 0.000,
-        0.333, 0.667, 0.000,
-        0.333, 1.000, 0.000,
-        0.667, 0.333, 0.000,
-        0.667, 0.667, 0.000,
-        0.667, 1.000, 0.000,
-        1.000, 0.333, 0.000,
-        1.000, 0.667, 0.000,
-        1.000, 1.000, 0.000,
-        0.000, 0.333, 0.500,
-        0.000, 0.667, 0.500,
-        0.000, 1.000, 0.500,
-        0.333, 0.000, 0.500,
-        0.333, 0.333, 0.500,
-        0.333, 0.667, 0.500,
-        0.333, 1.000, 0.500,
-        0.667, 0.000, 0.500,
-        0.667, 0.333, 0.500,
-        0.667, 0.667, 0.500,
-        0.667, 1.000, 0.500,
-        1.000, 0.000, 0.500,
-        1.000, 0.333, 0.500,
-        1.000, 0.667, 0.500,
-        1.000, 1.000, 0.500,
-        0.000, 0.333, 1.000,
-        0.000, 0.667, 1.000,
-        0.000, 1.000, 1.000,
-        0.333, 0.000, 1.000,
-        0.333, 0.333, 1.000,
-        0.333, 0.667, 1.000,
-        0.333, 1.000, 1.000,
-        0.667, 0.000, 1.000,
-        0.667, 0.333, 1.000,
-        0.667, 0.667, 1.000,
-        0.667, 1.000, 1.000,
-        1.000, 0.000, 1.000,
-        1.000, 0.333, 1.000,
-        1.000, 0.667, 1.000,
-        0.333, 0.000, 0.000,
-        0.500, 0.000, 0.000,
-        0.667, 0.000, 0.000,
-        0.833, 0.000, 0.000,
-        1.000, 0.000, 0.000,
-        0.000, 0.167, 0.000,
-        0.000, 0.333, 0.000,
-        0.000, 0.500, 0.000,
-        0.000, 0.667, 0.000,
-        0.000, 0.833, 0.000,
-        0.000, 1.000, 0.000,
-        0.000, 0.000, 0.167,
-        0.000, 0.000, 0.333,
-        0.000, 0.000, 0.500,
-        0.000, 0.000, 0.667,
-        0.000, 0.000, 0.833,
-        0.000, 0.000, 1.000,
-        0.000, 0.000, 0.000,
-        0.143, 0.143, 0.143,
-        0.286, 0.286, 0.286,
-        0.429, 0.429, 0.429,
-        0.571, 0.571, 0.571,
-        0.714, 0.714, 0.714,
-        0.857, 0.857, 0.857,
-        0.000, 0.447, 0.741,
-        0.314, 0.717, 0.741,
-        0.50, 0.5, 0
-    ]).astype(np.float32).reshape(-1, 3)
+    color_list = (
+        np.array(
+            [
+                0.000,
+                0.447,
+                0.741,
+                0.850,
+                0.325,
+                0.098,
+                0.929,
+                0.694,
+                0.125,
+                0.494,
+                0.184,
+                0.556,
+                0.466,
+                0.674,
+                0.188,
+                0.301,
+                0.745,
+                0.933,
+                0.635,
+                0.078,
+                0.184,
+                0.300,
+                0.300,
+                0.300,
+                0.600,
+                0.600,
+                0.600,
+                1.000,
+                0.000,
+                0.000,
+                1.000,
+                0.500,
+                0.000,
+                0.749,
+                0.749,
+                0.000,
+                0.000,
+                1.000,
+                0.000,
+                0.000,
+                0.000,
+                1.000,
+                0.667,
+                0.000,
+                1.000,
+                0.333,
+                0.333,
+                0.000,
+                0.333,
+                0.667,
+                0.000,
+                0.333,
+                1.000,
+                0.000,
+                0.667,
+                0.333,
+                0.000,
+                0.667,
+                0.667,
+                0.000,
+                0.667,
+                1.000,
+                0.000,
+                1.000,
+                0.333,
+                0.000,
+                1.000,
+                0.667,
+                0.000,
+                1.000,
+                1.000,
+                0.000,
+                0.000,
+                0.333,
+                0.500,
+                0.000,
+                0.667,
+                0.500,
+                0.000,
+                1.000,
+                0.500,
+                0.333,
+                0.000,
+                0.500,
+                0.333,
+                0.333,
+                0.500,
+                0.333,
+                0.667,
+                0.500,
+                0.333,
+                1.000,
+                0.500,
+                0.667,
+                0.000,
+                0.500,
+                0.667,
+                0.333,
+                0.500,
+                0.667,
+                0.667,
+                0.500,
+                0.667,
+                1.000,
+                0.500,
+                1.000,
+                0.000,
+                0.500,
+                1.000,
+                0.333,
+                0.500,
+                1.000,
+                0.667,
+                0.500,
+                1.000,
+                1.000,
+                0.500,
+                0.000,
+                0.333,
+                1.000,
+                0.000,
+                0.667,
+                1.000,
+                0.000,
+                1.000,
+                1.000,
+                0.333,
+                0.000,
+                1.000,
+                0.333,
+                0.333,
+                1.000,
+                0.333,
+                0.667,
+                1.000,
+                0.333,
+                1.000,
+                1.000,
+                0.667,
+                0.000,
+                1.000,
+                0.667,
+                0.333,
+                1.000,
+                0.667,
+                0.667,
+                1.000,
+                0.667,
+                1.000,
+                1.000,
+                1.000,
+                0.000,
+                1.000,
+                1.000,
+                0.333,
+                1.000,
+                1.000,
+                0.667,
+                1.000,
+                0.333,
+                0.000,
+                0.000,
+                0.500,
+                0.000,
+                0.000,
+                0.667,
+                0.000,
+                0.000,
+                0.833,
+                0.000,
+                0.000,
+                1.000,
+                0.000,
+                0.000,
+                0.000,
+                0.167,
+                0.000,
+                0.000,
+                0.333,
+                0.000,
+                0.000,
+                0.500,
+                0.000,
+                0.000,
+                0.667,
+                0.000,
+                0.000,
+                0.833,
+                0.000,
+                0.000,
+                1.000,
+                0.000,
+                0.000,
+                0.000,
+                0.167,
+                0.000,
+                0.000,
+                0.333,
+                0.000,
+                0.000,
+                0.500,
+                0.000,
+                0.000,
+                0.667,
+                0.000,
+                0.000,
+                0.833,
+                0.000,
+                0.000,
+                1.000,
+                0.000,
+                0.000,
+                0.000,
+                0.143,
+                0.143,
+                0.143,
+                0.286,
+                0.286,
+                0.286,
+                0.429,
+                0.429,
+                0.429,
+                0.571,
+                0.571,
+                0.571,
+                0.714,
+                0.714,
+                0.714,
+                0.857,
+                0.857,
+                0.857,
+                0.000,
+                0.447,
+                0.741,
+                0.314,
+                0.717,
+                0.741,
+                0.50,
+                0.5,
+                0,
+            ]
+        )
+        .astype(np.float32)
+        .reshape(-1, 3)
+    )
 
     if not rgb:
         color_list = color_list[:, ::-1]

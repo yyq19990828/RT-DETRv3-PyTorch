@@ -31,10 +31,11 @@ Reference:
 """
 
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Optional, List
 
 
 def deformable_attention_core_func(
@@ -42,7 +43,7 @@ def deformable_attention_core_func(
     value_spatial_shapes: torch.Tensor,
     value_level_start_index: torch.Tensor,
     sampling_locations: torch.Tensor,
-    attention_weights: torch.Tensor
+    attention_weights: torch.Tensor,
 ) -> torch.Tensor:
     """
     Multi-Scale Deformable Attention core function using grid_sample
@@ -73,8 +74,12 @@ def deformable_attention_core_func(
     sampling_value_list = []
     for level, (h, w) in enumerate(value_spatial_shapes):
         # Reshape value: (bs, H*W, n_head, c) -> (bs*n_head, c, H, W)
-        value_l_ = value_list[level].flatten(2).transpose(1, 2).reshape(
-            bs * n_head, c, int(h), int(w))
+        value_l_ = (
+            value_list[level]
+            .flatten(2)
+            .transpose(1, 2)
+            .reshape(bs * n_head, c, int(h), int(w))
+        )
 
         # Reshape sampling grid: (bs, Len_q, n_head, n_points, 2) -> (bs*n_head, Len_q, n_points, 2)
         sampling_grid_l_ = sampling_grids[:, :, :, level].transpose(1, 2).flatten(0, 1)
@@ -84,19 +89,22 @@ def deformable_attention_core_func(
         sampling_value_l_ = F.grid_sample(
             value_l_,
             sampling_grid_l_,
-            mode='bilinear',
-            padding_mode='zeros',
-            align_corners=False
+            mode="bilinear",
+            padding_mode="zeros",
+            align_corners=False,
         )
         sampling_value_list.append(sampling_value_l_)
 
     # Reshape attention weights: (bs, Len_q, n_head, n_levels, n_points) -> (bs*n_head, 1, Len_q, n_levels*n_points)
     attention_weights = attention_weights.transpose(1, 2).reshape(
-        bs * n_head, 1, Len_q, n_levels * n_points)
+        bs * n_head, 1, Len_q, n_levels * n_points
+    )
 
     # Weighted sum: (bs*n_head, c, Len_q, n_levels*n_points) * (bs*n_head, 1, Len_q, n_levels*n_points)
     # -> (bs*n_head, c, Len_q)
-    output = (torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights).sum(-1)
+    output = (
+        torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights
+    ).sum(-1)
 
     # Reshape output: (bs*n_head, c, Len_q) -> (bs, Len_q, n_head*c)
     output = output.reshape(bs, n_head * c, Len_q).transpose(1, 2)
@@ -145,11 +153,13 @@ class MSDeformableAttention(nn.Module):
         num_heads: int = 8,
         num_levels: int = 4,
         num_points: int = 4,
-        lr_mult: float = 0.1
+        lr_mult: float = 0.1,
     ):
         super().__init__()
         if embed_dim % num_heads != 0:
-            raise ValueError(f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_heads})")
+            raise ValueError(
+                f"embed_dim ({embed_dim}) must be divisible by num_heads ({num_heads})"
+            )
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -205,13 +215,19 @@ class MSDeformableAttention(nn.Module):
         nn.init.constant_(self.sampling_offsets.weight, 0.0)
 
         # Initialize offset biases with grid pattern
-        thetas = torch.arange(self.num_heads, dtype=torch.float32) * (2.0 * math.pi / self.num_heads)
+        thetas = torch.arange(self.num_heads, dtype=torch.float32) * (
+            2.0 * math.pi / self.num_heads
+        )
         grid_init = torch.stack([thetas.cos(), thetas.sin()], dim=-1)
         grid_init = grid_init / grid_init.abs().max(dim=-1, keepdim=True)[0]
-        grid_init = grid_init.view(self.num_heads, 1, 1, 2).repeat(1, self.num_levels, self.num_points, 1)
+        grid_init = grid_init.view(self.num_heads, 1, 1, 2).repeat(
+            1, self.num_levels, self.num_points, 1
+        )
 
         # Scale by sampling point index
-        scaling = torch.arange(1, self.num_points + 1, dtype=torch.float32).view(1, 1, -1, 1)
+        scaling = torch.arange(1, self.num_points + 1, dtype=torch.float32).view(
+            1, 1, -1, 1
+        )
         grid_init = grid_init * scaling
 
         self.sampling_offsets.bias.data = grid_init.view(-1)
@@ -233,7 +249,7 @@ class MSDeformableAttention(nn.Module):
         value: torch.Tensor,
         value_spatial_shapes: torch.Tensor,
         value_level_start_index: torch.Tensor,
-        value_mask: Optional[torch.Tensor] = None
+        value_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """
         Forward pass of multi-scale deformable attention
@@ -258,8 +274,9 @@ class MSDeformableAttention(nn.Module):
         Len_v = value.shape[1]
 
         # Verify value length matches spatial shapes
-        assert int(value_spatial_shapes.prod(1).sum()) == Len_v, \
+        assert int(value_spatial_shapes.prod(1).sum()) == Len_v, (
             f"Value length {Len_v} does not match spatial shapes {value_spatial_shapes}"
+        )
 
         # Project value
         value = self.value_proj(value)
@@ -273,42 +290,56 @@ class MSDeformableAttention(nn.Module):
 
         # Compute sampling offsets: (bs, Len_q, total_points * 2) -> (bs, Len_q, num_heads, num_levels, num_points, 2)
         sampling_offsets = self.sampling_offsets(query).view(
-            bs, Len_q, self.num_heads, self.num_levels, self.num_points, 2)
+            bs, Len_q, self.num_heads, self.num_levels, self.num_points, 2
+        )
 
         # Compute attention weights: (bs, Len_q, total_points) -> (bs, Len_q, num_heads, num_levels, num_points)
         attention_weights = self.attention_weights(query).view(
-            bs, Len_q, self.num_heads, self.num_levels * self.num_points)
+            bs, Len_q, self.num_heads, self.num_levels * self.num_points
+        )
         attention_weights = F.softmax(attention_weights, dim=-1).view(
-            bs, Len_q, self.num_heads, self.num_levels, self.num_points)
+            bs, Len_q, self.num_heads, self.num_levels, self.num_points
+        )
 
         # Compute sampling locations
         if reference_points.shape[-1] == 2:
             # Case 1: Reference points are 2D coordinates (x, y)
             # Normalize offsets by spatial shapes: (1, 1, 1, n_levels, 1, 2)
-            offset_normalizer = value_spatial_shapes.flip([1]).view(
-                1, 1, 1, self.num_levels, 1, 2).float()
+            offset_normalizer = (
+                value_spatial_shapes.flip([1])
+                .view(1, 1, 1, self.num_levels, 1, 2)
+                .float()
+            )
 
             # Compute sampling locations: reference_points + normalized_offsets
-            sampling_locations = reference_points.view(
-                bs, Len_q, 1, self.num_levels, 1, 2
-            ) + sampling_offsets / offset_normalizer
+            sampling_locations = (
+                reference_points.view(bs, Len_q, 1, self.num_levels, 1, 2)
+                + sampling_offsets / offset_normalizer
+            )
 
         elif reference_points.shape[-1] == 4:
             # Case 2: Reference points are bounding boxes (x, y, w, h)
             # Offset is relative to box size
             sampling_locations = (
-                reference_points[:, :, None, :, None, :2] +
-                sampling_offsets / self.num_points *
-                reference_points[:, :, None, :, None, 2:] * 0.5
+                reference_points[:, :, None, :, None, :2]
+                + sampling_offsets
+                / self.num_points
+                * reference_points[:, :, None, :, None, 2:]
+                * 0.5
             )
         else:
             raise ValueError(
-                f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}")
+                f"Last dim of reference_points must be 2 or 4, but got {reference_points.shape[-1]}"
+            )
 
         # Apply deformable attention
         output = deformable_attention_core_func(
-            value, value_spatial_shapes, value_level_start_index,
-            sampling_locations, attention_weights)
+            value,
+            value_spatial_shapes,
+            value_level_start_index,
+            sampling_locations,
+            attention_weights,
+        )
 
         # Output projection
         output = self.output_proj(output)
@@ -331,9 +362,9 @@ def build_ms_deformable_attention(cfg: dict) -> MSDeformableAttention:
         MSDeformableAttention instance
     """
     return MSDeformableAttention(
-        embed_dim=cfg.get('embed_dim', 256),
-        num_heads=cfg.get('num_heads', 8),
-        num_levels=cfg.get('num_levels', 4),
-        num_points=cfg.get('num_points', 4),
-        lr_mult=cfg.get('lr_mult', 0.1)
+        embed_dim=cfg.get("embed_dim", 256),
+        num_heads=cfg.get("num_heads", 8),
+        num_levels=cfg.get("num_levels", 4),
+        num_points=cfg.get("num_points", 4),
+        lr_mult=cfg.get("lr_mult", 0.1),
     )

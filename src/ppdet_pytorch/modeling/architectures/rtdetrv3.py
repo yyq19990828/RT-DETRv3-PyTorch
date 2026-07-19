@@ -13,34 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import torch
+from ppdet_pytorch.core.workspace import create, register
+
 from .meta_arch import BaseArch
-from ppdet_pytorch.core.workspace import register, create
 
-__all__ = ['RTDETRV3']
+__all__ = ["RTDETRV3"]
 # Deformable DETR, DINO use the same architecture as DETR
 
 
 @register
 class RTDETRV3(BaseArch):
-    __category__ = 'architecture'
-    __inject__ = ['post_process', 'post_process_semi']
-    __shared__ = ['with_mask', 'exclude_post_process']
+    __category__ = "architecture"
+    __inject__ = ["post_process", "post_process_semi"]
+    __shared__ = ["with_mask", "exclude_post_process"]
 
-    def __init__(self,
-                 backbone,
-                 transformer='DETRTransformer',
-                 detr_head='DETRHead',
-                 neck=None,
-                 aux_o2m_head=None,
-                 post_process='DETRPostProcess',
-                 post_process_semi=None,
-                 with_mask=False,
-                 exclude_post_process=False):
+    def __init__(
+        self,
+        backbone,
+        transformer="DETRTransformer",
+        detr_head="DETRHead",
+        neck=None,
+        aux_o2m_head=None,
+        post_process="DETRPostProcess",
+        post_process_semi=None,
+        with_mask=False,
+        exclude_post_process=False,
+    ):
         super(RTDETRV3, self).__init__()
         self.backbone = backbone
         self.transformer = transformer
@@ -55,32 +55,32 @@ class RTDETRV3(BaseArch):
     @classmethod
     def from_config(cls, cfg, *args, **kwargs):
         # backbone
-        backbone = create(cfg['backbone'])
+        backbone = create(cfg["backbone"])
         # neck
-        kwargs = {'input_shape': backbone.out_shape}
-        neck = create(cfg['neck'], **kwargs) if cfg['neck'] else None
+        kwargs = {"input_shape": backbone.out_shape}
+        neck = create(cfg["neck"], **kwargs) if cfg["neck"] else None
 
         # transformer
         if neck is not None:
-            kwargs = {'input_shape': neck.out_shape}
-        transformer = create(cfg['transformer'], **kwargs)
+            kwargs = {"input_shape": neck.out_shape}
+        transformer = create(cfg["transformer"], **kwargs)
         # head
         kwargs = {
-            'hidden_dim': transformer.hidden_dim,
-            'nhead': transformer.nhead,
-            'input_shape': backbone.out_shape
+            "hidden_dim": transformer.hidden_dim,
+            "nhead": transformer.nhead,
+            "input_shape": backbone.out_shape,
         }
-        detr_head = create(cfg['detr_head'], **kwargs)
+        detr_head = create(cfg["detr_head"], **kwargs)
 
-        kwargs = {'input_shape': neck.out_shape}
-        aux_o2m_head = create(cfg['aux_o2m_head'], **kwargs)
+        kwargs = {"input_shape": neck.out_shape}
+        aux_o2m_head = create(cfg["aux_o2m_head"], **kwargs)
 
         return {
-            'backbone': backbone,
-            'transformer': transformer,
+            "backbone": backbone,
+            "transformer": transformer,
             "detr_head": detr_head,
             "neck": neck,
-            "aux_o2m_head": aux_o2m_head
+            "aux_o2m_head": aux_o2m_head,
         }
 
     def _forward(self):
@@ -92,23 +92,21 @@ class RTDETRV3(BaseArch):
             body_feats = self.neck(body_feats)
 
         # Transformer
-        pad_mask = self.inputs.get('pad_mask', None)
+        pad_mask = self.inputs.get("pad_mask", None)
         out_transformer = self.transformer(body_feats, pad_mask, self.inputs)
 
         # DETR Head
         if self.training:
-            detr_losses = self.detr_head(out_transformer, body_feats,
-                                         self.inputs)
-            detr_losses.update({
-                'loss': sum(
-                    [v for k, v in detr_losses.items() if 'log' not in k])
-            })
+            detr_losses = self.detr_head(out_transformer, body_feats, self.inputs)
+            detr_losses.update(
+                {"loss": sum([v for k, v in detr_losses.items() if "log" not in k])}
+            )
             if self.aux_o2m_head is not None:
                 aux_o2m_losses = self.aux_o2m_head(body_feats, self.inputs)
                 for k, v in aux_o2m_losses.items():
-                    if k == 'loss':
+                    if k == "loss":
                         detr_losses[k] += v
-                    k = k + '_aux_o2m'
+                    k = k + "_aux_o2m"
                     detr_losses[k] = v
             return detr_losses
         else:
@@ -117,16 +115,19 @@ class RTDETRV3(BaseArch):
                 bbox, bbox_num, mask = preds
             else:
                 bbox, bbox_num, mask = self.post_process(
-                    preds, self.inputs['im_shape'], self.inputs['scale_factor'],
-                    self.inputs['image'][2:].shape)
+                    preds,
+                    self.inputs["im_shape"],
+                    self.inputs["scale_factor"],
+                    self.inputs["image"][2:].shape,
+                )
 
                 # aux_o2m_outs = self.aux_o2m_head(body_feats)
                 # bbox, bbox_num, nms_keep_idx = self.aux_o2m_head.post_process(
                 #         aux_o2m_outs, self.inputs['scale_factor'])
 
-            output = {'bbox': bbox, 'bbox_num': bbox_num}
+            output = {"bbox": bbox, "bbox_num": bbox_num}
             if self.with_mask:
-                output['mask'] = mask
+                output["mask"] = mask
             return output
 
     def get_loss(self):

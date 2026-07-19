@@ -19,17 +19,18 @@ Assigner Utilities - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/assigners/utils.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import torch
 import torch.nn.functional as F
 
 __all__ = [
-    'pad_gt', 'gather_topk_anchors', 'check_points_inside_bboxes',
-    'compute_max_iou_anchor', 'compute_max_iou_gt',
-    'generate_anchors_for_grid_cell'
+    "pad_gt",
+    "gather_topk_anchors",
+    "check_points_inside_bboxes",
+    "compute_max_iou_anchor",
+    "compute_max_iou_gt",
+    "generate_anchors_for_grid_cell",
 ]
 
 
@@ -58,39 +59,44 @@ def pad_gt(gt_labels, gt_bboxes, gt_scores=None):
 
         return gt_labels, gt_bboxes, gt_scores, pad_gt_mask
     elif isinstance(gt_labels, list) and isinstance(gt_bboxes, list):
-        assert len(gt_labels) == len(gt_bboxes), \
-            'The number of `gt_labels` and `gt_bboxes` is not equal. '
+        assert len(gt_labels) == len(gt_bboxes), (
+            "The number of `gt_labels` and `gt_bboxes` is not equal. "
+        )
         num_max_boxes = max([len(a) for a in gt_bboxes])
         batch_size = len(gt_bboxes)
         # pad label and bbox
         pad_gt_labels = torch.zeros(
             [batch_size, num_max_boxes, 1],
             dtype=gt_labels[0].dtype,
-            device=gt_labels[0].device)
+            device=gt_labels[0].device,
+        )
         pad_gt_bboxes = torch.zeros(
             [batch_size, num_max_boxes, 4],
             dtype=gt_bboxes[0].dtype,
-            device=gt_bboxes[0].device)
+            device=gt_bboxes[0].device,
+        )
         pad_gt_scores = torch.zeros(
             [batch_size, num_max_boxes, 1],
             dtype=gt_bboxes[0].dtype,
-            device=gt_bboxes[0].device)
+            device=gt_bboxes[0].device,
+        )
         pad_gt_mask = torch.zeros(
             [batch_size, num_max_boxes, 1],
             dtype=gt_bboxes[0].dtype,
-            device=gt_bboxes[0].device)
+            device=gt_bboxes[0].device,
+        )
         for i, (label, bbox) in enumerate(zip(gt_labels, gt_bboxes)):
             if len(label) > 0 and len(bbox) > 0:
-                pad_gt_labels[i, :len(label)] = label
-                pad_gt_bboxes[i, :len(bbox)] = bbox
-                pad_gt_mask[i, :len(bbox)] = 1.
+                pad_gt_labels[i, : len(label)] = label
+                pad_gt_bboxes[i, : len(bbox)] = bbox
+                pad_gt_mask[i, : len(bbox)] = 1.0
                 if gt_scores is not None:
-                    pad_gt_scores[i, :len(gt_scores[i])] = gt_scores[i]
+                    pad_gt_scores[i, : len(gt_scores[i])] = gt_scores[i]
         if gt_scores is None:
             pad_gt_scores = pad_gt_mask.clone()
         return pad_gt_labels, pad_gt_bboxes, pad_gt_scores, pad_gt_mask
     else:
-        raise ValueError('The input `gt_labels` or `gt_bboxes` is invalid! ')
+        raise ValueError("The input `gt_labels` or `gt_bboxes` is invalid! ")
 
 
 def gather_topk_anchors(metrics, topk, largest=True, topk_mask=None, eps=1e-9):
@@ -109,21 +115,16 @@ def gather_topk_anchors(metrics, topk, largest=True, topk_mask=None, eps=1e-9):
         is_in_topk (Tensor, float32): shape[B, n, L], value=1. means selected
     """
     num_anchors = metrics.shape[-1]
-    topk_metrics, topk_idxs = torch.topk(
-        metrics, topk, dim=-1, largest=largest)
+    topk_metrics, topk_idxs = torch.topk(metrics, topk, dim=-1, largest=largest)
     if topk_mask is None:
-        topk_mask = (
-            topk_metrics.max(dim=-1, keepdim=True)[0] > eps).to(metrics.dtype)
-    is_in_topk = F.one_hot(topk_idxs, num_anchors).sum(
-        dim=-2).to(metrics.dtype)
+        topk_mask = (topk_metrics.max(dim=-1, keepdim=True)[0] > eps).to(metrics.dtype)
+    is_in_topk = F.one_hot(topk_idxs, num_anchors).sum(dim=-2).to(metrics.dtype)
     return is_in_topk * topk_mask
 
 
-def check_points_inside_bboxes(points,
-                               bboxes,
-                               center_radius_tensor=None,
-                               eps=1e-9,
-                               sm_use=False):
+def check_points_inside_bboxes(
+    points, bboxes, center_radius_tensor=None, eps=1e-9, sm_use=False
+):
     """Check if points are inside bboxes.
 
     Args:
@@ -138,28 +139,30 @@ def check_points_inside_bboxes(points,
     x, y = points.chunk(2, dim=-1)
     xmin, ymin, xmax, ymax = bboxes.unsqueeze(2).chunk(4, dim=-1)
     # check whether `points` is in `bboxes`
-    l = x - xmin
+    left = x - xmin
     t = y - ymin
     r = xmax - x
     b = ymax - y
-    delta_ltrb = torch.cat([l, t, r, b], dim=-1)
-    is_in_bboxes = (delta_ltrb.min(dim=-1)[0] > eps)
+    delta_ltrb = torch.cat([left, t, r, b], dim=-1)
+    is_in_bboxes = delta_ltrb.min(dim=-1)[0] > eps
     if center_radius_tensor is not None:
         # check whether `points` is in `center_radius`
         center_radius_tensor = center_radius_tensor.unsqueeze(0).unsqueeze(0)
         cx = (xmin + xmax) * 0.5
         cy = (ymin + ymax) * 0.5
-        l = x - (cx - center_radius_tensor)
+        left = x - (cx - center_radius_tensor)
         t = y - (cy - center_radius_tensor)
         r = (cx + center_radius_tensor) - x
         b = (cy + center_radius_tensor) - y
-        delta_ltrb_c = torch.cat([l, t, r, b], dim=-1)
-        is_in_center = (delta_ltrb_c.min(dim=-1)[0] > eps)
+        delta_ltrb_c = torch.cat([left, t, r, b], dim=-1)
+        is_in_center = delta_ltrb_c.min(dim=-1)[0] > eps
         if sm_use:
             return is_in_bboxes.to(bboxes.dtype), is_in_center.to(bboxes.dtype)
         else:
-            return (torch.logical_and(is_in_bboxes, is_in_center),
-                    torch.logical_or(is_in_bboxes, is_in_center))
+            return (
+                torch.logical_and(is_in_bboxes, is_in_center),
+                torch.logical_or(is_in_bboxes, is_in_center),
+            )
 
     return is_in_bboxes.to(bboxes.dtype)
 
@@ -192,11 +195,9 @@ def compute_max_iou_gt(ious):
     return is_max_iou.to(ious.dtype)
 
 
-def generate_anchors_for_grid_cell(feats,
-                                   fpn_strides,
-                                   grid_cell_size=5.0,
-                                   grid_cell_offset=0.5,
-                                   dtype=torch.float32):
+def generate_anchors_for_grid_cell(
+    feats, fpn_strides, grid_cell_size=5.0, grid_cell_offset=0.5, dtype=torch.float32
+):
     """Like ATSS, generate anchors based on grid size.
 
     Args:
@@ -225,24 +226,24 @@ def generate_anchors_for_grid_cell(feats,
         shift_y = (
             torch.arange(end=h, dtype=dtype, device=device) + grid_cell_offset
         ) * stride
-        shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing='ij')
+        shift_y, shift_x = torch.meshgrid(shift_y, shift_x, indexing="ij")
         anchor = torch.stack(
             [
-                shift_x - cell_half_size, shift_y - cell_half_size,
-                shift_x + cell_half_size, shift_y + cell_half_size
+                shift_x - cell_half_size,
+                shift_y - cell_half_size,
+                shift_x + cell_half_size,
+                shift_y + cell_half_size,
             ],
-            dim=-1).to(dtype)
+            dim=-1,
+        ).to(dtype)
         anchor_point = torch.stack([shift_x, shift_y], dim=-1).to(dtype)
 
         anchors.append(anchor.reshape(-1, 4))
         anchor_points.append(anchor_point.reshape(-1, 2))
         num_anchors_list.append(len(anchors[-1]))
         stride_tensor.append(
-            torch.full(
-                [num_anchors_list[-1], 1],
-                stride,
-                dtype=dtype,
-                device=device))
+            torch.full([num_anchors_list[-1], 1], stride, dtype=dtype, device=device)
+        )
     anchors = torch.cat(anchors)
     anchors = anchors.detach()
     anchor_points = torch.cat(anchor_points)

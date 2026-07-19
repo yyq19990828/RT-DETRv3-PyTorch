@@ -51,7 +51,8 @@ def _flatten_batches(batch_sampler):
 
 def test_single_process_sampler_is_reproducible_per_epoch():
     sampler = DistributedBatchSampler(
-        list(range(20)), batch_size=4, shuffle=True, seed=17)
+        list(range(20)), batch_size=4, shuffle=True, seed=17
+    )
 
     sampler.set_epoch(3)
     epoch_three_first = _flatten_batches(sampler)

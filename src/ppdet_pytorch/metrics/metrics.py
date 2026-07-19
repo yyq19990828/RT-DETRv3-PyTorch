@@ -21,31 +21,69 @@ Metrics for model evaluation.
 Migrated from PaddlePaddle, compatible API.
 """
 
+import json
 import os
 import sys
-import json
-import torch
-import numpy as np
-from typing import Dict, List, Any
-from collections import defaultdict
 from pathlib import Path
+from typing import Dict
 
-from .coco_utils import get_infer_results, cocoapi_eval
+import numpy as np
+import torch
+
 from ..data.source.category import get_categories
-
 from ..utils.logger import setup_logger
+from .coco_utils import cocoapi_eval, get_infer_results
+
 logger = setup_logger(__name__)
 
-__all__ = ['Metric', 'COCOMetric']
+__all__ = ["Metric", "COCOMetric"]
 
-COCO_SIGMAS = np.array([
-    .26, .25, .25, .35, .35, .79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87,
-    .89, .89
-]) / 10.0
+COCO_SIGMAS = (
+    np.array(
+        [
+            0.26,
+            0.25,
+            0.25,
+            0.35,
+            0.35,
+            0.79,
+            0.79,
+            0.72,
+            0.72,
+            0.62,
+            0.62,
+            1.07,
+            1.07,
+            0.87,
+            0.87,
+            0.89,
+            0.89,
+        ]
+    )
+    / 10.0
+)
 
-CROWD_SIGMAS = np.array(
-    [.79, .79, .72, .72, .62, .62, 1.07, 1.07, .87, .87, .89, .89, .79,
-     .79]) / 10.0
+CROWD_SIGMAS = (
+    np.array(
+        [
+            0.79,
+            0.79,
+            0.72,
+            0.72,
+            0.62,
+            0.62,
+            1.07,
+            1.07,
+            0.87,
+            0.87,
+            0.89,
+            0.89,
+            0.79,
+            0.79,
+        ]
+    )
+    / 10.0
+)
 
 
 class Metric:
@@ -94,37 +132,31 @@ class COCOMetric(Metric):
 
     def __init__(self, anno_file, **kwargs):
         self.anno_file = anno_file
-        self.clsid2catid = kwargs.get('clsid2catid', None)
+        self.clsid2catid = kwargs.get("clsid2catid", None)
 
         if self.clsid2catid is None:
-            self.clsid2catid, _ = get_categories('COCO', anno_file)
+            self.clsid2catid, _ = get_categories("COCO", anno_file)
 
-        self.classwise = kwargs.get('classwise', False)
-        self.output_eval = kwargs.get('output_eval', None)
-        self.bias = kwargs.get('bias', 0)
-        self.save_prediction_only = kwargs.get('save_prediction_only', False)
-        self.iou_type = kwargs.get('IouType', 'bbox')
+        self.classwise = kwargs.get("classwise", False)
+        self.output_eval = kwargs.get("output_eval", None)
+        self.bias = kwargs.get("bias", 0)
+        self.save_prediction_only = kwargs.get("save_prediction_only", False)
+        self.iou_type = kwargs.get("IouType", "bbox")
 
         if not self.save_prediction_only:
-            assert os.path.isfile(anno_file), \
-                f"anno_file {anno_file} not a file"
+            assert os.path.isfile(anno_file), f"anno_file {anno_file} not a file"
 
         if self.output_eval is not None:
             Path(self.output_eval).mkdir(exist_ok=True, parents=True)
 
-        self.save_threshold = kwargs.get('save_threshold', 0)
+        self.save_threshold = kwargs.get("save_threshold", 0)
 
         self.reset()
 
     def reset(self):
         """Reset evaluation results"""
         # Only bbox and mask evaluation support currently
-        self.results = {
-            'bbox': [],
-            'mask': [],
-            'segm': [],
-            'keypoint': []
-        }
+        self.results = {"bbox": [], "mask": [], "segm": [], "keypoint": []}
         self.eval_results = {}
 
     def update(self, inputs: Dict, outputs: Dict):
@@ -146,132 +178,125 @@ class COCOMetric(Metric):
 
         # Multi-scale inputs: all inputs have same im_id
         if isinstance(inputs, (list, tuple)):
-            im_id = inputs[0]['im_id']
+            im_id = inputs[0]["im_id"]
         else:
-            im_id = inputs['im_id']
+            im_id = inputs["im_id"]
 
         # Convert im_id to numpy
         if isinstance(im_id, torch.Tensor):
-            outs['im_id'] = im_id.cpu().numpy()
+            outs["im_id"] = im_id.cpu().numpy()
         else:
-            outs['im_id'] = im_id
+            outs["im_id"] = im_id
 
         # Add image file path if available
-        if 'im_file' in inputs:
-            outs['im_file'] = inputs['im_file']
+        if "im_file" in inputs:
+            outs["im_file"] = inputs["im_file"]
 
         # Get inference results in COCO format
         infer_results = get_infer_results(
-            outs,
-            self.clsid2catid,
-            bias=self.bias,
-            save_threshold=self.save_threshold
+            outs, self.clsid2catid, bias=self.bias, save_threshold=self.save_threshold
         )
 
         # Accumulate results by type
-        self.results['bbox'] += infer_results.get('bbox', [])
-        self.results['mask'] += infer_results.get('mask', [])
-        self.results['segm'] += infer_results.get('segm', [])
-        self.results['keypoint'] += infer_results.get('keypoint', [])
+        self.results["bbox"] += infer_results.get("bbox", [])
+        self.results["mask"] += infer_results.get("mask", [])
+        self.results["segm"] += infer_results.get("segm", [])
+        self.results["keypoint"] += infer_results.get("keypoint", [])
 
     def accumulate(self):
         """
         Accumulate results and perform COCO evaluation.
         """
         # Evaluate bounding boxes
-        if len(self.results['bbox']) > 0:
+        if len(self.results["bbox"]) > 0:
             output = "bbox.json"
             if self.output_eval:
                 output = os.path.join(self.output_eval, output)
 
-            with open(output, 'w') as f:
-                json.dump(self.results['bbox'], f)
-                logger.info('The bbox result is saved to bbox.json.')
+            with open(output, "w") as f:
+                json.dump(self.results["bbox"], f)
+                logger.info("The bbox result is saved to bbox.json.")
 
             if self.save_prediction_only:
-                logger.info(f'The bbox result is saved to {output} and do not '
-                           'evaluate the mAP.')
+                logger.info(
+                    f"The bbox result is saved to {output} and do not evaluate the mAP."
+                )
             else:
                 bbox_stats = cocoapi_eval(
-                    output,
-                    'bbox',
-                    anno_file=self.anno_file,
-                    classwise=self.classwise
+                    output, "bbox", anno_file=self.anno_file, classwise=self.classwise
                 )
-                self.eval_results['bbox'] = bbox_stats
+                self.eval_results["bbox"] = bbox_stats
                 sys.stdout.flush()
 
         # Evaluate masks
-        if len(self.results['mask']) > 0:
+        if len(self.results["mask"]) > 0:
             output = "mask.json"
             if self.output_eval:
                 output = os.path.join(self.output_eval, output)
 
-            with open(output, 'w') as f:
-                json.dump(self.results['mask'], f)
-                logger.info('The mask result is saved to mask.json.')
+            with open(output, "w") as f:
+                json.dump(self.results["mask"], f)
+                logger.info("The mask result is saved to mask.json.")
 
             if self.save_prediction_only:
-                logger.info(f'The mask result is saved to {output} and do not '
-                           'evaluate the mAP.')
+                logger.info(
+                    f"The mask result is saved to {output} and do not evaluate the mAP."
+                )
             else:
                 seg_stats = cocoapi_eval(
-                    output,
-                    'segm',
-                    anno_file=self.anno_file,
-                    classwise=self.classwise
+                    output, "segm", anno_file=self.anno_file, classwise=self.classwise
                 )
-                self.eval_results['mask'] = seg_stats
+                self.eval_results["mask"] = seg_stats
                 sys.stdout.flush()
 
         # Evaluate segmentation
-        if len(self.results['segm']) > 0:
+        if len(self.results["segm"]) > 0:
             output = "segm.json"
             if self.output_eval:
                 output = os.path.join(self.output_eval, output)
 
-            with open(output, 'w') as f:
-                json.dump(self.results['segm'], f)
-                logger.info('The segm result is saved to segm.json.')
+            with open(output, "w") as f:
+                json.dump(self.results["segm"], f)
+                logger.info("The segm result is saved to segm.json.")
 
             if self.save_prediction_only:
-                logger.info(f'The segm result is saved to {output} and do not '
-                           'evaluate the mAP.')
+                logger.info(
+                    f"The segm result is saved to {output} and do not evaluate the mAP."
+                )
             else:
                 seg_stats = cocoapi_eval(
-                    output,
-                    'segm',
-                    anno_file=self.anno_file,
-                    classwise=self.classwise
+                    output, "segm", anno_file=self.anno_file, classwise=self.classwise
                 )
-                self.eval_results['segm'] = seg_stats
+                self.eval_results["segm"] = seg_stats
                 sys.stdout.flush()
 
         # Evaluate keypoints
-        if len(self.results['keypoint']) > 0:
+        if len(self.results["keypoint"]) > 0:
             output = "keypoint.json"
             if self.output_eval:
                 output = os.path.join(self.output_eval, output)
 
-            with open(output, 'w') as f:
-                json.dump(self.results['keypoint'], f)
-                logger.info('The keypoint result is saved to keypoint.json.')
+            with open(output, "w") as f:
+                json.dump(self.results["keypoint"], f)
+                logger.info("The keypoint result is saved to keypoint.json.")
 
             if self.save_prediction_only:
-                logger.info(f'The keypoint result is saved to {output} and do not '
-                           'evaluate the mAP.')
+                logger.info(
+                    f"The keypoint result is saved to {output} and do not "
+                    "evaluate the mAP."
+                )
             else:
-                style = self.anno_file.split('_')[-1].split('.')[0]
-                use_area = True if style == 'person' else False
+                style = self.anno_file.split("_")[-1].split(".")[0]
+                use_area = True if style == "person" else False
                 kpt_stats = cocoapi_eval(
                     output,
-                    'keypoints',
+                    "keypoints",
                     anno_file=self.anno_file,
                     classwise=self.classwise,
                     sigmas=COCO_SIGMAS,
-                    use_area=use_area
+                    use_area=use_area,
                 )
-                self.eval_results['keypoint'] = kpt_stats
+                self.eval_results["keypoint"] = kpt_stats
                 sys.stdout.flush()
 
     def log(self):

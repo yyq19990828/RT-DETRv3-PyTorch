@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import importlib
 import logging
 import sys
 from pathlib import Path
@@ -37,12 +38,11 @@ def build_paddle_model(config_path: str):
         Paddle model in eval mode with loaded weights
     """
     try:
-        import paddle
         import sys
+
+        import paddle
     except ImportError:
-        raise ImportError(
-            "PaddlePaddle is not installed. Run: uv sync --extra dev"
-        )
+        raise ImportError("PaddlePaddle is not installed. Run: uv sync --extra dev")
 
     config_path = Path(config_path)
     logger.info(f"Building Paddle model from config: {config_path}")
@@ -51,7 +51,9 @@ def build_paddle_model(config_path: str):
     paddle_codebase = project_root / "third-party" / "RT-DETRv3-paddle"
     if not paddle_codebase.exists():
         logger.error(f"Paddle codebase not found at: {paddle_codebase}")
-        logger.error("Initialize submodules with: git submodule update --init --recursive")
+        logger.error(
+            "Initialize submodules with: git submodule update --init --recursive"
+        )
         return None
 
     if str(paddle_codebase) not in sys.path:
@@ -59,7 +61,7 @@ def build_paddle_model(config_path: str):
 
     try:
         # Import Paddle model components
-        from ppdet.core.workspace import load_config, create
+        from ppdet.core.workspace import create, load_config
 
         # Load config
         logger.info(f"Loading config from: {config_path}")
@@ -71,13 +73,13 @@ def build_paddle_model(config_path: str):
 
         # Disable post-processing for raw output comparison
         # Post-processing includes NMS which changes output format
-        if hasattr(model, 'exclude_post_process'):
+        if hasattr(model, "exclude_post_process"):
             logger.info("Disabling post-processing for raw output comparison")
             model.exclude_post_process = True
 
         # Load checkpoint if specified in config
-        if 'checkpoint' in cfg and cfg['checkpoint']:
-            checkpoint_path = Path(cfg['checkpoint'])
+        if "checkpoint" in cfg and cfg["checkpoint"]:
+            checkpoint_path = Path(cfg["checkpoint"])
             if not checkpoint_path.is_absolute():
                 checkpoint_path = project_root / checkpoint_path
 
@@ -96,6 +98,7 @@ def build_paddle_model(config_path: str):
     except Exception as e:
         logger.error(f"Failed to build Paddle model: {e}")
         import traceback
+
         logger.error("Traceback:")
         logger.error(traceback.format_exc())
 
@@ -123,8 +126,9 @@ def build_pytorch_model(config_path: str):
 
     # Import PyTorch model builder and config loader using workspace
     try:
-        from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
-        from ppdet_pytorch.core.workspace import load_config, create
+        from ppdet_pytorch.core.workspace import create, load_config
+
+        importlib.import_module("ppdet_pytorch.modeling.architectures.rtdetrv3")
     except ImportError as e:
         logger.error(f"Failed to import PyTorch components: {e}")
         logger.error("Make sure ppdet_pytorch is in Python path")
@@ -141,25 +145,27 @@ def build_pytorch_model(config_path: str):
 
     # Disable post-processing for raw output comparison
     # Post-processing includes NMS which changes output format
-    if hasattr(model, 'exclude_post_process'):
+    if hasattr(model, "exclude_post_process"):
         logger.info("Disabling post-processing for raw output comparison")
         model.exclude_post_process = True
 
     # Load checkpoint if specified in config
-    if 'checkpoint' in cfg and cfg['checkpoint']:
-        checkpoint_path = Path(cfg['checkpoint'])
+    if "checkpoint" in cfg and cfg["checkpoint"]:
+        checkpoint_path = Path(cfg["checkpoint"])
         if not checkpoint_path.is_absolute():
             checkpoint_path = project_root / checkpoint_path
 
         logger.info(f"Loading checkpoint: {checkpoint_path}")
-        checkpoint = torch.load(str(checkpoint_path), map_location='cpu', weights_only=False)
+        checkpoint = torch.load(
+            str(checkpoint_path), map_location="cpu", weights_only=False
+        )
 
         # Extract state dict
         if isinstance(checkpoint, dict):
-            if 'model' in checkpoint:
-                state_dict = checkpoint['model']
-            elif 'state_dict' in checkpoint:
-                state_dict = checkpoint['state_dict']
+            if "model" in checkpoint:
+                state_dict = checkpoint["model"]
+            elif "state_dict" in checkpoint:
+                state_dict = checkpoint["state_dict"]
             else:
                 state_dict = checkpoint
         else:
@@ -191,46 +197,39 @@ def build_pytorch_model(config_path: str):
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description="Check RT-DETRv3 model output consistency")
+    parser = argparse.ArgumentParser(
+        description="Check RT-DETRv3 model output consistency"
+    )
     parser.add_argument(
         "--paddle-config",
         required=True,
-        help="Path to Paddle config file in third-party/RT-DETRv3-paddle/configs"
+        help="Path to Paddle config file in third-party/RT-DETRv3-paddle/configs",
     )
     parser.add_argument(
         "--torch-config",
         required=True,
-        help="Path to PyTorch config file under configs"
+        help="Path to PyTorch config file under configs",
     )
     parser.add_argument(
-        "--input-size",
-        type=int,
-        default=640,
-        help="Input image size (default: 640)"
+        "--input-size", type=int, default=640, help="Input image size (default: 640)"
     )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=1,
-        help="Batch size for forward pass (default: 1)"
+        help="Batch size for forward pass (default: 1)",
     )
     parser.add_argument(
-        "--rtol",
-        type=float,
-        default=1e-4,
-        help="Relative tolerance (default: 1e-4)"
+        "--rtol", type=float, default=1e-4, help="Relative tolerance (default: 1e-4)"
     )
     parser.add_argument(
-        "--atol",
-        type=float,
-        default=1e-5,
-        help="Absolute tolerance (default: 1e-5)"
+        "--atol", type=float, default=1e-5, help="Absolute tolerance (default: 1e-5)"
     )
     parser.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Logging level"
+        help="Logging level",
     )
 
     args = parser.parse_args()
@@ -239,16 +238,16 @@ def main():
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format="[%(asctime)s] %(levelname)s: %(message)s",
-        datefmt="%m/%d %H:%M:%S"
+        datefmt="%m/%d %H:%M:%S",
     )
 
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info("RT-DETRv3 Model Output Consistency Check")
-    logger.info("="*80)
+    logger.info("=" * 80)
 
     # Build models
     logger.info("\nStep 1: Building models...")
-    logger.info("-"*80)
+    logger.info("-" * 80)
 
     paddle_model = build_paddle_model(args.paddle_config)
     torch_model = build_pytorch_model(args.torch_config)
@@ -258,8 +257,7 @@ def main():
         logger.info("\nTo enable validation:")
         logger.info("1. Install development dependencies: uv sync --extra dev")
         logger.info(
-            "2. Initialize the reference code: "
-            "git submodule update --init --recursive"
+            "2. Initialize the reference code: git submodule update --init --recursive"
         )
         logger.info("3. Verify the supplied config and checkpoint paths")
         return 1
@@ -270,7 +268,7 @@ def main():
 
     # Run forward pass comparison
     logger.info("\nStep 2: Model output validation")
-    logger.info("-"*80)
+    logger.info("-" * 80)
 
     # Generate random input
     input_shape = (args.batch_size, 3, args.input_size, args.input_size)
@@ -281,25 +279,21 @@ def main():
     validator = ModelOutputValidator(rtol=args.rtol, atol=args.atol)
 
     # Run validation
-    result = validator.validate_forward_pass(
-        paddle_model,
-        torch_model,
-        sample_input
-    )
+    result = validator.validate_forward_pass(paddle_model, torch_model, sample_input)
 
     # Print report
     validator.print_validation_report(result)
 
     # Return exit code
     if result.passed:
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("✅ Model output validation PASSED!")
-        logger.info("="*80)
+        logger.info("=" * 80)
         return 0
     else:
-        logger.error("\n" + "="*80)
+        logger.error("\n" + "=" * 80)
         logger.error("❌ Model output validation FAILED!")
-        logger.error("="*80)
+        logger.error("=" * 80)
         return 1
 
 

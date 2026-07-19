@@ -22,9 +22,7 @@ Hungarian Matcher for DETR - PyTorch Migration from PaddlePaddle
 Reference: ppdet/modeling/transformers/matchers.py
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import torch
 import torch.nn as nn
@@ -32,30 +30,27 @@ import torch.nn.functional as F
 from scipy.optimize import linear_sum_assignment
 
 from ppdet_pytorch.core.workspace import register, serializable
+
 from ..losses.iou_loss import GIoULoss
 from .utils import bbox_cxcywh_to_xyxy
 
-__all__ = ['HungarianMatcher']
+__all__ = ["HungarianMatcher"]
 
 
 @register
 @serializable
 class HungarianMatcher(nn.Module):
-    __shared__ = ['use_focal_loss', 'with_mask', 'num_sample_points']
+    __shared__ = ["use_focal_loss", "with_mask", "num_sample_points"]
 
-    def __init__(self,
-                 matcher_coeff={
-                     'class': 1,
-                     'bbox': 5,
-                     'giou': 2,
-                     'mask': 1,
-                     'dice': 1
-                 },
-                 use_focal_loss=False,
-                 with_mask=False,
-                 num_sample_points=12544,
-                 alpha=0.25,
-                 gamma=2.0):
+    def __init__(
+        self,
+        matcher_coeff={"class": 1, "bbox": 5, "giou": 2, "mask": 1, "dice": 1},
+        use_focal_loss=False,
+        with_mask=False,
+        num_sample_points=12544,
+        alpha=0.25,
+        gamma=2.0,
+    ):
         r"""
         Args:
             matcher_coeff (dict): The coefficient of hungarian matcher cost.
@@ -70,13 +65,7 @@ class HungarianMatcher(nn.Module):
 
         self.giou_loss = GIoULoss()
 
-    def forward(self,
-                boxes,
-                logits,
-                gt_bbox,
-                gt_class,
-                masks=None,
-                gt_mask=None):
+    def forward(self, boxes, logits, gt_bbox, gt_class, masks=None, gt_mask=None):
         r"""
         Args:
             boxes (Tensor): [b, query, 4]
@@ -97,16 +86,22 @@ class HungarianMatcher(nn.Module):
 
         num_gts = [len(a) for a in gt_class]
         if sum(num_gts) == 0:
-            return [(torch.tensor(
-                [], dtype=torch.int64, device=boxes.device), torch.tensor(
-                    [], dtype=torch.int64, device=boxes.device))
-                    for _ in range(bs)]
+            return [
+                (
+                    torch.tensor([], dtype=torch.int64, device=boxes.device),
+                    torch.tensor([], dtype=torch.int64, device=boxes.device),
+                )
+                for _ in range(bs)
+            ]
 
         # We flatten to compute the cost matrices in a batch
         # [batch_size * num_queries, num_classes]
         logits = logits.detach()
-        out_prob = torch.sigmoid(logits.flatten(
-            0, 1)) if self.use_focal_loss else F.softmax(logits.flatten(0, 1), dim=-1)
+        out_prob = (
+            torch.sigmoid(logits.flatten(0, 1))
+            if self.use_focal_loss
+            else F.softmax(logits.flatten(0, 1), dim=-1)
+        )
         # [batch_size * num_queries, 4]
         out_bbox = boxes.detach().flatten(0, 1)
 
@@ -115,70 +110,88 @@ class HungarianMatcher(nn.Module):
         tgt_bbox = torch.cat(gt_bbox)
 
         # Compute the classification cost
-        out_prob = torch.gather(out_prob, 1, tgt_ids.unsqueeze(0).expand(out_prob.shape[0], -1))
+        out_prob = torch.gather(
+            out_prob, 1, tgt_ids.unsqueeze(0).expand(out_prob.shape[0], -1)
+        )
         if self.use_focal_loss:
-            neg_cost_class = (1 - self.alpha) * (out_prob**self.gamma) * (-(
-                1 - out_prob + 1e-8).log())
-            pos_cost_class = self.alpha * (
-                (1 - out_prob)**self.gamma) * (-(out_prob + 1e-8).log())
+            neg_cost_class = (
+                (1 - self.alpha)
+                * (out_prob**self.gamma)
+                * (-(1 - out_prob + 1e-8).log())
+            )
+            pos_cost_class = (
+                self.alpha * ((1 - out_prob) ** self.gamma) * (-(out_prob + 1e-8).log())
+            )
             cost_class = pos_cost_class - neg_cost_class
         else:
             cost_class = -out_prob
 
         # Compute the L1 cost between boxes
-        cost_bbox = (
-            out_bbox.unsqueeze(1) - tgt_bbox.unsqueeze(0)).abs().sum(-1)
+        cost_bbox = (out_bbox.unsqueeze(1) - tgt_bbox.unsqueeze(0)).abs().sum(-1)
 
         # Compute the giou cost betwen boxes
         giou_loss = self.giou_loss(
             bbox_cxcywh_to_xyxy(out_bbox.unsqueeze(1)),
-            bbox_cxcywh_to_xyxy(tgt_bbox.unsqueeze(0))).squeeze(-1)
+            bbox_cxcywh_to_xyxy(tgt_bbox.unsqueeze(0)),
+        ).squeeze(-1)
         cost_giou = giou_loss - 1
 
         # Final cost matrix
-        C = self.matcher_coeff['class'] * cost_class + \
-            self.matcher_coeff['bbox'] * cost_bbox + \
-            self.matcher_coeff['giou'] * cost_giou
+        C = (
+            self.matcher_coeff["class"] * cost_class
+            + self.matcher_coeff["bbox"] * cost_bbox
+            + self.matcher_coeff["giou"] * cost_giou
+        )
         # Compute the mask cost and dice cost
         if self.with_mask:
-            assert masks is not None and gt_mask is not None, \
-                'Make sure the input has `mask` and `gt_mask`'
+            assert masks is not None and gt_mask is not None, (
+                "Make sure the input has `mask` and `gt_mask`"
+            )
             # all masks share the same set of points for efficient matching
-            sample_points = torch.rand(bs, 1, self.num_sample_points, 2, device=boxes.device)
+            sample_points = torch.rand(
+                bs, 1, self.num_sample_points, 2, device=boxes.device
+            )
             sample_points = 2.0 * sample_points - 1.0
 
             out_mask = F.grid_sample(
-                masks.detach(), sample_points, align_corners=False).squeeze(-2)
+                masks.detach(), sample_points, align_corners=False
+            ).squeeze(-2)
             out_mask = out_mask.flatten(0, 1)
 
             tgt_mask = torch.cat(gt_mask).unsqueeze(1)
-            sample_points = torch.cat([
-                a.tile([b, 1, 1, 1]) for a, b in zip(sample_points, num_gts)
-                if b > 0
-            ])
+            sample_points = torch.cat(
+                [a.tile([b, 1, 1, 1]) for a, b in zip(sample_points, num_gts) if b > 0]
+            )
             tgt_mask = F.grid_sample(
-                tgt_mask, sample_points, align_corners=False).squeeze([1, 2])
+                tgt_mask, sample_points, align_corners=False
+            ).squeeze([1, 2])
 
             with torch.cuda.amp.autocast(enabled=False):
                 # binary cross entropy cost
                 pos_cost_mask = F.binary_cross_entropy_with_logits(
-                    out_mask, torch.ones_like(out_mask), reduction='none')
+                    out_mask, torch.ones_like(out_mask), reduction="none"
+                )
                 neg_cost_mask = F.binary_cross_entropy_with_logits(
-                    out_mask, torch.zeros_like(out_mask), reduction='none')
-                cost_mask = torch.matmul(
-                    pos_cost_mask, tgt_mask.T) + torch.matmul(
-                        neg_cost_mask, (1 - tgt_mask).T)
+                    out_mask, torch.zeros_like(out_mask), reduction="none"
+                )
+                cost_mask = torch.matmul(pos_cost_mask, tgt_mask.T) + torch.matmul(
+                    neg_cost_mask, (1 - tgt_mask).T
+                )
                 cost_mask /= self.num_sample_points
 
                 # dice cost
                 out_mask = torch.sigmoid(out_mask)
                 numerator = 2 * torch.matmul(out_mask, tgt_mask.T)
-                denominator = out_mask.sum(
-                    -1, keepdim=True) + tgt_mask.sum(-1).unsqueeze(0)
+                denominator = out_mask.sum(-1, keepdim=True) + tgt_mask.sum(
+                    -1
+                ).unsqueeze(0)
                 cost_dice = 1 - (numerator + 1) / (denominator + 1)
 
-                C = C + self.matcher_coeff['mask'] * cost_mask + \
-                    self.matcher_coeff['dice'] * cost_dice
+                C = (
+                    C
+                    + self.matcher_coeff["mask"] * cost_mask
+                    + self.matcher_coeff["dice"] * cost_dice
+                )
 
         C = C.reshape(bs, num_queries, -1)
         C = C.chunk(bs)
@@ -190,7 +203,10 @@ class HungarianMatcher(nn.Module):
             for i, c in enumerate(C)
         ]
 
-        return [(torch.tensor(
-            i, dtype=torch.int64, device=boxes.device), torch.tensor(
-                j, dtype=torch.int64, device=boxes.device))
-                for i, j in indices]
+        return [
+            (
+                torch.tensor(i, dtype=torch.int64, device=boxes.device),
+                torch.tensor(j, dtype=torch.int64, device=boxes.device),
+            )
+            for i, j in indices
+        ]

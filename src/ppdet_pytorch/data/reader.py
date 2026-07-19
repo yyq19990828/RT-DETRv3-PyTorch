@@ -20,22 +20,21 @@ Handle variable-length annotations and create properly batched tensors.
 
 import os
 import traceback
+from copy import deepcopy
+
 import numpy as np
 import torch
 import torch.distributed as dist
-
-from copy import deepcopy
-
 from torch.utils.data import DataLoader
-from .sampler import DistributedBatchSampler
-
-from .utils import default_collate_fn
 
 from ppdet_pytorch.core.workspace import register
-from . import transform
-
 from ppdet_pytorch.utils.logger import setup_logger
-logger = setup_logger('reader')
+
+from . import transform
+from .sampler import DistributedBatchSampler
+from .utils import default_collate_fn
+
+logger = setup_logger("reader")
 
 MAIN_PID = os.getpid()
 
@@ -48,24 +47,25 @@ class Compose(object):
             for k, v in t.items():
                 op_cls = getattr(transform, k)
                 f = op_cls(**v)
-                if hasattr(f, 'num_classes'):
+                if hasattr(f, "num_classes"):
                     f.num_classes = num_classes
 
                 self.transforms_cls.append(f)
 
     def _update_transforms_cls(self, data):
-        if 'transform_schedulers' in data:
+        if "transform_schedulers" in data:
+
             def is_valid(op):
                 op_name = op.__class__.__name__
-                for t in data['transform_schedulers']:
+                for t in data["transform_schedulers"]:
                     for k, v in t.items():
                         if op_name == k:
                             # [start_epoch, stop_epoch)
-                            start_epoch = v.get('start_epoch', 0)
-                            if start_epoch > data['curr_epoch']:
+                            start_epoch = v.get("start_epoch", 0)
+                            if start_epoch > data["curr_epoch"]:
                                 return False
-                            stop_epoch = v.get('stop_epoch', float('inf'))
-                            if stop_epoch <= data['curr_epoch']:
+                            stop_epoch = v.get("stop_epoch", float("inf"))
+                            if stop_epoch <= data["curr_epoch"]:
                                 return False
                 return True
 
@@ -80,9 +80,10 @@ class Compose(object):
                 data = f(data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map sample transform [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map sample transform [{}] "
+                    "with error: {} and stack:\n{}".format(f, e, str(stack_info))
+                )
                 raise e
 
         return data
@@ -100,13 +101,14 @@ class BatchCompose(Compose):
                 data = f(data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map batch transform [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map batch transform [{}] "
+                    "with error: {} and stack:\n{}".format(f, e, str(stack_info))
+                )
                 raise e
 
         # remove keys which is not needed by model
-        extra_key = ['h', 'w', 'flipped', 'transform_schedulers']
+        extra_key = ["h", "w", "flipped", "transform_schedulers"]
         for k in extra_key:
             for sample in data:
                 if k in sample:
@@ -122,9 +124,9 @@ class BatchCompose(Compose):
                 tmp_data = []
                 for i in range(len(data)):
                     tmp_data.append(data[i][k])
-                if not 'gt_' in k and not 'is_crowd' in k and not 'difficult' in k:
+                if "gt_" not in k and "is_crowd" not in k and "difficult" not in k:
                     tmp_data = np.stack(tmp_data, axis=0)
-                if 'origin_' in k:
+                if "origin_" in k:
                     tmp_data = np.stack(tmp_data, axis=0)
                 batch_data[k] = tmp_data
         return batch_data
@@ -154,24 +156,26 @@ class BaseDataLoader(object):
                 host-to-device transfers. Default False.
     """
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=False,
-                 drop_last=False,
-                 num_classes=80,
-                 collate_batch=True,
-                 use_shared_memory=False,
-                 seed=0,
-                 **kwargs):
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=False,
+        drop_last=False,
+        num_classes=80,
+        collate_batch=True,
+        use_shared_memory=False,
+        seed=0,
+        **kwargs,
+    ):
         # sample transform
-        self._sample_transforms = Compose(
-            sample_transforms, num_classes=num_classes)
+        self._sample_transforms = Compose(sample_transforms, num_classes=num_classes)
 
         # batch transfrom
-        self._batch_transforms = BatchCompose(batch_transforms, num_classes,
-                                              collate_batch)
+        self._batch_transforms = BatchCompose(
+            batch_transforms, num_classes, collate_batch
+        )
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.drop_last = drop_last
@@ -179,11 +183,7 @@ class BaseDataLoader(object):
         self.seed = int(seed)
         self.kwargs = kwargs
 
-    def __call__(self,
-                 dataset,
-                 worker_num,
-                 batch_sampler=None,
-                 return_list=False):
+    def __call__(self, dataset, worker_num, batch_sampler=None, return_list=False):
         # Kept for compatibility with Paddle-style reader configuration.
         # PyTorch always returns the object produced by ``collate_fn``.
         del return_list
@@ -201,7 +201,8 @@ class BaseDataLoader(object):
                 batch_size=self.batch_size,
                 shuffle=self.shuffle,
                 drop_last=self.drop_last,
-                seed=self.seed)
+                seed=self.seed,
+            )
         else:
             self._batch_sampler = batch_sampler
 
@@ -215,21 +216,21 @@ class BaseDataLoader(object):
             collate_fn=self._batch_transforms,
             num_workers=worker_num,
             pin_memory=self.pin_memory,
-            generator=self._worker_generator)
+            generator=self._worker_generator,
+        )
         self.loader = None
 
         return self
 
     def _seed_worker_generator(self, epoch):
-        epoch_seed = (
-            self.seed + int(epoch) * self._world_size + self._rank)
+        epoch_seed = self.seed + int(epoch) * self._world_size + self._rank
         self._worker_generator.manual_seed(epoch_seed)
 
     def set_epoch(self, epoch):
         """Reset sampler and worker RNG deterministically for an epoch."""
-        if hasattr(self._batch_sampler, 'set_epoch'):
+        if hasattr(self._batch_sampler, "set_epoch"):
             self._batch_sampler.set_epoch(epoch)
-        if hasattr(self.dataset, 'set_epoch'):
+        if hasattr(self.dataset, "set_epoch"):
             self.dataset.set_epoch(epoch)
         self._seed_worker_generator(epoch)
         self.loader = None
@@ -258,88 +259,129 @@ class BaseDataLoader(object):
 
 @register
 class TrainReader(BaseDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=True,
-                 drop_last=True,
-                 num_classes=80,
-                 collate_batch=True,
-                 **kwargs):
-        super(TrainReader, self).__init__(sample_transforms, batch_transforms,
-                                          batch_size, shuffle, drop_last,
-                                          num_classes, collate_batch, **kwargs)
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=True,
+        drop_last=True,
+        num_classes=80,
+        collate_batch=True,
+        **kwargs,
+    ):
+        super(TrainReader, self).__init__(
+            sample_transforms,
+            batch_transforms,
+            batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            collate_batch,
+            **kwargs,
+        )
 
 
 @register
 class EvalReader(BaseDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=False,
-                 drop_last=False,
-                 num_classes=80,
-                 **kwargs):
-        super(EvalReader, self).__init__(sample_transforms, batch_transforms,
-                                         batch_size, shuffle, drop_last,
-                                         num_classes, **kwargs)
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=False,
+        drop_last=False,
+        num_classes=80,
+        **kwargs,
+    ):
+        super(EvalReader, self).__init__(
+            sample_transforms,
+            batch_transforms,
+            batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            **kwargs,
+        )
 
 
 @register
 class TestReader(BaseDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=False,
-                 drop_last=False,
-                 num_classes=80,
-                 **kwargs):
-        super(TestReader, self).__init__(sample_transforms, batch_transforms,
-                                         batch_size, shuffle, drop_last,
-                                         num_classes, **kwargs)
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=False,
+        drop_last=False,
+        num_classes=80,
+        **kwargs,
+    ):
+        super(TestReader, self).__init__(
+            sample_transforms,
+            batch_transforms,
+            batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            **kwargs,
+        )
 
 
 @register
 class EvalMOTReader(BaseDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=False,
-                 drop_last=False,
-                 num_classes=1,
-                 **kwargs):
-        super(EvalMOTReader, self).__init__(sample_transforms, batch_transforms,
-                                            batch_size, shuffle, drop_last,
-                                            num_classes, **kwargs)
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=False,
+        drop_last=False,
+        num_classes=1,
+        **kwargs,
+    ):
+        super(EvalMOTReader, self).__init__(
+            sample_transforms,
+            batch_transforms,
+            batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            **kwargs,
+        )
 
 
 @register
 class TestMOTReader(BaseDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 batch_transforms=[],
-                 batch_size=1,
-                 shuffle=False,
-                 drop_last=False,
-                 num_classes=1,
-                 **kwargs):
-        super(TestMOTReader, self).__init__(sample_transforms, batch_transforms,
-                                            batch_size, shuffle, drop_last,
-                                            num_classes, **kwargs)
+    def __init__(
+        self,
+        sample_transforms=[],
+        batch_transforms=[],
+        batch_size=1,
+        shuffle=False,
+        drop_last=False,
+        num_classes=1,
+        **kwargs,
+    ):
+        super(TestMOTReader, self).__init__(
+            sample_transforms,
+            batch_transforms,
+            batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            **kwargs,
+        )
 
 
 # ===========================================================================================
@@ -353,7 +395,7 @@ class Compose_SSOD(object):
             for k, v in t.items():
                 op_cls = getattr(transform, k)
                 f = op_cls(**v)
-                if hasattr(f, 'num_classes'):
+                if hasattr(f, "num_classes"):
                     f.num_classes = num_classes
                 self.base_transforms_cls.append(f)
 
@@ -363,7 +405,7 @@ class Compose_SSOD(object):
             for k, v in t.items():
                 op_cls = getattr(transform, k)
                 f = op_cls(**v)
-                if hasattr(f, 'num_classes'):
+                if hasattr(f, "num_classes"):
                     f.num_classes = num_classes
                 self.weak_augs_cls.append(f)
 
@@ -373,7 +415,7 @@ class Compose_SSOD(object):
             for k, v in t.items():
                 op_cls = getattr(transform, k)
                 f = op_cls(**v)
-                if hasattr(f, 'num_classes'):
+                if hasattr(f, "num_classes"):
                     f.num_classes = num_classes
                 self.strong_augs_cls.append(f)
 
@@ -383,9 +425,10 @@ class Compose_SSOD(object):
                 data = f(data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map sample transform [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map sample transform [{}] "
+                    "with error: {} and stack:\n{}".format(f, e, str(stack_info))
+                )
                 raise e
 
         weak_data = deepcopy(data)
@@ -395,9 +438,11 @@ class Compose_SSOD(object):
                 weak_data = f(weak_data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map weak aug [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map weak aug [{}] with error: {} and stack:\n{}".format(
+                        f, e, str(stack_info)
+                    )
+                )
                 raise e
 
         for f in self.strong_augs_cls:
@@ -405,12 +450,14 @@ class Compose_SSOD(object):
                 strong_data = f(strong_data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map strong aug [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map strong aug [{}] with error: {} and stack:\n{}".format(
+                        f, e, str(stack_info)
+                    )
+                )
                 raise e
 
-        weak_data['strong_aug'] = strong_data
+        weak_data["strong_aug"] = strong_data
         return weak_data
 
 
@@ -423,26 +470,27 @@ class BatchCompose_SSOD(Compose):
         # split strong_data from data(weak_data)
         strong_data = []
         for sample in data:
-            strong_data.append(sample['strong_aug'])
-            sample.pop('strong_aug')
+            strong_data.append(sample["strong_aug"])
+            sample.pop("strong_aug")
 
         for f in self.transforms_cls:
             try:
                 data = f(data)
-                if 'BatchRandomResizeForSSOD' in f._id:
+                if "BatchRandomResizeForSSOD" in f._id:
                     strong_data = f(strong_data, data[1])[0]
                     data = data[0]
                 else:
                     strong_data = f(strong_data)
             except Exception as e:
                 stack_info = traceback.format_exc()
-                logger.warning("fail to map batch transform [{}] "
-                               "with error: {} and stack:\n{}".format(
-                                   f, e, str(stack_info)))
+                logger.warning(
+                    "fail to map batch transform [{}] "
+                    "with error: {} and stack:\n{}".format(f, e, str(stack_info))
+                )
                 raise e
 
         # remove keys which is not needed by model
-        extra_key = ['h', 'w', 'flipped']
+        extra_key = ["h", "w", "flipped"]
         for k in extra_key:
             for sample in data:
                 if k in sample:
@@ -463,7 +511,7 @@ class BatchCompose_SSOD(Compose):
                 tmp_data = []
                 for i in range(len(data)):
                     tmp_data.append(data[i][k])
-                if not 'gt_' in k and not 'is_crowd' in k and not 'difficult' in k:
+                if "gt_" not in k and "is_crowd" not in k and "difficult" not in k:
                     tmp_data = np.stack(tmp_data, axis=0)
                 batch_data[k] = tmp_data
 
@@ -472,7 +520,7 @@ class BatchCompose_SSOD(Compose):
                 tmp_data = []
                 for i in range(len(strong_data)):
                     tmp_data.append(strong_data[i][k])
-                if not 'gt_' in k and not 'is_crowd' in k and not 'difficult' in k:
+                if "gt_" not in k and "is_crowd" not in k and "difficult" not in k:
                     tmp_data = np.stack(tmp_data, axis=0)
                 strong_batch_data[k] = tmp_data
 
@@ -488,13 +536,13 @@ class CombineSSODLoader(object):
         while True:
             try:
                 label_samples = next(self.label_loader_iter)
-            except:
+            except StopIteration:
                 self.label_loader_iter = iter(self.label_loader)
                 label_samples = next(self.label_loader_iter)
 
             try:
                 unlabel_samples = next(self.unlabel_loader_iter)
-            except:
+            except StopIteration:
                 self.unlabel_loader_iter = iter(self.unlabel_loader)
                 unlabel_samples = next(self.unlabel_loader_iter)
 
@@ -502,7 +550,7 @@ class CombineSSODLoader(object):
                 label_samples[0],  # sup weak
                 label_samples[1],  # sup strong
                 unlabel_samples[0],  # unsup weak
-                unlabel_samples[1]  # unsup strong
+                unlabel_samples[1],  # unsup strong
             )
 
     def __call__(self):
@@ -510,32 +558,38 @@ class CombineSSODLoader(object):
 
 
 class BaseSemiDataLoader(object):
-    def __init__(self,
-                 sample_transforms=[],
-                 weak_aug=[],
-                 strong_aug=[],
-                 sup_batch_transforms=[],
-                 unsup_batch_transforms=[],
-                 sup_batch_size=1,
-                 unsup_batch_size=1,
-                 shuffle=True,
-                 drop_last=True,
-                 num_classes=80,
-                 collate_batch=True,
-                 use_shared_memory=False,
-                 **kwargs):
+    def __init__(
+        self,
+        sample_transforms=[],
+        weak_aug=[],
+        strong_aug=[],
+        sup_batch_transforms=[],
+        unsup_batch_transforms=[],
+        sup_batch_size=1,
+        unsup_batch_size=1,
+        shuffle=True,
+        drop_last=True,
+        num_classes=80,
+        collate_batch=True,
+        use_shared_memory=False,
+        **kwargs,
+    ):
         # sup transforms
         self._sample_transforms_label = Compose_SSOD(
-            sample_transforms, weak_aug, strong_aug, num_classes=num_classes)
+            sample_transforms, weak_aug, strong_aug, num_classes=num_classes
+        )
         self._batch_transforms_label = BatchCompose_SSOD(
-            sup_batch_transforms, num_classes, collate_batch)
+            sup_batch_transforms, num_classes, collate_batch
+        )
         self.batch_size_label = sup_batch_size
 
         # unsup transforms
         self._sample_transforms_unlabel = Compose_SSOD(
-            sample_transforms, weak_aug, strong_aug, num_classes=num_classes)
+            sample_transforms, weak_aug, strong_aug, num_classes=num_classes
+        )
         self._batch_transforms_unlabel = BatchCompose_SSOD(
-            unsup_batch_transforms, num_classes, collate_batch)
+            unsup_batch_transforms, num_classes, collate_batch
+        )
         self.batch_size_unlabel = unsup_batch_size
 
         # common
@@ -544,13 +598,15 @@ class BaseSemiDataLoader(object):
         self.pin_memory = bool(use_shared_memory)
         self.kwargs = kwargs
 
-    def __call__(self,
-                 dataset_label,
-                 dataset_unlabel,
-                 worker_num,
-                 batch_sampler_label=None,
-                 batch_sampler_unlabel=None,
-                 return_list=False):
+    def __call__(
+        self,
+        dataset_label,
+        dataset_unlabel,
+        worker_num,
+        batch_sampler_label=None,
+        batch_sampler_unlabel=None,
+        return_list=False,
+    ):
         # Kept for compatibility with Paddle-style reader configuration.
         # PyTorch always returns the object produced by ``collate_fn``.
         del return_list
@@ -565,7 +621,8 @@ class BaseSemiDataLoader(object):
                 self.dataset_label,
                 batch_size=self.batch_size_label,
                 shuffle=self.shuffle,
-                drop_last=self.drop_last)
+                drop_last=self.drop_last,
+            )
         else:
             self._batch_sampler_label = batch_sampler_label
 
@@ -581,7 +638,8 @@ class BaseSemiDataLoader(object):
                 self.dataset_unlabel,
                 batch_size=self.batch_size_unlabel,
                 shuffle=self.shuffle,
-                drop_last=self.drop_last)
+                drop_last=self.drop_last,
+            )
         else:
             self._batch_sampler_unlabel = batch_sampler_unlabel
 
@@ -590,17 +648,20 @@ class BaseSemiDataLoader(object):
             batch_sampler=self._batch_sampler_label,
             collate_fn=self._batch_transforms_label,
             num_workers=worker_num,
-            pin_memory=self.pin_memory)
+            pin_memory=self.pin_memory,
+        )
 
         self.dataloader_unlabel = DataLoader(
             dataset=self.dataset_unlabel,
             batch_sampler=self._batch_sampler_unlabel,
             collate_fn=self._batch_transforms_unlabel,
             num_workers=worker_num,
-            pin_memory=self.pin_memory)
+            pin_memory=self.pin_memory,
+        )
 
-        self.dataloader = CombineSSODLoader(self.dataloader_label,
-                                            self.dataloader_unlabel)
+        self.dataloader = CombineSSODLoader(
+            self.dataloader_label, self.dataloader_unlabel
+        )
         self.loader = iter(self.dataloader)
         return self
 
@@ -620,22 +681,34 @@ class BaseSemiDataLoader(object):
 
 @register
 class SemiTrainReader(BaseSemiDataLoader):
-    __shared__ = ['num_classes']
+    __shared__ = ["num_classes"]
 
-    def __init__(self,
-                 sample_transforms=[],
-                 weak_aug=[],
-                 strong_aug=[],
-                 sup_batch_transforms=[],
-                 unsup_batch_transforms=[],
-                 sup_batch_size=1,
-                 unsup_batch_size=1,
-                 shuffle=True,
-                 drop_last=True,
-                 num_classes=80,
-                 collate_batch=True,
-                 **kwargs):
+    def __init__(
+        self,
+        sample_transforms=[],
+        weak_aug=[],
+        strong_aug=[],
+        sup_batch_transforms=[],
+        unsup_batch_transforms=[],
+        sup_batch_size=1,
+        unsup_batch_size=1,
+        shuffle=True,
+        drop_last=True,
+        num_classes=80,
+        collate_batch=True,
+        **kwargs,
+    ):
         super(SemiTrainReader, self).__init__(
-            sample_transforms, weak_aug, strong_aug, sup_batch_transforms,
-            unsup_batch_transforms, sup_batch_size, unsup_batch_size, shuffle,
-            drop_last, num_classes, collate_batch, **kwargs)
+            sample_transforms,
+            weak_aug,
+            strong_aug,
+            sup_batch_transforms,
+            unsup_batch_transforms,
+            sup_batch_size,
+            unsup_batch_size,
+            shuffle,
+            drop_last,
+            num_classes,
+            collate_batch,
+            **kwargs,
+        )

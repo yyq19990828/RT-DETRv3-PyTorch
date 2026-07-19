@@ -16,24 +16,24 @@
 # https://github.com/dvlab-research/GridMask/blob/master/detection_grid/maskrcnn_benchmark/data/transforms/grid.py
 # TODO check the pytorch implementation
 
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import division
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from PIL import Image
 
 
 class Gridmask(object):
-    def __init__(self,
-                 use_h=True,
-                 use_w=True,
-                 rotate=1,
-                 offset=False,
-                 ratio=0.5,
-                 mode=1,
-                 prob=0.7,
-                 upper_iter=360000):
+    def __init__(
+        self,
+        use_h=True,
+        use_w=True,
+        rotate=1,
+        offset=False,
+        ratio=0.5,
+        mode=1,
+        prob=0.7,
+        upper_iter=360000,
+    ):
         super(Gridmask, self).__init__()
         self.use_h = use_h
         self.use_w = use_w
@@ -72,8 +72,9 @@ class Gridmask(object):
         mask = Image.fromarray(np.uint8(mask))
         mask = mask.rotate(r)
         mask = np.asarray(mask)
-        mask = mask[(hh - h) // 2:(hh - h) // 2 + h, (ww - w) // 2:(ww - w) // 2
-                    + w].astype(np.float32)
+        mask = mask[
+            (hh - h) // 2 : (hh - h) // 2 + h, (ww - w) // 2 : (ww - w) // 2 + w
+        ].astype(np.float32)
 
         if self.mode == 1:
             mask = 1 - mask

@@ -14,13 +14,15 @@
 import numpy as np
 
 
-def get_det_res(bboxes,
-                bbox_nums,
-                image_id,
-                label_to_cat_id_map,
-                bias=0,
-                im_file=None,
-                save_threshold=0):
+def get_det_res(
+    bboxes,
+    bbox_nums,
+    image_id,
+    label_to_cat_id_map,
+    bias=0,
+    im_file=None,
+    save_threshold=0,
+):
     det_res = []
     k = 0
     for i in range(len(bbox_nums)):
@@ -37,13 +39,13 @@ def get_det_res(bboxes,
             h = ymax - ymin + bias
             bbox = [xmin, ymin, w, h]
             dt_res = {
-                'image_id': cur_image_id,
-                'category_id': category_id,
-                'bbox': bbox,
-                'score': score
+                "image_id": cur_image_id,
+                "category_id": category_id,
+                "bbox": bbox,
+                "score": score,
             }
             if im_file:
-                dt_res['im_file'] = im_file
+                dt_res["im_file"] = im_file
             det_res.append(dt_res)
     return det_res
 
@@ -63,10 +65,10 @@ def get_det_poly_res(bboxes, bbox_nums, image_id, label_to_cat_id_map, bias=0):
             category_id = label_to_cat_id_map[int(num_id)]
             rbox = [x1, y1, x2, y2, x3, y3, x4, y4]
             dt_res = {
-                'image_id': cur_image_id,
-                'category_id': category_id,
-                'bbox': rbox,
-                'score': score
+                "image_id": cur_image_id,
+                "category_id": category_id,
+                "bbox": rbox,
+                "score": score,
             }
             det_res.append(dt_res)
     return det_res
@@ -82,12 +84,13 @@ def strip_mask(mask):
 
 def get_seg_res(masks, bboxes, mask_nums, image_id, label_to_cat_id_map):
     import pycocotools.mask as mask_util
+
     seg_res = []
     k = 0
     for i in range(len(mask_nums)):
         cur_image_id = int(image_id[i][0])
         det_nums = mask_nums[i]
-        mask_i = masks[k:k + det_nums]
+        mask_i = masks[k : k + det_nums]
         mask_i = strip_mask(mask_i)
         for j in range(det_nums):
             mask = mask_i[j].astype(np.uint8)
@@ -98,15 +101,15 @@ def get_seg_res(masks, bboxes, mask_nums, image_id, label_to_cat_id_map):
                 continue
             cat_id = label_to_cat_id_map[label]
             rle = mask_util.encode(
-                np.array(
-                    mask[:, :, None], order="F", dtype="uint8"))[0]
-            if isinstance(rle.get('counts'), bytes):
-                rle['counts'] = rle['counts'].decode("utf8")
+                np.array(mask[:, :, None], order="F", dtype="uint8")
+            )[0]
+            if isinstance(rle.get("counts"), bytes):
+                rle["counts"] = rle["counts"].decode("utf8")
             sg_res = {
-                'image_id': cur_image_id,
-                'category_id': cat_id,
-                'segmentation': rle,
-                'score': score
+                "image_id": cur_image_id,
+                "category_id": cat_id,
+                "segmentation": rle,
+                "score": score,
             }
             seg_res.append(sg_res)
     return seg_res
@@ -114,11 +117,12 @@ def get_seg_res(masks, bboxes, mask_nums, image_id, label_to_cat_id_map):
 
 def get_solov2_segm_res(results, image_id, num_id_to_cat_id_map):
     import pycocotools.mask as mask_util
+
     segm_res = []
     # for each batch
-    segms = results['segm'].astype(np.uint8)
-    clsid_labels = results['cate_label']
-    clsid_scores = results['cate_score']
+    segms = results["segm"].astype(np.uint8)
+    clsid_labels = results["cate_label"]
+    clsid_scores = results["cate_score"]
     lengths = segms.shape[0]
     im_id = int(image_id[0][0])
     if lengths == 0 or segms is None:
@@ -129,13 +133,13 @@ def get_solov2_segm_res(results, image_id, num_id_to_cat_id_map):
         catid = num_id_to_cat_id_map[clsid]
         score = float(clsid_scores[i])
         mask = segms[i]
-        segm = mask_util.encode(np.array(mask[:, :, np.newaxis], order='F'))[0]
-        segm['counts'] = segm['counts'].decode('utf8')
+        segm = mask_util.encode(np.array(mask[:, :, np.newaxis], order="F"))[0]
+        segm["counts"] = segm["counts"].decode("utf8")
         coco_res = {
-            'image_id': im_id,
-            'category_id': catid,
-            'segmentation': segm,
-            'score': score
+            "image_id": im_id,
+            "category_id": catid,
+            "segmentation": segm,
+            "score": score,
         }
         segm_res.append(coco_res)
     return segm_res
@@ -143,39 +147,43 @@ def get_solov2_segm_res(results, image_id, num_id_to_cat_id_map):
 
 def get_keypoint_res(results, im_id):
     anns = []
-    preds = results['keypoint']
+    preds = results["keypoint"]
     for idx in range(im_id.shape[0]):
         image_id = im_id[idx].item()
         kpts, scores = preds[idx]
         for kpt, score in zip(kpts, scores):
             kpt = kpt.flatten()
             ann = {
-                'image_id': image_id,
-                'category_id': 1,  # XXX hard code
-                'keypoints': kpt.tolist(),
-                'score': float(score)
+                "image_id": image_id,
+                "category_id": 1,  # XXX hard code
+                "keypoints": kpt.tolist(),
+                "score": float(score),
             }
             x = kpt[0::3]
             y = kpt[1::3]
-            x0, x1, y0, y1 = np.min(x).item(), np.max(x).item(), np.min(y).item(
-            ), np.max(y).item()
-            ann['area'] = (x1 - x0) * (y1 - y0)
-            ann['bbox'] = [x0, y0, x1 - x0, y1 - y0]
+            x0, x1, y0, y1 = (
+                np.min(x).item(),
+                np.max(x).item(),
+                np.min(y).item(),
+                np.max(y).item(),
+            )
+            ann["area"] = (x1 - x0) * (y1 - y0)
+            ann["bbox"] = [x0, y0, x1 - x0, y1 - y0]
             anns.append(ann)
     return anns
 
 
 def get_pose3d_res(results, im_id):
     anns = []
-    preds = results['pose3d']
+    preds = results["pose3d"]
     for idx in range(im_id.shape[0]):
         image_id = im_id[idx].item()
         pose3d = preds[idx]
         ann = {
-            'image_id': image_id,
-            'category_id': 1,  # XXX hard code
-            'pose3d': pose3d.tolist(),
-            'score': float(1.)
+            "image_id": image_id,
+            "category_id": 1,  # XXX hard code
+            "pose3d": pose3d.tolist(),
+            "score": float(1.0),
         }
         anns.append(ann)
     return anns

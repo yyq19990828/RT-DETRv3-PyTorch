@@ -19,8 +19,7 @@
 from collections import namedtuple
 
 
-class ShapeSpec(
-        namedtuple("_ShapeSpec", ["channels", "height", "width", "stride"])):
+class ShapeSpec(namedtuple("_ShapeSpec", ["channels", "height", "width", "stride"])):
     """
     A simple structure that contains basic shape specification about a tensor.
 
@@ -33,6 +32,6 @@ class ShapeSpec(
         width (int): Width of the feature map (optional)
         stride (int): The stride of the feature map relative to input image
     """
+
     def __new__(cls, channels=None, height=None, width=None, stride=None):
-        return super(ShapeSpec, cls).__new__(cls, channels, height, width,
-                                             stride)
+        return super(ShapeSpec, cls).__new__(cls, channels, height, width, stride)
