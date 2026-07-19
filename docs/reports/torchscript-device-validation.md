@@ -5,9 +5,11 @@
 - 实现提交：`85b956d`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
 
+> 历史快照（2026-07-19，M10）：本文的 ONNX CPU-only 结论记录 M10 验收时状态；当前 ONNX CUDA/CPU 合同见 [M11 验证报告](onnx-runtime-device-validation.md)。
+
 ## 结论
 
-**已验证**：`rtdetrv3-infer --torchscript-model` 现在与 checkpoint 一样，在 CUDA 可用时默认选择 CUDA，也接受显式 `--device cpu`；无 CUDA 时自动回退 CPU。ONNX 仍固定使用 ONNX Runtime `CPUExecutionProvider`，显式 `--device cuda` 在模型文件加载前以 argparse code 2 失败。
+**已验证**：`rtdetrv3-infer --torchscript-model` 与 checkpoint 一样，在 CUDA 可用时默认选择 CUDA，也接受显式 `--device cpu`；无 CUDA 时自动回退 CPU。在 M10 验收时，ONNX 固定使用 ONNX Runtime `CPUExecutionProvider`，显式 `--device cuda` 在模型文件加载前以 argparse code 2 失败。
 
 官方 R18、固定 640×640、四张真实 COCO 图片、batch 4、FP32、阈值 `0.3` 下，eager CUDA、TorchScript CUDA、eager CPU 和 TorchScript CPU 的每图检测数均为 `[30, 1, 25, 2]`。同设备比较结果如下：
 
@@ -102,4 +104,4 @@ uv run rtdetrv3-infer \
 
 实现和本地证据提交 `85b956d`/`f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全部通过。Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`；Python 3.12 全包/直接维护范围覆盖率为 `7,069/13,738 (51.46%)` 和 `1,981/2,190 (90.46%)`。托管 Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查、六个安装后 CLI、包外配置加载和 `60 passed` wheel smoke 同时通过。
 
-本报告只声明 R18、当前 Python Infer CLI、固定 640、FP32 和本机 PyTorch CUDA/CPU。ONNX Runtime 仍是 CPU-only；未验证 R34/R50 TorchScript CUDA、动态高宽、AMP/FP16、TensorRT、C++/mobile 或外部客户端预处理。这里只做功能与数值合同，不给出吞吐或显存排名。
+本报告只声明 M10 时的 R18、Python Infer CLI、固定 640、FP32 和本机 PyTorch CUDA/CPU。M10 当时的 ONNX Runtime CPU-only 边界已由 M11 扩展；本报告未验证 R34/R50 TorchScript CUDA、动态高宽、AMP/FP16、TensorRT、C++/mobile 或外部客户端预处理。这里只做功能与数值合同，不给出吞吐或显存排名。

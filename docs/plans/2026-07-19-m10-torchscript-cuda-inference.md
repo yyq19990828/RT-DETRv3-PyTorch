@@ -5,6 +5,8 @@
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
 
+> 历史计划快照（2026-07-19，M10）：本文的 ONNX CPU-only 边界后来由 [M11](2026-07-19-m11-onnx-runtime-cuda-inference.md) 扩展。
+
 ## 背景
 
 M9 已让 Infer CLI 直接消费 ONNX/TorchScript，但为避免混淆 provider，两个导出后端都暂时限制为 CPU。当前开发机的 PyTorch CUDA 和 RTX 3090 可用，TorchScript module 可由 PyTorch 自身映射到 CUDA；ONNX Runtime 则仍只有 `CPUExecutionProvider`。继续把两者绑定为同一设备边界，会无意义地放弃已经具备的 TorchScript CUDA 路径。

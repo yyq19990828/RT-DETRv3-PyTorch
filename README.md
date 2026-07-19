@@ -21,6 +21,9 @@ uv sync --extra dev
 # 仅增加 ONNX 导出和 CPU 回归依赖
 uv sync --extra export
 
+# 仅增加 ONNX 导出和 CUDA/CPU provider 依赖
+uv sync --extra export-gpu
+
 # 不安装 Paddle 的核心测试与导出回归依赖
 uv sync --extra test
 
@@ -36,7 +39,9 @@ git submodule update --init --recursive
 
 Paddle 及其专用依赖不属于核心运行依赖，只在 `dev` 附加依赖中安装。
 Linux x86_64 的 `dev` extra 固定使用 PaddlePaddle GPU 3.3.0/cu118；
-该构建可用 `paddle.set_device("cpu")` 显式回退到 CPU。
+该构建可用 `paddle.set_device("cpu")` 显式回退到 CPU。`export`/`test` 使用
+CPU `onnxruntime`；`export-gpu`/`dev` 使用同时包含 CUDA 和 CPU provider 的
+`onnxruntime-gpu`。两类 ORT distribution 不应共装，UV 会拒绝冲突的 extra 组合。
 
 ## 常用命令
 
@@ -65,13 +70,23 @@ uv run rtdetrv3-infer \
   --output-dir output/infer \
   --save-results
 
-# 使用导出的 ONNX（需要 export 或 dev 附加依赖）
+# 使用导出的 ONNX CPU（需要 export、export-gpu 或 dev 附加依赖）
 uv run --extra export rtdetrv3-infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --onnx-model output/export/rtdetrv3_r18vd_6x_coco.onnx \
   --infer-img path/to/image.jpg \
   --imgsz 640 \
+  --device cpu \
   --output-dir output/infer-onnx
+
+# 使用导出的 ONNX CUDA（需要 export-gpu 或 dev 附加依赖）
+uv run --extra export-gpu rtdetrv3-infer \
+  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
+  --onnx-model output/export/rtdetrv3_r18vd_6x_coco.onnx \
+  --infer-img path/to/image.jpg \
+  --imgsz 640 \
+  --device cuda:0 \
+  --output-dir output/infer-onnx-cuda
 
 # 使用导出的 TorchScript
 uv run rtdetrv3-infer \
@@ -105,7 +120,7 @@ uv run --extra export rtdetrv3-export \
   --output-dir output/export
 ```
 
-推理入口互斥接受 `--checkpoint`、`--onnx-model` 或 `--torchscript-model`，三者复用配置中的 `TestReader`、RT-DETR 后处理结果、阈值、JSON 和可视化，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；只有训练 checkpoint 可加 `--use-ema`。ONNX 当前默认且只声明 CPU/FP32；TorchScript 与 checkpoint 一样在 CUDA 可用时默认使用 CUDA，也可显式 `--device cpu`，无 CUDA 时自动回退 CPU。`--imgsz` 必须与导出时的固定高宽一致。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)，R18 四图 CUDA/CPU 证据见 [TorchScript 设备验证报告](docs/reports/torchscript-device-validation.md)。
+推理入口互斥接受 `--checkpoint`、`--onnx-model` 或 `--torchscript-model`，三者复用配置中的 `TestReader`、RT-DETR 后处理结果、阈值、JSON 和可视化，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；只有训练 checkpoint 可加 `--use-ema`。ONNX 默认 CPU，也可在 GPU ORT 环境中显式选择 `--device cuda[:id]`；TorchScript 与 checkpoint 在 CUDA 可用时默认使用 CUDA，也可显式 `--device cpu`，无 CUDA 时自动回退 CPU。`--imgsz` 必须与导出时的固定高宽一致。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)，R18 导出后端的设备证据见 [TorchScript 设备报告](docs/reports/torchscript-device-validation.md)和[ONNX Runtime 设备报告](docs/reports/onnx-runtime-device-validation.md)。
 
 导出入口使用 tensor-only 适配层，默认生成动态 batch、固定导出高宽的 ONNX opset 17，以及相同固定高宽的 traced TorchScript；空间尺寸改变时需要按新尺寸重新导出。Train/Eval/Infer/Convert/Export 只声明文档中列出的当前合同；未迁移的 Paddle Train 参数会直接报错，不会静默忽略。完整参数和部署边界同样见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
 

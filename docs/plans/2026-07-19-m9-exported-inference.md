@@ -5,6 +5,8 @@
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
 
+> 历史计划快照（2026-07-19，M9）：设备合同后来由 [M10](2026-07-19-m10-torchscript-cuda-inference.md) 和 [M11](2026-07-19-m11-onnx-runtime-cuda-inference.md) 扩展。
+
 ## 背景
 
 M5/M8 已证明 R18/R34/R50 的 ONNX 和 traced TorchScript 能从归一化 tensor 输入运行到 `bbox/bbox_num`，但用户侧 Infer CLI 仍只能加载 PyTorch checkpoint。当前导出证据复用了 TestReader 做真实图诊断，却没有形成可安装包中的公开入口；用户仍需自行拼接图片解码、预处理、batch 分组、阈值、JSON 和可视化。

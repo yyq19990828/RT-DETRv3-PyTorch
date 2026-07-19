@@ -6,7 +6,7 @@
 
 - 当前默认测试覆盖权重转换、数据操作、注意力、解码器和部分训练策略；通过并不等于已完成完整 COCO 训练、评估或 mAP 对齐。
 - 迁移早期针对旧构建器、Registry 和模型参数的测试保留在 `tests/legacy/`，默认不收集。这些场景需要按当前 API 重写，不应通过强行恢复旧兼容层来绕过。
-- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。公开 R18/R34/R50 checkpoint 已分别通过 Models CLI 固定 URL 下载、CPU/FP32 真实 COCO 单图 Infer 和统一四图 Eval；R18 另有 batch 4 和完整 val2017 证据。ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖三个变体的固定 640、动态 batch 1/4/8 和真实图，R18 另有固定 608；Infer CLI 已用 R18 真实图验证直接消费两种导出产物，并补充 R18 TorchScript CUDA/CPU 四图证据。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、ONNX GPU provider、R34/R50 TorchScript CUDA、TensorRT 或 C++ 部署已支持。
+- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。公开 R18/R34/R50 checkpoint 已分别通过 Models CLI 固定 URL 下载、CPU/FP32 真实 COCO 单图 Infer 和统一四图 Eval；R18 另有 batch 4 和完整 val2017 证据。ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖三个变体的固定 640、动态 batch 1/4/8 和真实图，R18 另有固定 608；Infer CLI 已补充 R18 TorchScript 和 ONNX Runtime 的 CUDA/CPU 四图证据。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出后端 CUDA、TensorRT 或 C++ 部署已支持。
 
 ## 数值等价
 
@@ -24,7 +24,7 @@
 - Paddle 参考实现是 `third-party/RT-DETRv3-paddle` 子模块，不会打包进 PyTorch wheel。开发工具还依赖子模块已初始化。
 - wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256；`v0.1.0` 固定 tag 的 GitHub Release 已提供转换权重、mapping report 和覆盖所有资产的 `SHA256SUMS`。
 - Paddle 和相关对齐工具位于 `dev` 附加依赖；核心 PyTorch 运行时不应直接导入 Paddle。
-- ONNX 和 ONNX Runtime 位于 `export` 附加依赖，并因导出回归测试同时包含在 `dev` 中；核心训练/eager 运行时不要求安装或导入它们。
+- CPU ONNX Runtime 位于 `export`/`test`，GPU ONNX Runtime 位于 `export-gpu`/`dev`；两类 distribution 由 UV conflicts 隔离。当前 CUDA 12 GPU extra 限制 `<1.27`，避免安装依赖 CUDA 13 的 ORT 1.27。核心训练/eager 运行时不要求安装或导入它们。
 - Paddle 扩展算子不会随 `uv sync --extra dev` 自动编译，使用旋转框等特定路径时需要额外构建。
 - 当前锁文件面向 Python 3.9–3.12，PyTorch 默认使用 CUDA 12.1 索引。CPU、macOS、ARM 或其他 CUDA 版本需要替换合适的 PyTorch 索引并重新锁定。
 
@@ -42,7 +42,7 @@
 
 - 当前 ONNX/TorchScript 图只声明动态 batch；deformable attention 中的 Python 整数转换和按层循环会固化空间 shape。改变高宽必须先同步模型 `eval_size` 并重新导出，不能把 ONNX 的 batch 动态轴解释为任意高宽支持。
 - 导出 tensor 合同从归一化后的 image tensor 开始，止于 raw `bbox/bbox_num`；图片解码、TestReader 和阈值过滤不在图中。本仓库 Infer CLI 已为 R18 验证复用 TestReader 的端到端路径，但任何外部部署端的预处理未经对比时，导出回归通过仍不证明其预测一致。
-- Infer 的 ONNX 路径当前只接受 CPU。TorchScript 由 PyTorch runtime 执行，在 CUDA 可用时默认 CUDA并支持显式 CPU fallback。ONNX 从图读取固定空间 shape，新 TorchScript 归档内嵌输入尺寸元数据；旧无元数据 TorchScript 可兼容加载，但不能在运行前由 CLI 证明尺寸匹配。
-- 当前回归使用官方 R18/R34/R50、CPU/FP32、ONNX opset 17 和 ONNX Runtime CPU provider；R34/R50 只验证固定 640。TorchScript CUDA 只覆盖 R18、固定 640、FP32 和当前 Python Infer CLI。其他配置、dtype、provider 和图优化级别需要独立证据。
+- Infer 的 ONNX 路径默认 CPU，并接受显式 `cuda[:id]`；GPU wheel 缺失或 session 完全落回 CPU 时失败。TorchScript 由 PyTorch runtime 执行，在 CUDA 可用时默认 CUDA并支持显式 CPU fallback。ONNX 从图读取固定空间 shape，新 TorchScript 归档内嵌输入尺寸元数据；旧无元数据 TorchScript 可兼容加载，但不能在运行前由 CLI 证明尺寸匹配。
+- 当前回归使用官方 R18/R34/R50、CPU/FP32、ONNX opset 17 和 ONNX Runtime CPU provider；R34/R50 只验证固定 640。TorchScript 与 ONNX Runtime CUDA 都只覆盖 R18、固定 640、FP32 和当前 Python Infer CLI。其他配置、dtype、provider 和图优化级别需要独立证据。
 - raw top-k 尾部会对近似并列 score 的微小后端误差敏感，R34/R50 ONNX 已稳定观测到每图最多两个低分候选重排行序。当前验收要求 `bbox_num`/分组严格相等，并在每张图内对全部候选按类别、score 和 box 一对一匹配；score/坐标门槛为 `2e-5/0.02 px`，同时报告重排行数。任何候选缺失、跨图配对或超容差仍失败，不能只比较最终可视化。
-- CPU/CUDA 不应共用逐位一致假设。R18 四图中，TorchScript CUDA 相对 eager CUDA 的最大 score/box 误差为 `2.79218e-4/0.00872803 px`；TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`。跨设备比较出现两条近似候选换序和更大的 score 漂移，只作为单独观测，不修改 M8 的同设备默认容差。
+- CPU/CUDA 不应共用逐位一致假设。R18 四图中，TorchScript CUDA 相对 eager CUDA 的最大 score/box 误差为 `2.79218e-4/0.00872803 px`，ONNX CUDA 为 `6.06865e-4/0.0238647 px`；两条 CPU 对照分别为 `1.90735e-6/9.15527e-5 px` 与 `6.82473e-6/0.000183105 px`。ONNX CUDA 使用单独记录的 `1e-3/0.03 px` 门槛；跨设备比较只作为观测，不修改 M8 的 CPU 默认容差。
