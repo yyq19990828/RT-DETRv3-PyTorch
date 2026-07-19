@@ -19,7 +19,7 @@ pytest -p no:cacheprovider -q -m "not paddle" \
   --cov=ppdet_pytorch --cov-report=term --cov-report=json:<temporary-path>
 ```
 
-`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU、已安装 `dev` extra 的本地结果为 `336 passed, 5 skipped, 34 deselected`；最新托管 `test` extra 结果为 `336 passed, 7 skipped, 17 deselected`。差异来自已安装能力和测试 extra，核心行为测试计数一致。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
+`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU、已安装 `dev` extra 的本地结果为 `350 passed, 5 skipped, 34 deselected`；最新托管 `test` extra 结果为 `350 passed, 7 skipped, 17 deselected`。差异来自已安装能力和测试 extra，核心行为测试计数一致。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
 
 在提交 `19bcb60` 上，已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的托管 `test` extra 为准。
 
@@ -55,24 +55,26 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 发布前最终 GitHub Actions [run 29687238968](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29687238968) 在提交 `80d2a80` 上再次通过全部 6 个 job：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,918/13,567`（`50.99%`）、直接维护范围 `1,835/2,021`（`90.80%`），Ruff `174` 个文件、Mypy `107` 个 source file 和 `49 passed` wheel smoke 均通过。下表采用该次最终托管结果。
 
+M8/M9 增加多变体导出集合匹配、导出产物 Infer runner、固定尺寸元数据和对应回归后，本地隐藏 GPU 的非 Paddle 测试为 `350 passed, 5 skipped, 34 deselected`，全包 `7,059/13,730`（`51.41%`）、直接维护范围 `1,977/2,184`（`90.52%`）。提交 `545578a` 的 GitHub Actions [run 29689593612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29689593612) 六个 job 全绿：托管 Python 3.12 为 `350 passed, 7 skipped, 17 deselected`，全包 `7,063/13,735`（`51.42%`）、直接维护范围 `1,980/2,189`（`90.45%`），Ruff/Mypy 和 `59 passed` wheel smoke 同时通过。新增实现扩大了直接维护分母，当前值仍高于 90% 门禁；下表采用该次托管结果。
+
 ## 当前结果
 
 | 模块 | 语句数 | 覆盖语句 | 覆盖率 |
 |---|---:|---:|---:|
 | package root | 4 | 4 | 100.0% |
-| `cli` | 876 | 800 | 91.3% |
+| `cli` | 986 | 892 | 90.5% |
 | `conversion` | 659 | 627 | 95.1% |
 | `core` | 401 | 327 | 81.5% |
 | `data` | 5,630 | 1,758 | 31.2% |
-| `deploy` | 85 | 81 | 95.3% |
+| `deploy` | 143 | 134 | 93.7% |
 | `engine` | 757 | 452 | 59.7% |
 | `metrics` | 577 | 265 | 45.9% |
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,567** | **6,918** | **50.99%** |
+| **全包** | **13,735** | **7,063** | **51.42%** |
 
-直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `2,021` 条语句，覆盖 `1,835` 条，覆盖率为 **90.80%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不将它的 90% 扩大表述为全包 90%。
+直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `2,189` 条语句，覆盖 `1,980` 条，覆盖率为 **90.45%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不将它的 90% 扩大表述为全包 90%。
 
 ## 门禁与限制
 
@@ -81,6 +83,6 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 - 非 Paddle 全包语句覆盖率不低于 **50.5%**。
 - `cli/conversion/core/deploy` 合计覆盖率不低于 **90%**。
 
-两个阈值都低于当前实测值，用于防止覆盖率回退。`ROADMAP.md` 中定义明确的直接维护范围 90% 目标已达到；全包当前为 50.99%，不应通过排除 `data`、`metrics` 或其他低覆盖源文件来声称全包也达到 90%。
+两个阈值都低于当前实测值，用于防止覆盖率回退。`ROADMAP.md` 中定义明确的直接维护范围 90% 目标已达到；全包当前为 51.42%，不应通过排除 `data`、`metrics` 或其他低覆盖源文件来声称全包也达到 90%。
 
 后续覆盖率工作应继续优先用户可见且低于各自范围平均值的路径，不为了数字补无行为价值的测试。

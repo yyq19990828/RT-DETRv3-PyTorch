@@ -1,8 +1,8 @@
 # 导出产物端到端推理验证报告
 
-- 状态：`implementation and local validation complete; hosted CI pending`
+- 状态：`verified`
 - 验证日期：`2026-07-19`
-- 代码基线：`9612d29` 后的 M9 工作树；实现与本报告在同一提交固化
+- 代码基线：`545578a`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
 
 ## 结论
@@ -79,4 +79,6 @@ CUDA_VISIBLE_DEVICES='' uv run rtdetrv3-infer \
 
 ## 测试、清理与剩余项
 
-参数、runner、session 复用、固定尺寸和既有 checkpoint 主流程的定向回归为 `46 passed`。显式隐藏 GPU 的非 Paddle 全仓为 `350 passed, 5 skipped, 34 deselected`；全包/直接维护范围覆盖率为 `7,059/13,730 (51.41%)` 和 `1,977/2,184 (90.52%)`，通过 `50.5%/90%` 门槛；Ruff `174` 个文件、Mypy `107` 个 source file 通过。临时 ONNX、TorchScript、JSON、图片、负例日志、coverage 和 pytest 目录已清理，UV `.venv` 保留；托管 CI 结果待本提交推送后补录。
+参数、runner、session 复用、固定尺寸和既有 checkpoint 主流程的定向回归为 `46 passed`。显式隐藏 GPU 的本地非 Paddle 全仓为 `350 passed, 5 skipped, 34 deselected`；全包/直接维护范围覆盖率为 `7,059/13,730 (51.41%)` 和 `1,977/2,184 (90.52%)`，通过 `50.5%/90%` 门槛；Ruff `174` 个文件、Mypy `107` 个 source file 通过。
+
+提交 `545578a` 的 [GitHub Actions run 29689593612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29689593612) 六个 job 全部通过。托管 Python 3.12 为 `350 passed, 7 skipped, 17 deselected`，全包/直接维护范围为 `7,063/13,735 (51.42%)` 和 `1,980/2,189 (90.45%)`；Python 3.9–3.11、Ruff/Mypy、构建/发布校验、包外配置和 `59 passed` wheel smoke 同时通过。临时 ONNX、TorchScript、JSON、图片、负例日志、coverage 和 pytest 目录已清理，UV `.venv` 保留。

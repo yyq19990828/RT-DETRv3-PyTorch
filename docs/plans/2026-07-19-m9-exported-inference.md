@@ -1,6 +1,6 @@
 # M9——导出产物端到端推理计划
 
-- 状态：`in_progress`
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -53,7 +53,7 @@ M5/M8 已证明 R18/R34/R50 的 ONNX 和 traced TorchScript 能从归一化 tens
 - [x] runner 只创建一次 session/module，并正确处理最后一个不足 batch 的图片组。
 - [x] R18 真实图片三后端在 `score >= 0.3` 下检测数、类别和框/score 满足 M8 数值合同，三者均生成可解码可视化和 JSON。
 - [x] 非 Paddle 全仓测试、覆盖率门禁、Ruff 和 Mypy 通过；中间产物已清理。
-- [ ] 提交后的 GitHub Actions 托管矩阵通过。
+- [x] 提交后的 GitHub Actions 托管矩阵通过。
 
 ## 决策记录
 
@@ -65,4 +65,4 @@ M5/M8 已证明 R18/R34/R50 的 ONNX 和 traced TorchScript 能从归一化 tens
 
 ## 完成记录
 
-本地实现与验收已完成。官方 R18 在 COCO `000000000139.jpg`、CPU/FP32、640×640、阈值 `0.3` 下，checkpoint/ONNX/TorchScript 均输出 30 条检测；ONNX 相对 eager 的最大 score/框误差为 `1.49012e-6/9.15527e-5 px`，TorchScript 为 0，三张渲染图字节一致。640 产物与 `--imgsz 608` 的 ONNX/TorchScript 负例均在 backend 执行前明确失败。定向回归 `46 passed`；非 Paddle 全仓 `350 passed, 5 skipped, 34 deselected`，全包/直接维护范围覆盖率为 `51.41%/90.52%`，Ruff `174` 个文件与 Mypy `107` 个 source file 通过。临时模型、JSON、图片、日志、coverage 和 pytest 目录已清理；等待本提交的 GitHub Actions 后关闭计划。
+已完成。官方 R18 在 COCO `000000000139.jpg`、CPU/FP32、640×640、阈值 `0.3` 下，checkpoint/ONNX/TorchScript 均输出 30 条检测；ONNX 相对 eager 的最大 score/框误差为 `1.49012e-6/9.15527e-5 px`，TorchScript 为 0，三张渲染图字节一致。640 产物与 `--imgsz 608` 的 ONNX/TorchScript 负例均在 backend 执行前明确失败。定向回归 `46 passed`；本地非 Paddle 全仓 `350 passed, 5 skipped, 34 deselected`，全包/直接维护范围覆盖率为 `51.41%/90.52%`，Ruff `174` 个文件与 Mypy `107` 个 source file 通过。提交 `545578a` 的 [GitHub Actions run 29689593612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29689593612) 六个 job 全绿；托管 Python 3.12 为 `350 passed, 7 skipped, 17 deselected`、覆盖率 `51.42%/90.45%`，wheel smoke `59 passed`。临时模型、JSON、图片、日志、coverage 和 pytest 目录已清理。
