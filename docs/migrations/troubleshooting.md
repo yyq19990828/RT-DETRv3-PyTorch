@@ -57,6 +57,14 @@ UV 锁文件会记录解析时使用的包索引和 artifact URL。即使 CI 机
 
 镜像可能更快，但 CI 的可复现性还取决于可用性和 artifact 保留策略。通用依赖使用官方 PyPI，框架大包只在项目明确固定的专用索引中解析，更容易判断失败责任边界。
 
+### PyTorch 镜像只卡住大体积 Torch wheel
+
+**已验证（2026-07-19）**：通用依赖切换到官方 PyPI 后，[GitHub Actions run 29681801681](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29681801681) 的六个隔离 job 都能迅速下载 NVIDIA CUDA 依赖，但南京大学 PyTorch 镜像上的 `torch 2.5.1+cu121`（约 `744 MiB`）在 45 分钟内始终没有完成；该 run 最终因后续提交触发并发取消，不是测试失败。日志中 `torchvision` 和其他大包已有完成记录，因此不能把整个安装步骤的长时间 `in_progress` 笼统归因于 PyPI 或 UV。
+
+仓库随后把 PyTorch 专用索引切换为官方 `https://download.pytorch.org/whl/cu121`；这也是 [PyTorch 2.5.1 官方 CUDA 12.1 安装文档](https://pytorch.org/get-started/previous-versions/)记录的索引。重新锁定只改变 Torch/Torchvision 的来源 URL，没有改变任何包名或版本。使用独立空 UV 缓存和临时 Python `3.9.23` venv 时，52 个包从零下载并准备完成耗时 `2m21s`，确认 `torch 2.5.1+cu121`、`torchvision 0.20.1+cu121`、CUDA `12.1` 和 `zipp 3.23.0`；随后非 Paddle 回归为 `308 passed, 7 skipped, 17 deselected`。临时环境与缓存在验证后删除。
+
+排查大包下载停滞时，应从已结束或取消的 job 日志逐个核对 `Downloading`/`Downloaded` 事件。HEAD 请求成功只证明连通，不能证明数百 MiB 文件的持续吞吐；切换来源后应使用空缓存完成一次真实锁文件安装，而不是让本地缓存掩盖问题。
+
 ## Paddle 加载 Path 对象报类型错误
 
 部分 Paddle 版本的 `paddle.load` 不接受 `pathlib.Path`。在框架边界显式转换：

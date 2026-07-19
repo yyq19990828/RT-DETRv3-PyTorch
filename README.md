@@ -5,7 +5,7 @@ RT-DETRv3 的 PyTorch 迁移实现。仓库当前仍处于迁移与数值对齐�
 ## 环境安装
 
 项目支持 Python 3.9–3.12，推荐用 `uv` 0.11.29.x 创建和管理虚拟环境；该版本范围与锁文件和 CI 一致。当前
-`torch`/`torchvision` 从 CUDA 12.1 索引安装，默认面向 Linux x86_64 或
+`torch`/`torchvision` 从 PyTorch 官方 CUDA 12.1 索引安装，默认面向 Linux x86_64 或
 Windows amd64；CPU、macOS 和 ARM 环境需要改用与平台匹配的 PyTorch 索引。
 
 ```bash
