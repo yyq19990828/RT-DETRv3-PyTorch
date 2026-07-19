@@ -95,6 +95,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 权重下载严格由 manifest 发布状态和固定 HTTPS URL 驱动 | 未发布时显式失败比猜测 latest URL 更可审计；下载只在 size/SHA-256 通过后原子替换目标 |
 | 2026-07-19 | Models CLI 与转换验证核心补测后将覆盖率下限提高到 48%/71% | 隐藏 GPU 的本地 CPU 实测达到全包 48.10%、直接维护范围 71.85%；新增回归同时修复额外输出字段和非有限值误判 |
 | 2026-07-19 | 转换器与 YAML 配置补测后将覆盖率下限提高到 49%/80% | 16 个纯 CPU 回归使本地全包达到 49.41%、直接维护范围达到 80.67%，并修复配置对象共享状态和 mapping 静默覆盖 |
+| 2026-07-19 | 用户可见边界补测后将覆盖率下限提高到 50%/84% | 17 个纯 CPU 回归使本地全包达到 50.08%、直接维护范围达到 84.93%，并拒绝布局误判、Infer 静默漏图和非法 Export 输入 shape |
 
 ## 完成记录
 
@@ -157,3 +158,5 @@ GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 转换器/YAML 配置批次把 Paddle-only 集成用例中的核心编排合同拆为 16 个纯 CPU 回归，覆盖 checkpoint 元数据、shape/transpose 传递、严格/宽松失败、内存释放、完整 session metadata、mapping 导出、批量失败隔离和 YAML 构造/序列化。回归修复 `Callable` 可变默认参数跨实例共享，以及批量转换在同名 mapping 已存在时未遵守 `--force` 的问题。本机非 Paddle CPU 为 `288 passed, 5 skipped, 34 deselected`，全包 `6,689/13,538`（`49.41%`），直接维护范围 `1,607/1,992`（`80.67%`），门槛提高到 49%/80%。
 
 GitHub Actions [run 29680140237](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29680140237) 在提交 `3fbd4ec` 上通过全部 6 个 jobs：质量 job 为 Ruff 174 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `288 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,690/13,538`（`49.42%`）和直接维护范围 `1,607/1,992`（`80.67%`）；wheel 安装后六个 CLI 和 `34 passed` smoke 均通过。
+
+用户可见边界批次将等元素数 shape 从“可自动 reshape”收紧为必须显式验证，只保留二维反转的已知 transpose 候选；Infer 对 `bbox_num` 的 rank、整数类型、非负性、总行数和 batch group 数执行完整检查，并用实际临时图片验证可视化与 JSON 主流程；Export 配置输入必须为整数且为正数的 `[3, H, W]`。本机隐藏 GPU 的定向测试为 `46 passed`，含 Paddle 的默认全量为 `336 passed, 8 skipped`，非 Paddle CPU 全量为 `305 passed, 5 skipped, 34 deselected`；全包 `6,790/13,557`（`50.08%`），直接维护范围 `1,708/2,011`（`84.93%`），门槛提高到 50%/84%。托管复验待本批提交后补录。

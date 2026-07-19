@@ -27,6 +27,27 @@ def test_input_size_uses_override_or_test_reader_shape():
     assert export_cli._input_size(cfg, [320, 480]) == (320, 480)
 
 
+@pytest.mark.parametrize(
+    ("image_shape", "message"),
+    [
+        ([3, 640], "channels, height, width"),
+        (["3", 640, 640], "must be integers"),
+        ([1, 640, 640], "channels must be 3"),
+        ([3, 0, 640], "must be positive"),
+    ],
+)
+def test_input_size_rejects_invalid_config_shape(image_shape, message):
+    cfg = AttrDict(TestReader={"inputs_def": {"image_shape": image_shape}})
+
+    with pytest.raises(ValueError, match=message):
+        export_cli._input_size(cfg)
+
+
+def test_input_size_requires_config_shape_without_override():
+    with pytest.raises(ValueError, match="must define"):
+        export_cli._input_size(AttrDict())
+
+
 def test_output_paths_are_deterministic(tmp_path):
     cfg = AttrDict(filename="rtdetrv3_r18vd_6x_coco")
 

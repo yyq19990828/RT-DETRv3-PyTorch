@@ -218,10 +218,23 @@ def split_detections(outputs, threshold=0.0):
         raise RuntimeError("Model must return bbox and bbox_num")
 
     bboxes = torch.as_tensor(outputs["bbox"]).detach().cpu()
-    bbox_num = torch.as_tensor(outputs["bbox_num"]).detach().cpu().tolist()
+    bbox_num_tensor = torch.as_tensor(outputs["bbox_num"]).detach().cpu()
     if bboxes.ndim != 2 or bboxes.shape[1] != 6:
         raise RuntimeError("bbox must have shape [N, 6]")
-    if sum(int(count) for count in bbox_num) != len(bboxes):
+    if bbox_num_tensor.ndim != 1:
+        raise RuntimeError("bbox_num must have shape [B]")
+    if bbox_num_tensor.dtype not in (
+        torch.uint8,
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+    ):
+        raise RuntimeError("bbox_num must contain integer counts")
+    bbox_num = [int(count) for count in bbox_num_tensor.tolist()]
+    if any(count < 0 for count in bbox_num):
+        raise RuntimeError("bbox_num counts must be non-negative")
+    if sum(bbox_num) != len(bboxes):
         raise RuntimeError("bbox_num does not match the number of bbox rows")
 
     detections = []
@@ -263,7 +276,10 @@ def predict_images(
             batch_transform,
             device,
         )
-        all_detections.extend(split_detections(model(batch), threshold))
+        batch_detections = split_detections(model(batch), threshold)
+        if len(batch_detections) != len(paths):
+            raise RuntimeError("bbox_num length does not match inference batch size")
+        all_detections.extend(batch_detections)
     return all_detections
 
 
@@ -338,6 +354,8 @@ def visualize_detections(image, detections, class_names):
 
 
 def detections_to_records(image_paths, detections, clsid2catid, class_names):
+    if len(image_paths) != len(detections):
+        raise RuntimeError("Detection groups do not match the number of input images")
     records = []
     for image_id, (image_path, image_detections) in enumerate(
         zip(image_paths, detections)

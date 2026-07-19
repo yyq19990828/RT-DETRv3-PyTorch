@@ -145,18 +145,19 @@ def check_shape_compatibility(
     if source_shape == target_shape:
         return True, "Shapes match exactly"
 
-    # Check if total elements match (can be reshaped)
-    source_elements = np.prod(source_shape)
-    target_elements = np.prod(target_shape)
+    source_elements = int(np.prod(source_shape))
+    target_elements = int(np.prod(target_shape))
+
+    # A reversed 2-D shape is the known Paddle Linear -> PyTorch Linear case.
+    if len(source_shape) == 2 and source_shape[::-1] == target_shape:
+        return True, "Shapes are compatible by a 2-D transpose"
 
     if source_elements == target_elements:
-        # Same total elements, different layout
-        if len(source_shape) == len(target_shape):
-            # Same rank, possibly transposed
-            return True, "Shapes can be reshaped: transpose or permute axes"
-        else:
-            # Different rank, can reshape
-            return True, f"Shapes can be reshaped: {source_shape} -> {target_shape}"
+        return (
+            False,
+            "Element counts match, but reshape/layout compatibility requires "
+            "explicit semantic validation",
+        )
 
     # Incompatible shapes
     return (

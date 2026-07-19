@@ -13,6 +13,7 @@ from ppdet_pytorch.conversion.tensor_utils import (
     detect_dtype,
     numpy_to_torch,
     paddle_to_numpy,
+    should_transpose_weight,
     validate_tensor_shape,
 )
 
@@ -133,14 +134,20 @@ class TestTensorConversion:
         assert is_compatible is True
         assert "match exactly" in message
 
-    def test_check_shape_compatibility_reshapeable(self):
-        """Test shape compatibility check with reshapeable tensors"""
+    def test_check_shape_compatibility_rejects_implicit_reshape(self):
+        """Equal element counts do not prove tensor layout compatibility."""
         source_shape = (12,)
         target_shape = (3, 4)
 
         is_compatible, message = check_shape_compatibility(source_shape, target_shape)
+        assert is_compatible is False
+        assert "semantic validation" in message.lower()
+
+    def test_check_shape_compatibility_accepts_known_2d_transpose(self):
+        is_compatible, message = check_shape_compatibility((3, 4), (4, 3))
+
         assert is_compatible is True
-        assert "reshaped" in message.lower()
+        assert "transpose" in message.lower()
 
     def test_check_shape_compatibility_incompatible(self):
         """Test shape compatibility check with incompatible shapes"""
@@ -150,6 +157,30 @@ class TestTensorConversion:
         is_compatible, message = check_shape_compatibility(source_shape, target_shape)
         assert is_compatible is False
         assert "incompatible" in message.lower()
+
+    def test_convert_paddle_like_tensor_with_explicit_transpose(self):
+        source = np.arange(6, dtype=np.float32).reshape(2, 3)
+
+        class PaddleLikeTensor:
+            def numpy(self):
+                return source
+
+        converted = convert_paddle_to_torch_tensor(
+            PaddleLikeTensor(),
+            "square_or_renamed_linear.weight",
+            transpose=True,
+        )
+
+        np.testing.assert_array_equal(converted.numpy(), source.T)
+        assert converted.is_contiguous()
+
+    def test_historical_transpose_heuristic_is_conservative(self):
+        assert should_transpose_weight("decoder.linear1.weight") is True
+        assert should_transpose_weight("decoder.in_proj_weight") is False
+
+    def test_detect_dtype_rejects_unknown_object(self):
+        with pytest.raises(ValueError, match="Unknown tensor type"):
+            detect_dtype(object())
 
     @pytest.mark.paddle
     def test_convert_different_dtypes(self, paddle_module):

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import cv2
@@ -182,6 +183,19 @@ def test_split_detections_rejects_inconsistent_output():
         )
 
 
+@pytest.mark.parametrize(
+    ("bbox", "bbox_num", "message"),
+    [
+        (torch.zeros((1, 6)), torch.tensor([[1]]), "shape"),
+        (torch.zeros((1, 6)), torch.tensor([1.0]), "integer counts"),
+        (torch.zeros((0, 6)), torch.tensor([-1, 1]), "non-negative"),
+    ],
+)
+def test_split_detections_rejects_invalid_bbox_counts(bbox, bbox_num, message):
+    with pytest.raises(RuntimeError, match=message):
+        infer_cli.split_detections({"bbox": bbox, "bbox_num": bbox_num})
+
+
 def test_predict_images_passes_batch_dict_to_current_model(tmp_path):
     image_paths = [tmp_path / name for name in ("one.jpg", "two.jpg", "three.jpg")]
     observed_batch_sizes = []
@@ -226,6 +240,35 @@ def test_predict_images_passes_batch_dict_to_current_model(tmp_path):
     assert all(item["labels"].tolist() == [1] for item in detections)
 
 
+def test_predict_images_rejects_missing_detection_group(tmp_path):
+    image_paths = [tmp_path / "one.jpg", tmp_path / "two.jpg"]
+
+    def sample_transform(sample):
+        return {
+            "image": np.ones((3, 4, 4), dtype=np.float32),
+            "im_shape": np.array([4.0, 4.0], dtype=np.float32),
+            "scale_factor": np.array([1.0, 1.0], dtype=np.float32),
+            "im_id": sample["im_id"],
+        }
+
+    class Model(torch.nn.Module):
+        def forward(self, batch):
+            return {
+                "bbox": torch.tensor([[1.0, 0.9, 0.0, 0.0, 2.0, 2.0]]),
+                "bbox_num": torch.tensor([1]),
+            }
+
+    with pytest.raises(RuntimeError, match="batch size"):
+        infer_cli.predict_images(
+            Model(),
+            image_paths,
+            sample_transform,
+            default_collate_fn,
+            torch.device("cpu"),
+            batch_size=2,
+        )
+
+
 def test_detections_to_records_uses_category_mapping(tmp_path):
     detections = [
         {
@@ -249,6 +292,151 @@ def test_detections_to_records_uses_category_mapping(tmp_path):
             "category_id": 17,
             "category_name": "cat",
             "bbox": [2.0, 3.0, 5.0, 8.0],
+            "score": pytest.approx(0.75),
+        }
+    ]
+
+
+def test_detections_to_records_rejects_missing_group():
+    with pytest.raises(RuntimeError, match="input images"):
+        infer_cli.detections_to_records(
+            [Path("one.jpg"), Path("two.jpg")],
+            [],
+            {},
+            {},
+        )
+
+
+def test_build_model_wires_config_checkpoint_and_eval_mode(monkeypatch):
+    cfg = AttrDict(
+        architecture="FakeDetector",
+        FakeDetector={"width": 8},
+        TestReader={"sample_transforms": [{"Decode": {}}]},
+    )
+    observed = {}
+
+    class Model(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = torch.nn.Parameter(torch.ones(1))
+            self.transforms = None
+
+        def load_meanstd(self, transforms):
+            self.transforms = transforms
+
+    model = Model()
+
+    def fake_create(model_config):
+        observed["model_config"] = model_config
+        return model
+
+    def fake_load_weights(loaded_model, checkpoint_path, use_ema=False):
+        observed["checkpoint"] = (loaded_model, checkpoint_path, use_ema)
+
+    monkeypatch.setattr(infer_cli, "create", fake_create)
+    monkeypatch.setattr(infer_cli, "load_evaluation_weights", fake_load_weights)
+
+    result = infer_cli.build_model(
+        cfg,
+        "model.pth",
+        torch.device("cpu"),
+        use_ema=True,
+    )
+
+    assert result is model
+    assert observed["model_config"] == {"width": 8, "name": "FakeDetector"}
+    assert observed["checkpoint"] == (model, "model.pth", True)
+    assert model.transforms == [{"Decode": {}}]
+    assert model.training is False
+    assert model.weight.device.type == "cpu"
+
+
+def test_build_model_requires_architecture_block():
+    with pytest.raises(ValueError, match="architecture block"):
+        infer_cli.build_model(AttrDict(), "model.pth", torch.device("cpu"))
+
+
+def test_main_writes_visualization_and_machine_readable_results(
+    tmp_path,
+    monkeypatch,
+):
+    image_path = tmp_path / "sample.jpg"
+    assert cv2.imwrite(
+        str(image_path),
+        np.zeros((20, 30, 3), dtype=np.uint8),
+    )
+    output_directory = tmp_path / "results"
+    cfg = AttrDict(eval_size=[640, 640])
+    detections = [
+        {
+            "labels": torch.tensor([0]),
+            "scores": torch.tensor([0.75]),
+            "boxes": torch.tensor([[2.0, 3.0, 12.0, 15.0]]),
+        }
+    ]
+
+    monkeypatch.setattr(infer_cli, "load_config", lambda path: cfg)
+    monkeypatch.setattr(infer_cli, "apply_overrides", lambda cfg, overrides: None)
+    monkeypatch.setattr(
+        infer_cli,
+        "create_preprocessors",
+        lambda cfg, image_size=None: (object(), object()),
+    )
+    monkeypatch.setattr(
+        infer_cli,
+        "build_model",
+        lambda cfg, checkpoint, device, use_ema=False: object(),
+    )
+    monkeypatch.setattr(
+        infer_cli,
+        "get_category_metadata",
+        lambda cfg, annotation: ({0: 1}, {0: "person"}),
+    )
+    monkeypatch.setattr(
+        infer_cli,
+        "predict_images",
+        lambda *args, **kwargs: detections,
+    )
+
+    assert (
+        infer_cli.main(
+            [
+                "--config",
+                "model.yml",
+                "--checkpoint",
+                "model.pth",
+                "--infer-img",
+                str(image_path),
+                "--output-dir",
+                str(output_directory),
+                "--device",
+                "cpu",
+                "--batch-size",
+                "4",
+                "--threshold",
+                "0.5",
+                "--imgsz",
+                "16",
+                "--save-results",
+            ]
+        )
+        == 0
+    )
+
+    assert cfg.eval_size == [16, 16]
+    rendered = cv2.imread(str(output_directory / image_path.name))
+    assert rendered is not None
+    assert np.count_nonzero(rendered) > 0
+    records = json.loads(
+        (output_directory / "detections.json").read_text(encoding="utf-8")
+    )
+    assert records == [
+        {
+            "image_id": 0,
+            "image": str(image_path),
+            "category_id": 1,
+            "category_name": "person",
+            "bbox": [2.0, 3.0, 10.0, 12.0],
             "score": pytest.approx(0.75),
         }
     ]

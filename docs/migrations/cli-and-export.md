@@ -58,6 +58,7 @@ uv run rtdetrv3-infer \
 - `--infer-img` 与 `--infer-dir` 互斥且必须指定一个；目录扫描不递归，并按路径排序。
 - `--threshold` 同时控制可视化和 `detections.json` 的最小 score；范围是 `[0, 1]`。
 - `--batch-size` 现在控制真实 batch，而不是只改变日志或被忽略。
+- 模型输出的 `bbox_num` 必须是一维整数、计数非负、总和等于 `bbox` 行数，并且 group 数等于当前输入 batch；任何不一致都会失败，避免目录推理因 `zip` 截断而静默漏图。
 - 默认完全使用 TestReader；`--imgsz N` 把其中的第一个 Resize 和模型 `eval_size` 缓存同时覆盖为方形 `[N, N]`，不会另建预处理链。官方 R18 已实际验证 608 和 640；其他尺寸仍需逐一验证。
 - `--use-ema` 只接受含 EMA 状态的训练 checkpoint；否则显式失败。
 - `--anno-file` 可为自定义数据集提供类别 ID/名称。未提供且配置的 annotation 不存在时，COCO 配置使用内置 COCO 类别映射。
@@ -82,6 +83,8 @@ uv run --extra export rtdetrv3-export \
 ```
 
 适配层输入为 FP32 `image[B,3,H,W]`、`im_shape[B,2]` 和 `scale_factor[B,2]`，输出为 `bbox[N,6]` 与 `bbox_num[B]`。它只隔离模型现有 batch dict，不包含图片解码、TestReader、阈值过滤或可视化。使用者必须复用 Infer 的预处理，或者建立等价且单独验证的预处理。
+
+未显式传 `--input-size` 时，配置中的 `TestReader.inputs_def.image_shape` 必须是整数且为正高宽的 `[3, H, W]`；字符串、浮点数、非三通道、零或负高宽在构建模型前失败，不留到 example input 或导出后端产生间接错误。
 
 | 格式 | 已验证行为 | 明确限制 |
 |---|---|---|

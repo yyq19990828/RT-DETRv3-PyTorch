@@ -35,7 +35,7 @@
 - Paddle Linear 权重通常为 `[in_features, out_features]`，PyTorch 为 `[out_features, in_features]`；转换时应以目标模块类型为准。
 - R18 审计发现 65 个二维 `.weight` 中有 64 个属于 `torch.nn.Linear`、1 个属于 Embedding。原名称规则漏转置了 12 个 `[256, 256]` Linear 权重，包括 decoder `cross_attn` 的 `value_proj`/`output_proj`、`transformer.enc_output.*.0.weight` 和 `transformer.map_memory.0.weight`。
 - 方阵 Linear 转置前后 shape 不变，所以“shape 全部匹配”无法发现这类错误。修复前 backbone/neck 通过，transformer 首次明显分歧；目标模块感知转置后 transformer 恢复到设定容差内。
-- 只看元素数相等不能盲目 reshape。应先确认该层的数学语义，再决定 transpose/permute。
+- 只看元素数相等不能盲目 reshape。当前通用 shape 检查只把完全相同 shape 和二维反转 shape 视为可兼容候选；后者仍需由目标模块证明是 Linear transpose，其他等元素数变化必须显式验证数学语义。
 - 默认保留源 dtype。FP16/BF16 权重应在转换后单独记录误差，不与 FP32 使用同一容差。
 
 ## 校验层级

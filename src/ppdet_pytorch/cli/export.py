@@ -78,9 +78,18 @@ def _input_size(cfg, override=None):
         raise ValueError(
             "Config must define TestReader.inputs_def.image_shape or --input-size"
         ) from None
-    if len(image_shape) != 3:
+    if not isinstance(image_shape, (list, tuple)) or len(image_shape) != 3:
         raise ValueError("TestReader image_shape must be [channels, height, width]")
-    return int(image_shape[1]), int(image_shape[2])
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) for value in image_shape
+    ):
+        raise ValueError("TestReader image_shape values must be integers")
+    channels, height, width = image_shape
+    if channels != 3:
+        raise ValueError("TestReader image_shape channels must be 3")
+    if height < 1 or width < 1:
+        raise ValueError("TestReader image_shape height and width must be positive")
+    return height, width
 
 
 def _output_paths(cfg, output_directory, export_format):

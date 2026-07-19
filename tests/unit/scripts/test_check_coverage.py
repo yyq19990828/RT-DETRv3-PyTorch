@@ -51,7 +51,7 @@ def test_summarize_files_keeps_full_and_direct_scopes_separate(monkeypatch):
 def test_threshold_failures_report_each_scope(monkeypatch):
     script = load_script(monkeypatch)
     below = script.CoverageSummary(statements=100, covered=40)
-    above = script.CoverageSummary(statements=100, covered=80)
+    above = script.CoverageSummary(statements=100, covered=85)
 
     assert len(script.threshold_failures(below, below)) == 2
     assert script.threshold_failures(above, above) == []
