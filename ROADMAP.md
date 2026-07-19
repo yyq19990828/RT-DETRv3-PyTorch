@@ -91,7 +91,7 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，Mypy 临时范围清单已删除，整个 `src/ppdet_pytorch` 与 3 个质量/稳定性脚本共 103 个 source file 本机门禁通过。新增 data 边界回归后，本机非 Paddle CPU 覆盖率为 47.09%/66.81%，回退下限提高到 47%/66%；当前批次的托管复验待推送后完成。90% 覆盖率目标、完整 CUDA、性能和发布验收仍未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，Mypy 临时范围清单已删除，整个 `src/ppdet_pytorch` 与 3 个质量/稳定性脚本共 103 个 source file 门禁通过。新增 data 边界回归后，托管非 Paddle CPU 覆盖率为 47.10%/66.81%，47%/66% 双回退下限和全部 6 个 CI jobs 均已通过。90% 覆盖率目标、完整 CUDA、性能和发布验收仍未完成。
 
 - [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。

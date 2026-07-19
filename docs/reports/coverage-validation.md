@@ -19,7 +19,7 @@ pytest -p no:cacheprovider -q -m "not paddle" \
   --cov=ppdet_pytorch --cov-report=term --cov-report=json:<temporary-path>
 ```
 
-`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。最近一次托管 `test` extra 的结果为 `225 passed, 7 skipped, 17 deselected, 6 warnings in 11.49s`；17 项因 `paddle` marker 被排除，7 项因当前环境缺少所需的 Paddle/CUDA 能力跳过。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
+`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。最近一次托管 `test` extra 的结果为 `241 passed, 7 skipped, 17 deselected, 6 warnings in 15.47s`；17 项因 `paddle` marker 被排除，7 项因当前环境缺少所需的 Paddle/CUDA 能力跳过。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
 
 在提交 `19bcb60` 上，已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的托管 `test` extra 为准。
 
@@ -37,7 +37,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 新增 modeling 的 3 个实际边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `233 passed, 5 skipped, 34 deselected`，全包 `5,990/13,296`（`45.05%`），直接维护范围仍为 `1,202/1,797`（`66.89%`）。`modeling` 实现语句净增 32 条、覆盖语句净增 45 条，因此全包回退下限从 44% 提高到 45%。GitHub Actions [run 29674832957](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29674832957) 在提交 `c309c42` 上完成托管复验：Python 3.12 CPU job 为 `233 passed, 7 skipped, 17 deselected`，全包 `5,991/13,296`（`45.06%`），直接维护范围 `1,202/1,797`（`66.89%`），新双门禁通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
-新增 data 的 8 个边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `241 passed, 5 skipped, 34 deselected`，全包 `6,284/13,345`（`47.09%`），直接维护范围为 `1,202/1,799`（`66.81%`）。实现语句净增 49 条，覆盖语句净增 294 条，因此全包回退下限从 45% 提高到 47%。本段与下表是本机观测，当前批次的托管 Python 3.12 覆盖率待推送后复验。
+新增 data 的 8 个边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `241 passed, 5 skipped, 34 deselected`，全包 `6,284/13,345`（`47.09%`），直接维护范围为 `1,202/1,799`（`66.81%`）。实现语句净增 49 条，覆盖语句净增 294 条，因此全包回退下限从 45% 提高到 47%。GitHub Actions [run 29675617264](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29675617264) 在提交 `28ec38d` 上完成托管复验：Python 3.12 CPU job 为 `241 passed, 7 skipped, 17 deselected`，全包 `6,285/13,345`（`47.10%`），直接维护范围 `1,202/1,799`（`66.81%`），新双门禁通过。托管环境比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
 ## 当前结果
 
@@ -47,14 +47,14 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 | `cli` | 681 | 486 | 71.4% |
 | `conversion` | 649 | 352 | 54.2% |
 | `core` | 384 | 283 | 73.7% |
-| `data` | 5,630 | 1,757 | 31.2% |
+| `data` | 5,630 | 1,758 | 31.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 757 | 452 | 59.7% |
 | `metrics` | 577 | 265 | 45.9% |
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,345** | **6,284** | **47.09%** |
+| **全包** | **13,345** | **6,285** | **47.10%** |
 
 直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,799` 条语句，覆盖 `1,202` 条，覆盖率为 **66.81%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
