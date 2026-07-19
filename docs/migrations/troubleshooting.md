@@ -25,18 +25,22 @@ uv sync --extra dev
 uv lock --check
 ```
 
-## UV 为 Paddle nightly 选中错误架构
+## UV 解析 Paddle wheel 失败
 
 **已验证（2026-07-19）**：只写 `paddlepaddle>=3.0` 时，UV 0.11.29 曾把 nightly 索引中版本排序更优先、但只有 Linux aarch64 wheel 的 `3.4.0.post20260717` 写进锁文件。`uv lock --check` 只证明声明与锁一致，不证明当前平台一定有可安装 wheel；Linux x86_64 上随后执行 `uv sync --extra dev --locked` 会失败。
 
-当前仓库把 Linux x86_64 声明为 UV 必需解析环境，并固定迁移证据实际使用、同时提供 Python 3.9–3.12 x86_64 wheel 的 `paddlepaddle==3.3.0.dev20251015`。排查类似问题时应同时执行：
+当前仓库把 Linux x86_64 声明为 UV 必需解析环境，并固定使用有
+Python 3.9–3.12 x86_64 wheel 的 `paddlepaddle-gpu==3.3.0`/cu118。不使用
+cu126 是因为 Paddle cu126 与当前 PyTorch cu121 强制依赖不同版本的
+`nvidia-nvtx-cu12`，无法在同一 UV 环境解析；Paddle cu118 的 cu11 运行库可与
+PyTorch cu121 的 cu12 运行库并存。排查类似问题时应同时执行：
 
 ```bash
 uv lock --check
 uv sync --extra dev --locked --dry-run
 ```
 
-如果要升级 Paddle，先确认目标 Python 和平台的 wheel 实际存在，再有意更新版本、锁文件和数值验证环境；不要只放宽 nightly 版本下限后把“解析成功”当作“可安装”。核心 PyTorch 和托管 CPU 测试仍应使用不含 Paddle 的默认/`test` extra。
+如果要升级 Paddle，先确认目标 Python 和平台的 wheel 实际存在，再有意更新版本、锁文件和数值验证环境；不要只放宽 nightly 版本下限后把“解析成功”当作“可安装”。在 2026-07-19 的本机验证中，同一 GPU wheel 已实际执行 CUDA 算子，随后切换到 `paddle.set_device("cpu")` 执行 CPU 算子。核心 PyTorch 和托管 CPU 测试仍应使用不含 Paddle 的默认/`test` extra。
 
 ## Paddle 加载 Path 对象报类型错误
 

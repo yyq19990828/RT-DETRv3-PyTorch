@@ -35,6 +35,8 @@ git submodule update --init --recursive
 ```
 
 Paddle 及其专用依赖不属于核心运行依赖，只在 `dev` 附加依赖中安装。
+Linux x86_64 的 `dev` extra 固定使用 PaddlePaddle GPU 3.3.0/cu118；
+该构建可用 `paddle.set_device("cpu")` 显式回退到 CPU。
 
 ## 常用命令
 
