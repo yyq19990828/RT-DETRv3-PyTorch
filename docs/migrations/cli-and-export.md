@@ -4,7 +4,7 @@
 
 ## 六个公开入口的共同边界
 
-**已验证（2026-07-19）**：Train/Eval/Infer/Convert/Export/Models 的 parser 都有活跃 `--help` contract，安装后的六个 console script 均可用；参数解析错误使用 argparse code 2。Train/Eval/Convert 的核心参数和 main wiring 另有定向测试，既有 M2–M4 真实转换、训练和评估证据继续作为端到端依据。Infer 与 Export 的真实 R18 证据见本页对应章节；Models 已完成四个转换产物的本地校验、未发布失败路径和统一下载合同。`v0.1.0` 固定 URL 已进入 manifest，并使用公开 R18 asset 完成下载、checksum、Infer 和 Eval 端到端回读。
+**已验证（2026-07-19）**：Train/Eval/Infer/Convert/Export/Models 的 parser 都有活跃 `--help` contract，安装后的六个 console script 均可用；参数解析错误使用 argparse code 2。Train/Eval/Convert 的核心参数和 main wiring 另有定向测试，既有 M2–M4 真实转换、训练和评估证据继续作为端到端依据。Infer 与 Export 的真实 R18 证据见本页对应章节；Models 已完成四个转换产物的本地校验、未发布失败路径和统一下载合同。`v0.1.0` 固定 URL 已进入 manifest，三个检测 asset 均完成公开下载、checksum、Infer 和 Eval 端到端回读。
 
 | 入口 | 当前必需输入 | 已声明支持 | 显式边界 |
 |---|---|---|---|
@@ -13,13 +13,13 @@
 | Infer | config + checkpoint + 单图/目录之一 | batch、阈值、可视化、JSON、EMA、device、TestReader Resize override | 不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
 | Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |
 | Export | config + checkpoint | ONNX opset 17、ONNX Runtime CPU 回归、traced TorchScript、动态 batch、固定高宽重新导出、EMA | 不声明单个产物动态高宽、GPU provider、TensorRT、C++ 或 Paddle 导出参数兼容 |
-| Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | `v0.1.0` 只接受固定 tag 的 GitHub Release URL；已回读 R18，其他三个 URL 由 11-asset 整体回读覆盖 |
+| Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | `v0.1.0` 只接受固定 tag 的 GitHub Release URL；三个检测权重均经 CLI 回读，backbone 由 11-asset 整体回读覆盖 |
 
 Train/Eval/Infer 推荐连字符参数；为既有仓库命令保留的下划线别名只覆盖文档列出的参数，不等于完整复刻 Paddle ArgsParser。各入口的 override 语法仍不同，复杂结构应放进派生 YAML。
 
 Models 入口使用包内 `configs/checkpoints/rtdetrv3_coco.yml`，开发仓库中则回退到根目录同一 manifest。每个 `converted_artifact.alias` 是 CLI 的唯一用户别名；重复或非法别名会被 Models CLI 和发布检查共同拒绝。`distribution_status=unpublished` 必须没有 URL；`published` 必须有 HTTPS URL。下载先写目标同目录的 `.part` 临时文件，完成 size/SHA-256 校验后才原子替换目标；不匹配的既有文件默认保留，只有 `--force` 允许替换。
 
-**公开回读（2026-07-19）**：`v0.1.0` 的 11 个 Release asset 已从无认证固定 URL 下载，并同时通过严格目录校验和系统 checksum。Models CLI 另行下载 R18，确认 `92,075,629` 字节及 SHA-256 `cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547`；该文件完成 CPU 单图 Infer 和四图 COCO Eval 冒烟。四图指标不代表完整 val2017 精度。
+**公开回读（2026-07-19）**：`v0.1.0` 的 11 个 Release asset 已从无认证固定 URL 下载，并同时通过严格目录校验和系统 checksum。Models CLI 另行下载 R18/R34/R50，size/SHA-256 均与 manifest 一致；三个文件都完成 CPU 单图 Infer 和同一四图 COCO Eval 冒烟。四图指标不代表完整 val2017 精度，实际输入和输出规模见[多变体运行时报告](../reports/variant-runtime-validation.md)。
 
 ## Infer 的当前数据流
 
@@ -35,6 +35,8 @@ YAML + overrides
 ```
 
 **已验证（2026-07-19）**：官方 R18 checkpoint 在 CPU/FP32 上完成真实 COCO 单图和 batch 4 目录推理。单图阈值 `0.3` 生成 30 条 JSON 记录；batch 4 生成 4 张可视化图片。环境、checksum 和命令边界见[M5 计划](../plans/2026-07-19-m5-cli-export-boundaries.md)。这证明当前 PyTorch CLI 可运行，不新增跨框架数值等价声明。
+
+同日使用 `v0.1.0` 公开 R34/R50 checkpoint 和各自配置补齐相同 CPU/FP32 单图合同，阈值 `0.3` 分别生成 `31/28` 条 JSON 记录和可解码图片；两者还完成统一四图 Eval 链路。该证据只扩展 eager 变体范围，导出范围仍只声明 R18，详见[多变体运行时报告](../reports/variant-runtime-validation.md)。
 
 ### 为什么不能保留旧推理链
 

@@ -13,7 +13,8 @@
 
 ## 当前文档
 
-- [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：进行中；Ruff/Mypy 全活跃范围、Python 3.9–3.12 CPU CI、本机 CUDA model-only 与真实 COCO 端到端性能证据、wheel/sdist 发布候选验证、R18/R34/R50 COCO 可视化对比、四产物 Models CLI 和 11-asset checksum/严格回读预检已完成。最新托管全包/直接维护覆盖率为 50.99%/90.80%，门禁为 50.5%/90%；权重公开发布及真实 URL 回读尚未完成。
+- [M7——公开模型多变体运行时验收计划](2026-07-19-m7-variant-runtime-validation.md)：已完成；公开 R18/R34/R50 均通过 Models、真实 COCO Infer 和统一四图 Eval 运行时验收，未恢复 deferred 长训。
+- [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：已完成；Ruff/Mypy、Python 3.9–3.12 CPU CI、本机 CUDA/COCO 性能、直接维护范围 90.80% 覆盖率、三变体可视化和 `v0.1.0` 的 11 个公开 asset 均已验收。
 - [M5——配置、CLI 与导出边界计划](2026-07-19-m5-cli-export-boundaries.md)：已完成；覆盖 workspace/config、五个 CLI 合同、官方 R18 eager 推理，以及 ONNX/TorchScript 固定高宽和动态 batch 边界。
 - [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：同权重完整 val2017 gate 已通过；本机长训于 2026-07-19 暂缓，已提供 GitHub 社区分片执行脚本。
 - [M3——训练、评估与恢复验收计划](2026-07-18-m3-training-evaluation-recovery.md)：已完成，覆盖 optimizer/LR、完整 COCO epoch/val、恢复、AMP/EMA、DDP、loss reduce 与梯度累积。

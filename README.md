@@ -128,7 +128,7 @@ wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模�
 
 [`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0) 已通过 GitHub Releases 对外发布，包含 wheel、sdist、四个 PyTorch 权重、四份 mapping report 和 `SHA256SUMS`，共 11 个 asset。固定 tag 的全部资产已通过匿名公开下载、严格 checksum 回读和系统 `sha256sum` 复核；具体环境、命令和限制见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
 
-`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；`download` 已使用公开 R18 asset 完成端到端校验，并用该下载文件通过 CPU 单图 Infer 和四图 COCO Eval 链路冒烟。
+`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；三个公开检测 asset 均已通过 Models CLI 下载校验，并使用各自配置完成 CPU 单图 Infer 和统一四图 COCO Eval 链路冒烟，详见[多变体运行时报告](docs/reports/variant-runtime-validation.md)。
 
 ```bash
 # 构建 wheel 与 sdist

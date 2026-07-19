@@ -6,7 +6,7 @@
 
 - 当前默认测试覆盖权重转换、数据操作、注意力、解码器和部分训练策略；通过并不等于已完成完整 COCO 训练、评估或 mAP 对齐。
 - 迁移早期针对旧构建器、Registry 和模型参数的测试保留在 `tests/legacy/`，默认不收集。这些场景需要按当前 API 重写，不应通过强行恢复旧兼容层来绕过。
-- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。Infer 已用官方 R18 checkpoint 完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 尺寸验证；ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖固定高宽、动态 batch 1/4/8。Models 能列出并校验本地权重，但当前没有公开 URL，不能声称下载链路已验收。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出、GPU provider、TensorRT 或 C++ 部署已支持。
+- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。公开 R18/R34/R50 checkpoint 已分别通过 Models CLI 固定 URL 下载、CPU/FP32 真实 COCO 单图 Infer 和统一四图 Eval；R18 另有 batch 4、608/640 和完整 val2017 证据。ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 目前只用 R18 覆盖固定高宽、动态 batch 1/4/8。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出、GPU provider、TensorRT 或 C++ 部署已支持。
 
 ## 数值等价
 
@@ -22,7 +22,7 @@
 ## 框架与环境
 
 - Paddle 参考实现是 `third-party/RT-DETRv3-paddle` 子模块，不会打包进 PyTorch wheel。开发工具还依赖子模块已初始化。
-- wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256；固定 tag 的 GitHub Release 会同时提供转换权重、mapping report 和覆盖所有资产的 `SHA256SUMS`。
+- wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256；`v0.1.0` 固定 tag 的 GitHub Release 已提供转换权重、mapping report 和覆盖所有资产的 `SHA256SUMS`。
 - Paddle 和相关对齐工具位于 `dev` 附加依赖；核心 PyTorch 运行时不应直接导入 Paddle。
 - ONNX 和 ONNX Runtime 位于 `export` 附加依赖，并因导出回归测试同时包含在 `dev` 中；核心训练/eager 运行时不要求安装或导入它们。
 - Paddle 扩展算子不会随 `uv sync --extra dev` 自动编译，使用旋转框等特定路径时需要额外构建。

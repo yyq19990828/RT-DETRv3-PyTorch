@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)
-**Current execution plan**: 暂无；后续工作从本路线图中的 deferred 项重新立项
+**Latest completed execution plan**: [`M7——公开模型多变体运行时验收计划`](docs/plans/2026-07-19-m7-variant-runtime-validation.md)
+**Current execution plan**: 暂无；后续工作从本路线图中的 deferred 项或已记录部署边界重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -128,6 +128,19 @@
 
 **验收记录**：2026-07-19，annotated tag `v0.1.0` 指向 `c0317ef`，GitHub Release 的 11 个公开资产完成匿名下载与双重 checksum 回读；公开 R18 权重完成 Models CLI 下载、单图 Infer 和四图 COCO Eval 冒烟。提交 `80d2a80` 的最终 GitHub Actions 6 个 job 全部通过。
 
+## Milestone 7 — 公开模型多变体运行时验收（P1）
+
+**执行计划**：[`M7——公开模型多变体运行时验收计划`](docs/plans/2026-07-19-m7-variant-runtime-validation.md)。本阶段只补发布后三个检测模型的用户侧 eager 运行证据，不恢复 M4 长训，也不把小样本 Eval 指标作为正式 AP。
+
+- [x] 使用公开 R18 asset 完成 Models CLI 下载、真实 COCO 单图 Infer 和四图 Eval 冒烟。
+- [x] 使用公开 R34 asset 完成相同 CPU/FP32 运行时验收。
+- [x] 使用公开 R50 asset 完成相同 CPU/FP32 运行时验收。
+- [x] 更新发布后局限、运行矩阵和可复现证据，清理全部测试产物。
+
+**Exit criteria**: 三个已发布检测权重均能从固定 tag URL 下载并通过 checksum，使用各自配置严格加载，完成真实图片 Infer 和同一 COCO 小样本 Eval；报告明确不外推为 R34/R50 完整 AP、训练收敛或导出支持。
+
+**验收记录**：2026-07-19，R34/R50 公开下载的 size/SHA-256 与 manifest 一致；同一 COCO 单图分别生成 `31/28` 条检测和可解码图片，同一四图子集 Eval 均写出 1,200 条候选。未发现变体专属实现故障；完整证据见[公开模型多变体运行时报告](docs/reports/variant-runtime-validation.md)。
+
 ## 依赖顺序
 
 ```text
@@ -135,7 +148,7 @@ M1 最小训练链
  ├──> M2 权重/数值对齐 ──> M4 精度对齐
  └──> M3 训练/评估/恢复 ─┘
 M1–M3 ──> M5 CLI/导出
-M4–M5 ──> M6 性能与发布
+M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵
 ```
 
 ## 不作为当前阻塞的延伸项
