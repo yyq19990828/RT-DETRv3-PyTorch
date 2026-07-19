@@ -84,8 +84,14 @@ jobs:
       - name: Install locked test environment
         run: uv sync --locked --extra test
 
-      - name: Build wheel
-        run: uv build --wheel
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Validate release artifacts
+        run: >-
+          uv run --no-sync python scripts/check_release.py
+          --wheel dist/*.whl
+          --sdist dist/*.tar.gz
 
       - name: Install wheel over editable package
         run: uv pip install --python .venv/bin/python --no-deps --reinstall dist/*.whl
@@ -95,6 +101,14 @@ jobs:
           for command in rtdetrv3-train rtdetrv3-eval rtdetrv3-infer rtdetrv3-export rtdetrv3-convert; do
             ".venv/bin/$command" --help
           done
+
+      - name: Verify packaged config outside checkout
+        run: |
+          venv_python="$PWD/.venv/bin/python"
+          scratch_dir="$(mktemp -d)"
+          trap 'rm -rf "$scratch_dir"' EXIT
+          cd "$scratch_dir"
+          "$venv_python" -c "from ppdet_pytorch import modeling; from ppdet_pytorch.core.workspace import load_config; cfg = load_config('configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml'); assert cfg.architecture == 'RTDETRV3'"
 
       - name: Run wheel CLI and export smoke tests
         run: >-

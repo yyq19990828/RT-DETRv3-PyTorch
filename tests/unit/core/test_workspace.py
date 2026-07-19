@@ -296,3 +296,16 @@ def test_failed_load_config_preserves_active_workspace(
 
     assert global_config.filename == "valid"
     assert create("WorkspacePreserved").value == 9
+
+
+def test_repository_style_config_path_resolves_outside_checkout(
+    isolated_workspace,
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.chdir(tmp_path)
+
+    config = load_config("configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml")
+
+    assert config.filename == "rtdetrv3_r18vd_6x_coco"
+    assert config.architecture == "RTDETRV3"

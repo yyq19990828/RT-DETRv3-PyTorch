@@ -18,6 +18,7 @@ import importlib
 import os
 import sys
 from collections.abc import Mapping
+from pathlib import Path
 
 import yaml
 
@@ -73,6 +74,24 @@ class AttrDict(dict):
 global_config = AttrDict()
 
 BASE_KEY = "_BASE_"
+_PACKAGE_CONFIG_ROOT = Path(__file__).resolve().parents[1] / "configs"
+_REPOSITORY_CONFIG_ROOT = Path(__file__).resolve().parents[3] / "configs"
+
+
+def _resolve_config_path(file_path):
+    """Resolve a repository-style config path from an installed wheel."""
+    path = Path(file_path).expanduser()
+    if path.is_file() or path.is_absolute():
+        return str(path)
+    if not path.parts or path.parts[0] != "configs":
+        return str(path)
+
+    relative_path = Path(*path.parts[1:])
+    for config_root in (_PACKAGE_CONFIG_ROOT, _REPOSITORY_CONFIG_ROOT):
+        candidate = config_root / relative_path
+        if candidate.is_file():
+            return str(candidate)
+    return str(path)
 
 
 # parse and load _BASE_ recursively
@@ -113,6 +132,7 @@ def load_config(file_path):
 
     Returns: global config
     """
+    file_path = _resolve_config_path(file_path)
     _, ext = os.path.splitext(file_path)
     assert ext in [".yml", ".yaml"], "only support yaml files for now"
 

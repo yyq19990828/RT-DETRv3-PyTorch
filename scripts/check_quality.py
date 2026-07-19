@@ -16,6 +16,7 @@ RUFF_TARGETS = (".",)
 MYPY_TARGETS = (
     "scripts/check_coverage.py",
     "scripts/check_quality.py",
+    "scripts/check_release.py",
     "scripts/run_framework_benchmark.py",
     "scripts/run_stability_experiment.py",
     "src/ppdet_pytorch",

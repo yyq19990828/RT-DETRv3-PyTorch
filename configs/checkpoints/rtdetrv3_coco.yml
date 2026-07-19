@@ -3,6 +3,8 @@ source_repository:
   url: https://github.com/clxia12/RT-DETRv3
   revision: 349e7d99a5065e7b684118912e6a74178d4f4625
   model_zoo: https://github.com/clxia12/RT-DETRv3/blob/349e7d99a5065e7b684118912e6a74178d4f4625/README.md
+  license: Apache-2.0
+  license_file: LICENSE
 
 pretraining:
   resnet18_vd:
@@ -10,9 +12,16 @@ pretraining:
     used_by: rtdetrv3_r18vd_6x_coco
     target_config: configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml
     source_url: https://paddledet.bj.bcebos.com/models/pretrained/ResNet18_vd_pretrained.pdparams
+    source_path: pretrained_models/paddle/ResNet18_vd_pretrained.pdparams
     source_size_bytes: 44850756
     source_sha256: 68d7632cb67ad2c658fe67ab5837d8eb65466a7bc1574badc74860059ef5e7f0
     converted_tensor_count: 115
+    converted_artifact:
+      path: pretrained_models/pytorch/ResNet18_vd_pretrained.pth
+      size_bytes: 44876108
+      sha256: 2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2
+      mapping_report: pretrained_models/reports/ResNet18_vd_pretrained.mapping.json
+      mapping_count: 115
 
 models:
   rtdetrv3_r18vd_6x_coco:
@@ -20,19 +29,40 @@ models:
     config: configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml
     source_url: https://drive.google.com/file/d/1zIDOjn1qDccC3TBsDlGQHOjVrehd26bk/view
     source_file_id: 1zIDOjn1qDccC3TBsDlGQHOjVrehd26bk
+    source_path: pretrained_models/paddle/rtdetrv3_r18vd_6x_coco.pdparams
     source_size_bytes: 91945530
     source_sha256: f32dbd008bd7e5311c877d522f6d8c9e349795978c889f53823588b5e5d74a5f
+    converted_artifact:
+      path: pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth
+      size_bytes: 92075629
+      sha256: cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547
+      mapping_report: pretrained_models/reports/rtdetrv3_r18vd_6x_coco.mapping.json
+      mapping_count: 571
   rtdetrv3_r34vd_6x_coco:
     status: verified
     config: configs/rtdetrv3/rtdetrv3_r34vd_6x_coco.yml
     source_url: https://drive.google.com/file/d/12-wqAF8i67eqbocaWPK33d4tFkN2wGi2/view
     source_file_id: 12-wqAF8i67eqbocaWPK33d4tFkN2wGi2
+    source_path: pretrained_models/paddle/rtdetrv3_r34vd_6x_coco.pdparams
     source_size_bytes: 137016081
     source_sha256: 29b09c64d6c372cde46d94caee1b57a23cee0aae24bd7bd3e2937cf57e581a68
+    converted_artifact:
+      path: pretrained_models/pytorch/rtdetrv3_r34vd_6x_coco.pth
+      size_bytes: 137170947
+      sha256: e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272
+      mapping_report: pretrained_models/reports/rtdetrv3_r34vd_6x_coco.mapping.json
+      mapping_count: 681
   rtdetrv3_r50vd_6x_coco:
     status: verified
     config: configs/rtdetrv3/rtdetrv3_r50vd_6x_coco.yml
     source_url: https://drive.google.com/file/d/1wfJE-QgdgqKE0IkiTuoD5HEbZwwZg3sQ/view
     source_file_id: 1wfJE-QgdgqKE0IkiTuoD5HEbZwwZg3sQ
+    source_path: pretrained_models/paddle/rtdetrv3_r50vd_6x_coco.pdparams
     source_size_bytes: 182331170
     source_sha256: e8b1d5db3208ce0f9edba5a914f23c918141b608ab4cd409db9d9204f7ed4b08
+    converted_artifact:
+      path: pretrained_models/pytorch/rtdetrv3_r50vd_6x_coco.pth
+      size_bytes: 182510207
+      sha256: 5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7
+      mapping_report: pretrained_models/reports/rtdetrv3_r50vd_6x_coco.mapping.json
+      mapping_count: 789

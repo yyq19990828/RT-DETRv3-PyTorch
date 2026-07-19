@@ -22,6 +22,7 @@
 ## 框架与环境
 
 - Paddle 参考实现是 `third-party/RT-DETRv3-paddle` 子模块，不会打包进 PyTorch wheel。开发工具还依赖子模块已初始化。
+- wheel 包含当前 26 个 YAML 配置与 Apache-2.0/NOTICE，但不包含 checkpoint 或数据集；sdist 同样排除 Paddle 子模块和 `pretrained_models/`。用户仍需根据 manifest 单独获取权重并校验 SHA-256。
 - Paddle 和相关对齐工具位于 `dev` 附加依赖；核心 PyTorch 运行时不应直接导入 Paddle。
 - ONNX 和 ONNX Runtime 位于 `export` 附加依赖，并因导出回归测试同时包含在 `dev` 中；核心训练/eager 运行时不要求安装或导入它们。
 - Paddle 扩展算子不会随 `uv sync --extra dev` 自动编译，使用旋转框等特定路径时需要额外构建。
@@ -32,6 +33,7 @@
 - PyTorch 保留了部分 PaddleDetection 风格的 YAML 和注册机制，但两个框架的对象创建、参数注入和 DataLoader 语义不能假设完全等价。
 - 当前 `create()` 接受类、注册名、全局命名配置块或带 `name`/`type` 的配置映射；不带组件名的任意字典会失败。显式构造参数优先于配置块和 `from_config()`，显式注入目标会先递归解析。
 - 组件依赖仍在导入时注册。`load_config()` 现已隔离连续 YAML 的运行时值并保留注册 schema，但 `global_config` 仍是当前进程共享的活动配置；测试中的临时 `merge_config()` 和手工修改仍必须在前后恢复。
+- 当相对 `configs/...` 路径在当前工作目录不存在时，`load_config()` 会回退到 wheel 内配置；绝对路径、已存在的用户相对路径和不以 `configs/` 开头的自定义路径不会被改写。
 - 数据集路径使用仓库相对默认值，实际训练仍需根据本机数据位置覆盖配置。
 
 当前行为和设计约束见[注册与配置经验](registry-and-configuration.md)与[配置迁移指南](configuration-guide.md)。

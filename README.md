@@ -101,7 +101,7 @@ uv run --extra test python scripts/check_coverage.py
 
 ## 代码质量
 
-全部活跃 Python 文件统一使用 Ruff 格式化和基础 lint，Mypy 单独负责类型检查。Ruff 已覆盖仓库根目录并排除只读子模块、历史测试和生成目录；Mypy 仍按 M6 计划逐步扩展已验证范围。
+全部活跃 Python 文件统一使用 Ruff 格式化和基础 lint，Mypy 单独负责类型检查。Ruff 已覆盖仓库根目录并排除只读子模块、历史测试和生成目录；Mypy 已覆盖完整 `src/ppdet_pytorch` 与纳入门禁的仓库脚本。
 
 ```bash
 # 检查 Ruff format、Ruff lint 和 Mypy
@@ -109,6 +109,23 @@ uv run --extra quality python scripts/check_quality.py
 
 # 格式化并应用 Ruff 安全修复，再运行 Mypy
 uv run --extra quality python scripts/check_quality.py --fix
+```
+
+## 发布候选检查
+
+wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模型权重、数据集或 Paddle 子模块。安装 wheel 后，从仓库外仍可使用 `configs/...` 路径访问包内配置。发布候选权重的来源、大小、SHA-256 和 mapping 数记录在 [`configs/checkpoints/rtdetrv3_coco.yml`](configs/checkpoints/rtdetrv3_coco.yml)。
+
+```bash
+# 构建 wheel 与 sdist
+uv build
+
+# 检查许可元数据、包内配置和发布归档内容
+uv run python scripts/check_release.py \
+  --wheel dist/rtdetrv3_pytorch-0.1.0-py3-none-any.whl \
+  --sdist dist/rtdetrv3_pytorch-0.1.0.tar.gz
+
+# 发布权重前还必须实际校验本地源权重、转换权重和 mapping report
+uv run python scripts/check_release.py --require-models
 ```
 
 ## 仓库结构

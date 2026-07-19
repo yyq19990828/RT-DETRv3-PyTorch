@@ -1,0 +1,14 @@
+RT-DETRv3 PyTorch
+
+This distribution contains source code adapted from the following
+Apache-2.0-licensed projects:
+
+- RT-DETRv3, https://github.com/clxia12/RT-DETRv3,
+  revision 349e7d99a5065e7b684118912e6a74178d4f4625.
+- PaddleDetection, https://github.com/PaddlePaddle/PaddleDetection.
+
+Copyright and attribution notices from those projects are retained in the
+individual source files. The official and converted model checkpoints are not
+included in the Python wheel or source distribution. Their provenance,
+checksums, and release-candidate paths are recorded in
+configs/checkpoints/rtdetrv3_coco.yml.

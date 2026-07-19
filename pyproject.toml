@@ -3,8 +3,24 @@ name = "rtdetrv3-pytorch"
 version = "0.1.0"
 description = "PyTorch implementation and migration workspace for RT-DETRv3"
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["object-detection", "pytorch", "rt-detr", "rtdetrv3"]
 authors = [
     { name = "yiqing.yang", email = "yiqing.yang@tyjt-ai.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 requires-python = ">=3.9,<3.13"
 dependencies = [
@@ -74,12 +90,33 @@ rtdetrv3-export = "ppdet_pytorch.cli.export:main"
 rtdetrv3-infer = "ppdet_pytorch.cli.infer:main"
 rtdetrv3-train = "ppdet_pytorch.cli.train:main"
 
+[project.urls]
+Documentation = "https://github.com/yyq19990828/RT-DETRv3-PyTorch/tree/main/docs"
+Issues = "https://github.com/yyq19990828/RT-DETRv3-PyTorch/issues"
+Repository = "https://github.com/yyq19990828/RT-DETRv3-PyTorch"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ppdet_pytorch"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"configs" = "ppdet_pytorch/configs"
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "configs",
+    "scripts",
+    "src",
+    "tests",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "pyproject.toml",
+    "uv.lock",
+]
 
 [tool.uv]
 required-version = ">=0.11.29,<0.12"

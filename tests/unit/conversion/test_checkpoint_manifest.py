@@ -36,6 +36,14 @@ def test_verified_checkpoint_has_sha256_and_size():
         assert model["source_size_bytes"] > 0
         assert len(model["source_sha256"]) == 64
         int(model["source_sha256"], 16)
+        assert model["source_path"].startswith("pretrained_models/paddle/")
+        converted = model["converted_artifact"]
+        assert converted["path"].startswith("pretrained_models/pytorch/")
+        assert converted["size_bytes"] > 0
+        assert len(converted["sha256"]) == 64
+        int(converted["sha256"], 16)
+        assert converted["mapping_report"].startswith("pretrained_models/reports/")
+        assert converted["mapping_count"] > 0
 
 
 def test_r18_pretraining_manifest_is_target_aware():
@@ -49,3 +57,4 @@ def test_r18_pretraining_manifest_is_target_aware():
     assert len(pretraining["source_sha256"]) == 64
     int(pretraining["source_sha256"], 16)
     assert pretraining["converted_tensor_count"] == 115
+    assert pretraining["converted_artifact"]["mapping_count"] == 115
