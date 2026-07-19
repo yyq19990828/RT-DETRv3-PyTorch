@@ -1,6 +1,6 @@
 # M11——ONNX Runtime CUDA/CPU 推理计划
 
-- 状态：`in-progress`
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -32,7 +32,7 @@ M9 已让 Infer CLI 直接消费 ONNX，M10 又验证了 TorchScript CUDA/CPU �
 - [x] 实现可复用 ONNX session 的 CUDA/CPU provider 合同，并保持 ONNX 预处理 tensor 位于 CPU。
 - [x] 将 CPU/GPU ORT wheel 隔离到明确的 UV extras，验证 Python 3.9–3.12 lock 与 CPU CI 安装。
 - [x] 导出 R18 ONNX，运行四图 batch 的 eager/ONNX × CUDA/CPU 对照。
-- [ ] 更新 ROADMAP、CLI/limitations 和独立报告，执行本地门禁并清理全部中间产物；推送后确认托管 CI。（本地部分已完成，等待托管 CI。）
+- [x] 更新 ROADMAP、CLI/limitations 和独立报告，执行本地门禁并清理全部中间产物；推送后确认托管 CI。
 
 ## 依赖
 
@@ -54,7 +54,7 @@ M9 已让 Infer CLI 直接消费 ONNX，M10 又验证了 TorchScript CUDA/CPU �
 - [x] 默认 ONNX 走 CPU；显式 `cuda`/`cuda:N` 将正确 device id 交给 `CUDAExecutionProvider`。
 - [x] 缺少 CUDA provider 或实际 session 回退时给出带 GPU extra 指引的错误；显式 CPU 始终可用。
 - [x] R18 四图 batch 4 的 ONNX CUDA/CPU 均生成四张可解码图片和 JSON，并分别与同设备 eager 满足记录的数值合同。
-- [ ] 非 Paddle 全仓、覆盖率门禁、Ruff/Mypy 和托管 CPU CI 通过；中间产物已清理。（除托管 CPU CI 外均已完成。）
+- [x] 非 Paddle 全仓、覆盖率门禁、Ruff/Mypy 和托管 CPU CI 通过；中间产物已清理。
 
 ## 决策记录
 
@@ -69,4 +69,4 @@ M9 已让 Infer CLI 直接消费 ONNX，M10 又验证了 TorchScript CUDA/CPU �
 
 ## 完成记录
 
-本地实现与验证已完成，实现提交 `dc97927`。GPU session 实际使用 CUDA/CPU providers，R18 四图在 CUDA/CPU 两条路径均满足本计划记录的同设备合同；非 Paddle 全仓 `358 passed, 9 skipped, 17 deselected`，覆盖率 `51.48%/90.50%`，Ruff/Mypy、构建与发布检查通过，临时产物已清理。等待写入托管 CI 证据后关闭计划。
+2026-07-19 完成。实现提交 `dc97927`；GPU session 实际使用 CUDA/CPU providers，R18 四图在 CUDA/CPU 两条路径均满足本计划记录的同设备合同。本地非 Paddle 全仓 `358 passed, 9 skipped, 17 deselected`，覆盖率 `51.48%/90.50%`，Ruff/Mypy、构建与发布检查通过，临时产物已清理。文档提交 `983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管全包/直接维护范围为 `7,079/13,748 (51.49%)` 和 `1,991/2,200 (90.50%)`，Ruff `174` 个文件、Mypy `107` 个 source file、发布检查和 `65 passed` wheel smoke 同时通过。

@@ -13,7 +13,7 @@
 
 ## 当前文档
 
-- [M11——ONNX Runtime CUDA/CPU 推理计划](2026-07-19-m11-onnx-runtime-cuda-inference.md)：进行中；保持 CPU 默认与 CPU CI，补显式 CUDA provider、依赖隔离和 R18 四图同设备数值证据。
+- [M11——ONNX Runtime CUDA/CPU 推理计划](2026-07-19-m11-onnx-runtime-cuda-inference.md)：已完成；保持 CPU 默认与 CPU CI，显式 CUDA provider、依赖隔离、R18 四图同设备数值证据和托管矩阵均通过。
 - [M10——TorchScript CUDA/CPU 推理计划](2026-07-19-m10-torchscript-cuda-inference.md)：已完成；拆分 ONNX provider 与 TorchScript device 合同，真实四图和托管矩阵均通过。
 - [M9——导出产物端到端推理计划](2026-07-19-m9-exported-inference.md)：已完成；Infer 可直接消费 checkpoint/ONNX/TorchScript，真实图和托管矩阵均通过。
 - [M8——R34/R50 多变体导出验收计划](2026-07-19-m8-variant-export-validation.md)：已完成；R34/R50 的 ONNX/TorchScript 已通过固定 640、动态 batch 1/4/8 和真实图的每图全候选一对一回归。

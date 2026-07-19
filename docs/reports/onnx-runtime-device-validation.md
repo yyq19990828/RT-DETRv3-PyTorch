@@ -1,6 +1,6 @@
 # ONNX Runtime CUDA/CPU 推理验证报告
 
-- 状态：`locally verified; hosted CPU CI pending`
+- 状态：`verified`
 - 验证日期：`2026-07-19`
 - 实现提交：`dc97927`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
@@ -100,6 +100,8 @@ ORT CUDA 默认 `use_tf32=1` 时相对默认 eager CUDA 为 `6.06865e-4/0.023864
 - GPU `dev`/`export-gpu` 与 CPU `test` extras 均完成实际安装；四组互斥组合均由 UV 拒绝。GPU 环境回读 `CUDAExecutionProvider,CPUExecutionProvider`，CPU wheel 对显式 CUDA 请求在创建输出目录前失败。
 - 隐藏 GPU 的非 Paddle 全仓：`358 passed, 9 skipped, 17 deselected`。全包覆盖率 `7,078/13,748 (51.48%)`，直接维护范围 `1,991/2,200 (90.50%)`，通过 `50.5%/90%` 门槛。
 - Ruff format/lint：`174` 个文件通过；Mypy：`107` 个 source file 通过；wheel/sdist 构建和发布内容检查通过。
-- 临时 ONNX、四图副本、五组 Infer 输出与 pytest/cache 产物均已清理；UV `.venv` 保留 GPU `dev` 环境。GitHub Actions 结果待实现提交后补充。
+- 临时 ONNX、四图副本、五组 Infer 输出与 pytest/cache 产物均已清理；UV `.venv` 保留 GPU `dev` 环境。
+
+实现与本地证据提交 `dc97927`/`983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全部通过。Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`；Python 3.12 全包/直接维护范围覆盖率为 `7,079/13,748 (51.49%)` 和 `1,991/2,200 (90.50%)`。托管 Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查、六个安装后 CLI、包外配置加载和 `65 passed` wheel smoke 同时通过。
 
 本报告只声明 R18、当前 Python Infer CLI、固定 640、FP32、ORT 1.23.2 和本机 CUDA 12.1/cuDNN 9。它不证明 R34/R50 ONNX CUDA、动态高宽、AMP/FP16、I/O Binding、TensorRT、C++/mobile 或性能收益。CPU/GPU 的独立门槛也不能外推为 Paddle/PyTorch 逐位等价。

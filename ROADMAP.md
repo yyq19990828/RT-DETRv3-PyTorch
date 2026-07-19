@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M10——TorchScript CUDA/CPU 推理计划`](docs/plans/2026-07-19-m10-torchscript-cuda-inference.md)
-**Current execution plan**: [`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)；M4 长训保持 deferred
+**Latest completed execution plan**: [`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)
+**Current execution plan**: 暂无；M4 长训保持 deferred，后续从尚未覆盖的 provider/外部部署边界重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -188,9 +188,11 @@
 - [x] provider 缺失或 session 完全静默降级时明确失败并给出 GPU extra 安装指引。
 - [x] CPU `export`/`test` 与 GPU `dev`/`export-gpu` extras 可分别安装，冲突组合由 UV 拒绝。
 - [x] 使用 R18 四图 batch 4 完成 ONNX/eager × CUDA/CPU 的同设备数值、JSON 与可视化对照。
-- [ ] 更新 provider 支持矩阵、复现命令和未覆盖边界，清理全部中间产物。
+- [x] 更新 provider 支持矩阵、复现命令和未覆盖边界，清理全部中间产物。
 
 **Exit criteria**: ONNX Infer 可在显式 CUDA 和 CPU fallback 上完成真实图片 batch 推理；两个 provider 分别与同设备 eager 满足记录的每图输出合同，默认 CPU 用户和 Python 3.9–3.12 CPU CI 不回归。
+
+**验收记录**：2026-07-19，实现提交 `dc97927`。R18 四图的 ONNX CUDA/CPU 相对同设备 eager 最大 score/box 误差分别为 `6.06865e-4/0.0238647 px` 和 `6.82473e-6/0.000183105 px`，两组均无候选重排。提交 `983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[ONNX Runtime 设备验证报告](docs/reports/onnx-runtime-device-validation.md)。
 
 ## 依赖顺序
 
