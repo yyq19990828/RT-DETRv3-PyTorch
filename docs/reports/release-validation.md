@@ -67,4 +67,4 @@
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
 - [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
 
-90% 覆盖率目标、end-to-end DataLoader/profile 和 M4 完整长训仍未完成或已按决策 deferred；本报告不会把它们改写为已验证。
+直接维护范围的 90% 覆盖率目标已有本地证据；end-to-end DataLoader/profile 和 M4 完整长训仍未完成或已按决策 deferred；本报告不会把未验证项改写为已验证。

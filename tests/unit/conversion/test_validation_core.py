@@ -1,7 +1,12 @@
 """Core model-output validation tests that do not require Paddle."""
 
+import sys
+from contextlib import nullcontext
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
+import torch
 
 from ppdet_pytorch.conversion.validation import (
     ForwardPassResult,
@@ -137,6 +142,110 @@ def test_compare_dict_outputs_accepts_two_empty_dictionaries(validator):
     assert result.passed is True
     assert result.output_shape == ()
     assert result.details == "Both output dictionaries are empty"
+
+
+def _install_fake_paddle(monkeypatch):
+    fake_paddle = SimpleNamespace(
+        to_tensor=lambda value, dtype=None: PaddleValue(value),
+        no_grad=nullcontext,
+    )
+    monkeypatch.setitem(sys.modules, "paddle", fake_paddle)
+
+
+def test_validate_forward_pass_normalizes_generic_sequence_outputs(
+    validator, monkeypatch
+):
+    _install_fake_paddle(monkeypatch)
+
+    class PaddleModel:
+        def eval(self):
+            return self
+
+        def __call__(self, value):
+            return [PaddleValue(value.numpy() * 2)]
+
+    class TorchModel:
+        def eval(self):
+            return self
+
+        def __call__(self, value):
+            return (value * 2,)
+
+    sample = np.ones((1, 3, 2, 2), dtype=np.float32)
+
+    result = validator.validate_forward_pass(PaddleModel(), TorchModel(), sample)
+
+    assert result.passed is True
+    assert result.output_shape == sample.shape
+
+
+def test_validate_forward_pass_extracts_rtdetr_transformer_outputs(
+    validator, monkeypatch
+):
+    _install_fake_paddle(monkeypatch)
+    boxes = np.asarray([[[0.1, 0.2, 0.3, 0.4]]], dtype=np.float32)
+    logits = np.asarray([[[0.25, 0.75]]], dtype=np.float32)
+
+    class PaddleModel:
+        def eval(self):
+            return self
+
+        def backbone(self, inputs):
+            assert set(inputs) == {"image", "im_shape", "scale_factor"}
+            return "body"
+
+        def neck(self, body):
+            assert body == "body"
+            return "neck"
+
+        def transformer(self, neck, pad_mask, inputs):
+            assert (neck, pad_mask, inputs) == ("neck", None, None)
+            return None, None, PaddleValue(boxes), PaddleValue(logits)
+
+    class TorchModel:
+        def eval(self):
+            return self
+
+        def __call__(self, inputs):
+            assert set(inputs) == {"image", "im_shape", "scale_factor"}
+            return {
+                "pred_boxes": torch.from_numpy(boxes.copy()),
+                "pred_logits": torch.from_numpy(logits.copy()),
+            }
+
+    sample = np.ones((1, 3, 2, 2), dtype=np.float32)
+
+    result = validator.validate_forward_pass(PaddleModel(), TorchModel(), sample)
+
+    assert result.passed is True
+    assert result.output_shape == boxes.shape
+
+
+def test_validate_forward_pass_rejects_incompatible_output_structures(
+    validator, monkeypatch
+):
+    _install_fake_paddle(monkeypatch)
+
+    class PaddleModel:
+        def eval(self):
+            return self
+
+        def __call__(self, value):
+            return {"output": PaddleValue(value.numpy())}
+
+    class TorchModel:
+        def eval(self):
+            return self
+
+        def __call__(self, value):
+            return value
+
+    with pytest.raises(TypeError, match="incompatible output structures"):
+        validator.validate_forward_pass(
+            PaddleModel(),
+            TorchModel(),
+            np.ones((1, 3, 2, 2), dtype=np.float32),
+        )
 
 
 @pytest.mark.parametrize("passed", [True, False])

@@ -42,6 +42,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
   - [x] 将完整 `modeling` 目录加入门禁，累计 84 个 source file 通过。
   - [x] 清理 `data` 的 87 项错误，将整个 `src/ppdet_pytorch` 收敛为单一 Mypy 目标；含 3 个脚本共 103 个 source file 通过。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
+- [x] 为 Convert/Export 用户编排和转换输出适配补回归，将直接维护范围提高到 90.80% 并将门禁固化为 90%。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [x] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
 - [x] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
@@ -100,6 +101,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 通用 Python 依赖锁定到官方 PyPI，保留 PyTorch/Paddle 专用索引 | 清华镜像对 Python 3.9 的 `zipp==3.23.0` artifact 返回 HTTP 403；重建锁文件没有改变包名或版本，干净 3.9 安装和回归通过 |
 | 2026-07-19 | R18-vd backbone 与三个检测权重共用发布合同 | 官方训练复现依赖该初始化权重；manifest 现在为四个产物声明唯一 CLI alias，Models CLI 和发布检查共同覆盖 list/verify/download |
 | 2026-07-19 | 四产物下载补测后将直接维护范围下限提高到 85% | 重复 alias、路径逃逸和 backbone 下载回归使本地直接维护范围达到 85.11%；新增发布边界应转化为回退约束 |
+| 2026-07-19 | Convert/Export/转换适配补测后完成 90% 直接维护目标 | 11 项纯 CPU 行为回归使本地直接范围达到 90.80%；门禁提高为全包 50.5%/直接 90% |
 | 2026-07-19 | PyTorch 2.5.1/cu121 改用官方专用索引 | 南京镜像在 GitHub 六个 job 中均超过 45 分钟未完成 744 MiB Torch wheel；官方源空缓存完整安装为 2m21s，包版本不变 |
 
 ## 完成记录
@@ -183,3 +185,5 @@ GitHub Actions [run 29683881309](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 公开回读预演把四份 mapping report 的 size/SHA-256 加入 checkpoint manifest，避免只依赖与下载文件同源的 `SHA256SUMS`。`--verify-release-dir` 只接受恰好 11 个普通文件的扁平目录，对 checksum 格式、路径、唯一性、完整资产集、实际文件摘要、manifest 独立摘要以及 wheel/sdist 内容逐层校验。本地从当前工作树重建归档，用真实四权重/四报告构造扁平下载目录，生成 10 行 checksum 后回读结果为 `11 release assets, 10 checksummed assets`；发布定向回归 `12 passed`，Ruff `174` 个文件、Mypy `107` 个 source file 通过，隐藏 GPU 的非 Paddle 回归为 `317 passed, 5 skipped, 34 deselected`，覆盖率仍为 `50.14%/85.11%`。临时硬链接、归档和清单均已清理。
 
 GitHub Actions [run 29684281347](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684281347) 在提交 `ecabe32` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `317 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,803/13,567`（`50.14%`）和 `1,720/2,021`（`85.11%`）；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `47 passed` wheel smoke 全部通过。
+
+90% 覆盖率收口批次先用逐文件 JSON 证据锁定 `cli/convert.py` 65.84%、`cli/export.py` 67.78% 和 `conversion/validation.py` 72.13% 三个用户边界，而不扩大排除范围。新增 11 项纯 CPU 回归，覆盖非法输入/输出/辅助路径拒绝、目标感知单文件转换编排和退出码、ONNX/TorchScript 双格式导出与防覆盖，以及不安装 Paddle 的通用/检测模型输出适配合同。显式隐藏 GPU 的非 Paddle 回归为 `328 passed, 5 skipped, 34 deselected`；三个目标文件均达到 99%，全包为 `6,917/13,567`（`50.98%`），直接维护范围为 `1,835/2,021`（`90.80%`）。门禁从 50%/85% 提高到 50.5%/90%；托管复验待提交后补录。
