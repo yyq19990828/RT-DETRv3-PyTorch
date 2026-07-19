@@ -91,3 +91,5 @@ Mypy 第二批将完整 `cli`、`conversion` 目录并入既有 `deploy` 和脚�
 GitHub Actions [run 29672051076](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672051076) 在提交 `6750f62` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 17 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率为全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
 
 Mypy 第三批仅为 `optimizer` 中的 LR multiplier 分组字典和已访问参数名列表补充可证明的元素类型，不改动优化器方程、参数组或更新顺序。完整 `optimizer` 并入后，统一门禁为 22 个 source file，定向测试为 `13 passed`；全包待办降为 233 项、38 个文件。
+
+GitHub Actions [run 29672324668](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672324668) 在提交 `9979863` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 22 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率维持全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
