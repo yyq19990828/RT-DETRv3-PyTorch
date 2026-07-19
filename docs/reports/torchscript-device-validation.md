@@ -1,6 +1,6 @@
 # TorchScript CUDA/CPU 推理验证报告
 
-- 状态：`local verified; hosted CI pending`
+- 状态：`verified`
 - 验证日期：`2026-07-19`
 - 实现提交：`85b956d`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
@@ -99,5 +99,7 @@ uv run rtdetrv3-infer \
 - 覆盖率：全包 `7,068/13,738 (51.45%)`；直接维护范围 `1,981/2,190 (90.46%)`，通过 `50.5%/90%` 门槛。
 - Ruff format/lint：`174` 个文件通过；Mypy：`107` 个 source file 通过。
 - 四个后端均生成 58 条 JSON 记录和四张可解码图片；临时模型、图片、JSON 和 pytest 目录在验收结束后清理，UV `.venv` 保留。
+
+实现和本地证据提交 `85b956d`/`f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全部通过。Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`；Python 3.12 全包/直接维护范围覆盖率为 `7,069/13,738 (51.46%)` 和 `1,981/2,190 (90.46%)`。托管 Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查、六个安装后 CLI、包外配置加载和 `60 passed` wheel smoke 同时通过。
 
 本报告只声明 R18、当前 Python Infer CLI、固定 640、FP32 和本机 PyTorch CUDA/CPU。ONNX Runtime 仍是 CPU-only；未验证 R34/R50 TorchScript CUDA、动态高宽、AMP/FP16、TensorRT、C++/mobile 或外部客户端预处理。这里只做功能与数值合同，不给出吞吐或显存排名。

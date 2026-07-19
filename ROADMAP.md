@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M9——导出产物端到端推理计划`](docs/plans/2026-07-19-m9-exported-inference.md)
-**Current execution plan**: [`M10——TorchScript CUDA/CPU 推理计划`](docs/plans/2026-07-19-m10-torchscript-cuda-inference.md)
+**Latest completed execution plan**: [`M10——TorchScript CUDA/CPU 推理计划`](docs/plans/2026-07-19-m10-torchscript-cuda-inference.md)
+**Current execution plan**: 暂无；M4 长训保持 deferred，后续从尚未覆盖的 provider/外部部署边界重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -178,7 +178,7 @@
 
 **Exit criteria**: TorchScript Infer 在真实 CUDA 与 CPU fallback 上均完成四图 batch，并与 eager CUDA 满足记录的每图输出合同；ONNX 的 CPU-only 限制保持显式。
 
-**本地验收记录**：2026-07-19，实现提交 `85b956d`。四条 eager/TorchScript × CUDA/CPU 路径均输出 `[30,1,25,2]` 条检测；TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，同设备渲染全部字节一致。跨设备两条近似候选换序单独记录，不全局放宽同设备门槛。非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率 `51.45%/90.46%`，Ruff/Mypy 通过；托管 CI 待确认。详见[TorchScript 设备验证报告](docs/reports/torchscript-device-validation.md)。
+**验收记录**：2026-07-19，实现提交 `85b956d`。四条 eager/TorchScript × CUDA/CPU 路径均输出 `[30,1,25,2]` 条检测；TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，同设备渲染全部字节一致。跨设备两条近似候选换序单独记录，不全局放宽同设备门槛。本地非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率 `51.45%/90.46%`，Ruff/Mypy 通过。提交 `f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全绿；Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`，托管覆盖率 `51.46%/90.46%`，wheel smoke `60 passed`。详见[TorchScript 设备验证报告](docs/reports/torchscript-device-validation.md)。
 
 ## 依赖顺序
 

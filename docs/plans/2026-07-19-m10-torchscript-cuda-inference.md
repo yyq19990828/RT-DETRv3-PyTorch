@@ -1,6 +1,6 @@
 # M10——TorchScript CUDA/CPU 推理计划
 
-- 状态：`in_progress`（本地验收完成，托管 CI 待确认）
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -51,7 +51,7 @@ M9 已让 Infer CLI 直接消费 ONNX/TorchScript，但为避免混淆 provider�
 - [x] `--onnx-model --device cuda` 继续在加载前失败。
 - [x] CUDA 可用时 TorchScript 默认 `cuda`，显式 `--device cpu` 可用；无 CUDA时默认 CPU。
 - [x] R18 四图 batch 4 的 TorchScript CUDA/CPU 均生成四张可解码图片和 JSON，并分别与同设备 eager 满足记录的数值合同。
-- [ ] 非 Paddle 全仓、覆盖率门禁和 Ruff/Mypy 已通过；中间产物已清理，托管 CI 待确认。
+- [x] 非 Paddle 全仓、覆盖率门禁、Ruff/Mypy 和托管 CI 通过；中间产物已清理。
 
 ## 决策记录
 
@@ -64,4 +64,4 @@ M9 已让 Infer CLI 直接消费 ONNX/TorchScript，但为避免混淆 provider�
 
 ## 完成记录
 
-本地实现已完成于 `85b956d`。R18 四图阈值后检测数为 `[30,1,25,2]`；TorchScript CUDA 相对 eager CUDA 的最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，两组同设备渲染均逐字节一致。跨设备对照有两条近似候选换序，按独立观测记录，不修改 M8 默认门槛。定向回归 `56 passed`；隐藏 GPU 的非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率为 `51.45%/90.46%`；Ruff `174` 个文件、Mypy `107` 个 source file 通过。完整环境、checksum、命令与限制见[TorchScript 设备验证报告](../reports/torchscript-device-validation.md)。托管 CI 通过后关闭本计划。
+已完成。实现提交 `85b956d`；R18 四图阈值后检测数为 `[30,1,25,2]`。TorchScript CUDA 相对 eager CUDA 的最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，两组同设备渲染均逐字节一致。跨设备对照有两条近似候选换序，按独立观测记录，不修改 M8 默认门槛。定向回归 `56 passed`；隐藏 GPU 的本地非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率为 `51.45%/90.46%`；Ruff `174` 个文件、Mypy `107` 个 source file 通过。提交 `f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全绿；Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`，托管覆盖率 `51.46%/90.46%`，wheel smoke `60 passed`。临时产物已清理，完整环境、checksum、命令与限制见[TorchScript 设备验证报告](../reports/torchscript-device-validation.md)。
