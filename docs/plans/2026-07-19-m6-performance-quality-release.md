@@ -97,3 +97,5 @@ Mypy 第三批仅为 `optimizer` 中的 LR multiplier 分组字典和已访问�
 GitHub Actions [run 29672324668](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672324668) 在提交 `9979863` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 22 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率维持全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
 
 Mypy 第四批清理 `metrics` 的 5 项类型错误，并新增 4 个活跃回归，覆盖 AP 积分、零 padding 裁剪、DetectionMAP classwise 累积和 COCO prediction-only JSON。完整 `metrics` 并入后，统一门禁为 27 个 source file，定向测试为 `17 passed`，默认全量为 `257 passed, 3 skipped`；全包 Mypy 待办降为 228 项、35 个文件。新测试使隐藏 GPU 的本地全包覆盖率提高到 `43.94%`，因此回退下限从 42% 同步提高到 43%。
+
+GitHub Actions [run 29672789563](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672789563) 在提交 `e22c2b4` 上通过全部 6 个 jobs：质量 job 为 161 个 Ruff 文件和 27 个 Mypy source file 通过；Python 3.12 CPU 为 `221 passed, 7 skipped, 17 deselected`，全包覆盖率 `43.95%`、直接维护范围 `65.60%`，其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
