@@ -26,6 +26,7 @@
 - GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在覆盖率收口提交 `48cc134` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 发布检查通过，wheel smoke 为 `49 passed`。
 - GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在端到端 runner 提交 `d823edf` 上继续通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`，覆盖率仍为 `50.99%/90.80%`；Ruff/Mypy、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 - 原子暂存批次增加 `--stage-release-dir`：在同一父目录的隐藏临时目录复制 10 个输入、生成 checksum 并严格校验，通过后才原子更名；目标已存在时拒绝覆盖，校验失败时清理半成品。当前工作树临时构建的 wheel/sdist 与真实四权重/四报告一次暂存为 `11 release assets, 10 checksummed assets`，随后的独立 `--verify-release-dir` 再次通过；`438 MiB` 临时目录已清理。定向回归为 `16 passed`；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.98%/90.80%`。
+- GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在原子暂存提交 `51847eb` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
