@@ -23,6 +23,7 @@
 - GitHub Actions [run 29683881309](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683881309) 在 checksum 生成器提交 `75d7bab` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `312 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,803/13,567`（`50.14%`）和直接维护范围 `1,720/2,021`（`85.11%`）；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 构建与发布检查通过，wheel smoke 为 `47 passed`。
 - 公开回读预演将四份 mapping report 的 size/SHA-256 加入 manifest，再从当前工作树构建 wheel/sdist，与真实四权重/四报告组成 11 个普通文件的扁平目录。新的 `--verify-release-dir` 对完整资产集、10 行 checksum 清单、实际文件摘要、manifest 独立摘要与 wheel/sdist 内容全部校验通过，输出 `11 release assets, 10 checksummed assets`；临时产物已清理。发布定向回归为 `12 passed`，质量门禁为 Ruff `174` 个文件和 Mypy `107` 个 source file；隐藏 GPU 的非 Paddle 覆盖率回归为 `317 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.14%/85.11%`。
 - GitHub Actions [run 29684281347](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684281347) 在公开回读预演提交 `ecabe32` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `317 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,803/13,567`（`50.14%`）和直接维护范围 `1,720/2,021`（`85.11%`）；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 发布检查通过，wheel smoke 为 `47 passed`。
+- GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在覆盖率收口提交 `48cc134` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；质量 job 为 Ruff `174` 个文件和 Mypy `107` 个 source file；wheel/sdist 发布检查通过，wheel smoke 为 `49 passed`。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -67,4 +68,4 @@
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
 - [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再把固定下载 URL 写入 manifest 和 README。
 
-直接维护范围的 90% 覆盖率目标已有本地证据；end-to-end DataLoader/profile 和 M4 完整长训仍未完成或已按决策 deferred；本报告不会把未验证项改写为已验证。
+直接维护范围的 90% 覆盖率目标已有托管证据；end-to-end DataLoader/profile 和 M4 完整长训仍未完成或已按决策 deferred；本报告不会把未验证项改写为已验证。

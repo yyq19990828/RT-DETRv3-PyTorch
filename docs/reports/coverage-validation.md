@@ -19,7 +19,7 @@ pytest -p no:cacheprovider -q -m "not paddle" \
   --cov=ppdet_pytorch --cov-report=term --cov-report=json:<temporary-path>
 ```
 
-`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU 的本地 `test` extra 结果为 `328 passed, 5 skipped, 34 deselected`；34 项因 `paddle` marker 被排除，5 项因当前 CPU 环境缺少所需的 CUDA 能力跳过。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
+`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU、已安装 `dev` extra 的本地结果为 `328 passed, 5 skipped, 34 deselected`；最新托管 `test` extra 结果为 `328 passed, 7 skipped, 17 deselected`。差异来自已安装能力和测试 extra，核心行为测试计数一致。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
 
 在提交 `19bcb60` 上，已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的托管 `test` extra 为准。
 
@@ -47,7 +47,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 四产物发布合同批次把 R18-vd backbone 训练初始化权重加入 manifest 驱动的 Models CLI，并新增重复 alias、路径逃逸和真实 backbone 下载合同回归。显式隐藏 GPU 的本地非 Paddle 测试为 `308 passed, 5 skipped, 34 deselected`，全包 `6,802/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`）；`cli` 合计为 `718/876`（`82.0%`），其中 `cli/models.py` 为 `156/176`（`88.64%`）。基于新增的用户下载边界证据，直接维护范围门槛从 84% 提高到 85%。GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在提交 `aa3ccac` 上完成托管复验：Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,803/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`），新门槛通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表采用托管结果。
 
-90% 目标收口批次使用逐文件 coverage JSON 将主要缺口定位到 `cli/convert.py`、`cli/export.py` 和 `conversion/validation.py`，没有为提高数字而排除任何源文件。11 项新增纯 CPU 回归覆盖了 Convert 输入/输出路径拒绝、目标感知编排与退出码，Export 双格式编排与防覆盖，以及不依赖 Paddle 安装的通用/检测模型输出适配。显式隐藏 GPU 的本地非 Paddle 测试为 `328 passed, 5 skipped, 34 deselected`，全包 `6,917/13,567`（`50.98%`），直接维护范围 `1,835/2,021`（`90.80%`）。`cli/convert.py`、`cli/export.py` 和 `conversion/validation.py` 均为 99%；可执行门禁提高到全包 50.5%/直接维护 90%。托管复验待提交后补录。
+90% 目标收口批次使用逐文件 coverage JSON 将主要缺口定位到 `cli/convert.py`、`cli/export.py` 和 `conversion/validation.py`，没有为提高数字而排除任何源文件。11 项新增纯 CPU 回归覆盖了 Convert 输入/输出路径拒绝、目标感知编排与退出码，Export 双格式编排与防覆盖，以及不依赖 Paddle 安装的通用/检测模型输出适配。显式隐藏 GPU 的本地非 Paddle 测试为 `328 passed, 5 skipped, 34 deselected`，全包 `6,917/13,567`（`50.98%`），直接维护范围 `1,835/2,021`（`90.80%`）。`cli/convert.py`、`cli/export.py` 和 `conversion/validation.py` 均为 99%；可执行门禁提高到全包 50.5%/直接维护 90%。GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在提交 `48cc134` 上完成托管复验：Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,918/13,567`（`50.99%`），直接维护范围 `1,835/2,021`（`90.80%`），新门禁通过。下表采用托管结果。
 
 ## 当前结果
 
@@ -57,14 +57,14 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 | `cli` | 876 | 800 | 91.3% |
 | `conversion` | 659 | 627 | 95.1% |
 | `core` | 401 | 327 | 81.5% |
-| `data` | 5,630 | 1,757 | 31.2% |
+| `data` | 5,630 | 1,758 | 31.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 757 | 452 | 59.7% |
 | `metrics` | 577 | 265 | 45.9% |
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,567** | **6,917** | **50.98%** |
+| **全包** | **13,567** | **6,918** | **50.99%** |
 
 直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `2,021` 条语句，覆盖 `1,835` 条，覆盖率为 **90.80%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不将它的 90% 扩大表述为全包 90%。
 
@@ -75,6 +75,6 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 - 非 Paddle 全包语句覆盖率不低于 **50.5%**。
 - `cli/conversion/core/deploy` 合计覆盖率不低于 **90%**。
 
-两个阈值都低于当前实测值，用于防止覆盖率回退。`ROADMAP.md` 中定义明确的直接维护范围 90% 目标已达到；全包当前为 50.98%，不应通过排除 `data`、`metrics` 或其他低覆盖源文件来声称全包也达到 90%。
+两个阈值都低于当前实测值，用于防止覆盖率回退。`ROADMAP.md` 中定义明确的直接维护范围 90% 目标已达到；全包当前为 50.99%，不应通过排除 `data`、`metrics` 或其他低覆盖源文件来声称全包也达到 90%。
 
 后续覆盖率工作应继续优先用户可见且低于各自范围平均值的路径，不为了数字补无行为价值的测试。
