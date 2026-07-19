@@ -488,7 +488,7 @@ class OptimizerBuilder:
 
     def _build_lr_multiplier_groups(self, model, learning_rate):
         """Group trainable parameters by their model-declared LR multiplier."""
-        grouped_params = {}
+        grouped_params: dict[float, list[torch.nn.Parameter]] = {}
         for param in model.parameters():
             if not param.requires_grad:
                 continue
@@ -525,7 +525,7 @@ class OptimizerBuilder:
         assert isinstance(param_group_configs, list), "param_groups must be a list"
 
         param_groups = []
-        visited = []
+        visited: list[str] = []
 
         for group_config in param_group_configs:
             assert isinstance(group_config, dict) and "params" in group_config, (

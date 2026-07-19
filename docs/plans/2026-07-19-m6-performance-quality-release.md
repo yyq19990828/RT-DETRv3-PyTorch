@@ -34,7 +34,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
 - [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
   - [x] 将门禁扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
-  - [ ] 清理其余 235 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 26、`core` 21、`utils` 21、`metrics` 5 和 `optimizer` 2。
+  - [x] 将完整 `optimizer` 目录加入门禁，累计 22 个 source file 通过。
+  - [ ] 清理其余 233 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 26、`core` 21、`utils` 21 和 `metrics` 5。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -88,3 +89,5 @@ GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第二批将完整 `cli`、`conversion` 目录并入既有 `deploy` 和脚本门禁，共 17 个 source file 通过。清理的 4 项包含两个实际边界：训练 CLI 对未实现的半监督 teacher/student 权重显式失败，转换验证器对 Paddle/PyTorch 输出结构不一致显式失败；定向测试为 `112 passed`。同日全包重新审计为 235 项、39 个文件，历史 123 项仅保留为初始快照，不代表当前待办数量。
 
 GitHub Actions [run 29672051076](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672051076) 在提交 `6750f62` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 17 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率为全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
+
+Mypy 第三批仅为 `optimizer` 中的 LR multiplier 分组字典和已访问参数名列表补充可证明的元素类型，不改动优化器方程、参数组或更新顺序。完整 `optimizer` 并入后，统一门禁为 22 个 source file，定向测试为 `13 passed`；全包待办降为 233 项、38 个文件。

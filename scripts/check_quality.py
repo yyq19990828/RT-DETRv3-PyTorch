@@ -20,6 +20,7 @@ MYPY_TARGETS = (
     "src/ppdet_pytorch/cli",
     "src/ppdet_pytorch/conversion",
     "src/ppdet_pytorch/deploy",
+    "src/ppdet_pytorch/optimizer",
 )
 
 
