@@ -1,6 +1,6 @@
 # 发布候选验证报告
 
-- 状态：`v0.1.0 manifest finalized; artifacts not published`
+- 状态：`v0.1.0 assets rebuilt from local tag; artifacts not published`
 - 验证日期：`2026-07-19`
 - 发布加固基线提交：`dc09cd8`
 
@@ -28,6 +28,17 @@
 - 原子暂存批次增加 `--stage-release-dir`：在同一父目录的隐藏临时目录复制 10 个输入、生成 checksum 并严格校验，通过后才原子更名；目标已存在时拒绝覆盖，校验失败时清理半成品。当前工作树临时构建的 wheel/sdist 与真实四权重/四报告一次暂存为 `11 release assets, 10 checksummed assets`，随后的独立 `--verify-release-dir` 再次通过；`438 MiB` 临时目录已清理。定向回归为 `16 passed`；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.98%/90.80%`。
 - GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在原子暂存提交 `51847eb` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 - `v0.1.0` 发布元数据批次将 distribution repository/tag 与四个权重的精确 asset URL 固化到 manifest，发布检查不再只验证 HTTPS 前缀，还会拒绝 repository、tag 或文件名不一致。Models/manifest/release 定向回归为 `27 passed`，四个 manifest 条目和 `12` 个真实本地文件/报告校验通过；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，覆盖率为 `50.98%/90.80%`。本段证明 tag 提交的输入元数据可用，不替代后续从 tag 重建和公开 URL 回读。
+- 本地 annotated tag `v0.1.0` 指向提交 `c0317ef8475f82b53951ef88b92120b63c08aaa6`。从该 tag 的 detached 独立工作树构建 wheel/sdist，与真实四权重/四 mapping report 原子暂存为 `dist/releases/v0.1.0/` 下恰好 `11` 个普通文件。tag 内发布检查、独立 `--verify-release-dir` 和系统 `sha256sum --check` 全部通过，输出 `11 release assets, 10 checksummed assets`。wheel/sdist 内嵌 manifest 与 tag 源文件的 SHA-256 均为 `7f0dcc2b95cb3c0b7049185c0d9f267f00544fafba6a08cd874714f993001620`；解包 wheel 在仓库外按 `r18/r34/r50/r18-backbone` 读出四个 `published` 固定 URL。临时工作树和构建目录已清理，实际上传目录按维护者要求保留。
+
+## v0.1.0 实际上传归档
+
+| 产物 | 大小 | SHA-256 |
+|---|---:|---|
+| `rtdetrv3_pytorch-0.1.0-py3-none-any.whl` | `330,416` | `ffd8db68649abf132216105c48cdb6cccdf1ed9b0ebf94dc40c3036e70b33ee9` |
+| `rtdetrv3_pytorch-0.1.0.tar.gz` | `719,418` | `0d42b6935ecae2d0fe12e2b1be388b3647819822a60feda66ac5fdaff5ef176a` |
+| `SHA256SUMS` | `982` | `edaada576b9afe66469d2eda818d15dbab68d0d715d5c6f8c2aa8e0bb3c0f799` |
+
+四个权重和四份 mapping report 的大小/SHA-256 与下方 manifest 表及 `SHA256SUMS` 一致。该目录是实际 GitHub Release 上传输入，不属于 Git 跟踪源码；如任一内容改变，必须更换版本而不能覆盖 `v0.1.0` 同名资产。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -67,7 +78,7 @@
 2026-07-19 实际查询时，远程仓库尚无 tag 和 GitHub Release；因此本地扁平目录预演不能替代真实公开 URL 证据。
 
 - [x] 确认 `v0.1.0` 版本号和 asset 文件名，在 tag 所指提交中将四个产物改为 `published` 并写入该 tag 的固定 HTTPS URL。
-- [ ] 创建签名或受保护 tag，从 tag 的干净工作树重建 wheel/sdist，用 `scripts/check_release.py --stage-release-dir` 生成并验证完整 11-asset 目录。
+- [x] 创建本地 annotated tag，从 tag 的干净工作树重建 wheel/sdist，用 `scripts/check_release.py --stage-release-dir` 生成并验证完整 11-asset 目录。
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
 - [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再将公开回读证据写入本报告。
 

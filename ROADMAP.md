@@ -121,6 +121,7 @@
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态、本地 checksum 校验和发布后 HTTPS 原子下载。
 - [x] 将四份 mapping report 的 size/SHA-256 固化到 manifest，并完成 11-asset 扁平 Release 目录的严格回读预演。
 - [x] 将四权重、四报告、wheel/sdist 和 `SHA256SUMS` 收敛为单命令原子暂存，并用真实 11-asset 目录严格回读。
+- [x] 确认 `v0.1.0`，从本地 annotated tag 的 detached 工作树重建并校验实际 11-asset 上传目录。
 - [ ] 以固定 tag 公开发布三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 **Exit criteria**: 安装、测试、训练、评估、导出和模型获取都有可重复发布流程。

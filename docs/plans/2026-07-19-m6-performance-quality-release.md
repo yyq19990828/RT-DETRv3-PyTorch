@@ -54,6 +54,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 将 mapping report 的 size/SHA-256 纳入 manifest，并完成 11-asset 扁平 Release 目录、严格 checksum 清单和归档内容的回读预演。
 - [x] 增加单命令原子发布暂存：拒绝覆盖已有目录，失败清理半成品，并用真实四权重完成 11-asset 严格回读。
 - [x] 维护者确认 `v0.1.0`，四个产物在 manifest 中固定到该 tag 的精确 GitHub Release URL。
+- [x] 从本地 annotated `v0.1.0` tag 的 detached 工作树重建实际 wheel/sdist，生成并严格回读待上传的 11-asset 目录。
 - [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
@@ -205,3 +206,5 @@ GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在提交 `51847eb` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 
 `v0.1.0` 发布输入已在创建 tag 前收口：manifest 新增 distribution repository/tag，四个权重使用精确的固定 tag asset URL，发布检查对 repository、tag 和权重文件名做组合校验。Models/manifest/release 定向回归为 `27 passed`，本地 `12` 个真实文件/报告校验通过；全仓 Ruff `174` 文件、Mypy `107` source file 和隐藏 GPU 的非 Paddle `340 passed, 5 skipped, 34 deselected` 通过，覆盖率为 `50.98%/90.80%`。该证据只覆盖 tag 输入；实际归档 checksum 必须在 tag 创建后重建记录。
+
+本地 annotated `v0.1.0` tag 指向 `c0317ef8475f82b53951ef88b92120b63c08aaa6`。从 detached tag 工作树构建的 wheel/sdist 与真实四权重/四 mapping report 组成 `dist/releases/v0.1.0/` 下的 11 个实际上传文件；tag 内发布检查、独立严格回读和系统 checksum 复核均通过。wheel/sdist 的 SHA-256 为 `ffd8db68649abf132216105c48cdb6cccdf1ed9b0ebf94dc40c3036e70b33ee9`/`0d42b6935ecae2d0fe12e2b1be388b3647819822a60feda66ac5fdaff5ef176a`；包内 manifest 与 tag 源文件逐字节一致，临时工作树已清理。tag 和资产仍未推送/公开，M6 保持进行中。
