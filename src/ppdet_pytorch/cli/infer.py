@@ -56,7 +56,7 @@ def create_argument_parser():
     )
     model_group.add_argument(
         "--torchscript-model",
-        help="Run a tensor-only traced TorchScript export on CPU.",
+        help="Run a tensor-only traced TorchScript export on a PyTorch device.",
     )
 
     image_group = parser.add_mutually_exclusive_group(required=True)
@@ -126,19 +126,18 @@ def create_argument_parser():
 def parse_args(argv=None):
     parser = create_argument_parser()
     args = parser.parse_args(argv)
+    onnx_model = args.onnx_model is not None
     exported_model = args.onnx_model is not None or args.torchscript_model is not None
     if args.device is None:
         args.device = (
-            "cpu"
-            if exported_model
-            else ("cuda" if torch.cuda.is_available() else "cpu")
+            "cpu" if onnx_model else ("cuda" if torch.cuda.is_available() else "cpu")
         )
     try:
         device = torch.device(args.device)
     except (RuntimeError, ValueError):
         parser.error("--device must be a valid PyTorch device")
-    if exported_model and device.type != "cpu":
-        parser.error("ONNX/TorchScript Infer currently requires --device cpu")
+    if onnx_model and device.type != "cpu":
+        parser.error("ONNX Infer currently requires --device cpu")
     if exported_model and args.use_ema:
         parser.error("--use-ema is only valid with --checkpoint")
     if not 0.0 <= args.threshold <= 1.0:

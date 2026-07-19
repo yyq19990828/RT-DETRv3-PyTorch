@@ -66,7 +66,8 @@ def test_parse_args_accepts_current_and_legacy_flag_spellings():
     assert args.threshold == pytest.approx(0.25)
 
 
-def test_parse_args_accepts_cpu_exported_model_sources():
+def test_parse_args_uses_backend_specific_default_devices(monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
     onnx_args = infer_cli.parse_args(
         [
             "--config",
@@ -87,9 +88,47 @@ def test_parse_args_accepts_cpu_exported_model_sources():
             "image.jpg",
         ]
     )
+    checkpoint_args = infer_cli.parse_args(
+        [
+            "--config",
+            "model.yml",
+            "--checkpoint",
+            "model.pth",
+            "--infer-img",
+            "image.jpg",
+        ]
+    )
 
     assert onnx_args.device == "cpu"
-    assert torchscript_args.device == "cpu"
+    assert torchscript_args.device == "cuda"
+    assert checkpoint_args.device == "cuda"
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    fallback_args = infer_cli.parse_args(
+        [
+            "--config",
+            "model.yml",
+            "--torchscript-model",
+            "model.pt",
+            "--infer-img",
+            "image.jpg",
+        ]
+    )
+    assert fallback_args.device == "cpu"
+
+
+def test_parse_args_accepts_explicit_torchscript_cpu_and_cuda():
+    base_args = [
+        "--config",
+        "model.yml",
+        "--torchscript-model",
+        "model.pt",
+        "--infer-img",
+        "image.jpg",
+    ]
+
+    assert infer_cli.parse_args([*base_args, "--device", "cpu"]).device == "cpu"
+    assert infer_cli.parse_args([*base_args, "--device", "cuda:0"]).device == "cuda:0"
 
 
 @pytest.mark.parametrize(
@@ -97,7 +136,7 @@ def test_parse_args_accepts_cpu_exported_model_sources():
     [
         ["--onnx-model", "model.onnx", "--checkpoint", "model.pth"],
         ["--onnx-model", "model.onnx", "--use-ema"],
-        ["--torchscript-model", "model.pt", "--device", "cuda"],
+        ["--onnx-model", "model.onnx", "--device", "cuda"],
     ],
 )
 def test_parse_args_rejects_invalid_exported_model_combinations(extra_args, capsys):

@@ -488,7 +488,9 @@ class RTDETRTransformerv3(nn.Module):
 
         # init encoder output anchors and valid_mask
         if self.eval_size:
-            self.anchors, self.valid_mask = self._generate_anchors()
+            anchors, valid_mask = self._generate_anchors()
+            self.register_buffer("anchors", anchors, persistent=False)
+            self.register_buffer("valid_mask", valid_mask, persistent=False)
 
     @classmethod
     def from_config(cls, cfg, input_shape):
@@ -681,8 +683,8 @@ class RTDETRTransformerv3(nn.Module):
             target,
             init_ref_points_unact,
             memory,
-            torch.tensor(spatial_shapes, dtype=torch.long, device=memory.device),
-            torch.tensor(level_start_index, dtype=torch.long, device=memory.device),
+            memory.new_tensor(spatial_shapes, dtype=torch.long),
+            memory.new_tensor(level_start_index, dtype=torch.long),
             self.dec_bbox_head,
             self.dec_score_head,
             self.query_pos_head,
@@ -750,9 +752,9 @@ class RTDETRTransformerv3(nn.Module):
         if self.training or self.eval_size is None or is_teacher:
             anchors, valid_mask = self._generate_anchors(spatial_shapes, device=device)
         else:
-            anchors, valid_mask = self.anchors.to(device), self.valid_mask.to(device)
+            anchors, valid_mask = self.anchors, self.valid_mask
 
-        memory = torch.where(valid_mask, memory, torch.tensor(0.0, device=device))
+        memory = torch.where(valid_mask, memory, torch.zeros_like(memory))
         map_memory = self.map_memory(memory.detach())
         targets, reference_points_unacts, enc_topk_bboxes, enc_topk_logits = (
             [],
@@ -771,8 +773,8 @@ class RTDETRTransformerv3(nn.Module):
             )
 
             # extract region proposal boxes
-            batch_ind = torch.arange(bs, dtype=topk_ind.dtype, device=device)
-            batch_ind = batch_ind.unsqueeze(-1).repeat(1, self.num_queries[g_id])
+            batch_ind = torch.ones_like(topk_ind[:, :1]).cumsum(dim=0) - 1
+            batch_ind = batch_ind.repeat(1, self.num_queries[g_id])
 
             # Gather using advanced indexing
             reference_points_unact = enc_outputs_coord_unact[

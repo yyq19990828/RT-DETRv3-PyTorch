@@ -202,18 +202,11 @@ class DETRPostProcess(object):
 
         if not self.use_focal_loss:
             scores, labels = scores.max(dim=-1)
-            query_indices = (
-                torch.arange(scores.shape[1], device=scores.device)
-                .unsqueeze(0)
-                .expand(scores.shape[0], -1)
-            )
+            query_indices = torch.ones_like(scores, dtype=torch.long).cumsum(dim=1) - 1
             if scores.shape[1] > self.num_top_queries:
                 scores, query_indices = torch.topk(scores, self.num_top_queries, dim=-1)
-            batch_ind = (
-                torch.arange(end=scores.shape[0], device=scores.device)
-                .unsqueeze(-1)
-                .expand_as(query_indices)
-            )
+            batch_ind = torch.ones_like(query_indices[:, :1]).cumsum(dim=0) - 1
+            batch_ind = batch_ind.expand_as(query_indices)
             index = torch.stack([batch_ind, query_indices], dim=-1)
             labels = labels[index[..., 0], index[..., 1]]
             bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
@@ -221,11 +214,8 @@ class DETRPostProcess(object):
             scores, index = torch.topk(scores.flatten(1), self.num_top_queries, dim=-1)
             labels = index % self.num_classes
             index = index // self.num_classes
-            batch_ind = (
-                torch.arange(end=scores.shape[0], device=scores.device)
-                .unsqueeze(-1)
-                .tile(1, self.num_top_queries)
-            )
+            batch_ind = torch.ones_like(index[:, :1]).cumsum(dim=0) - 1
+            batch_ind = batch_ind.expand_as(index)
             index = torch.stack([batch_ind, index], dim=-1)
             bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
 
@@ -258,11 +248,10 @@ class DETRPostProcess(object):
             dim=-1,
         )
         num_predictions = bbox_pred.shape[1]
-        bbox_num = torch.full(
+        bbox_num = bbox_pred.new_full(
             (bbox_pred.shape[0],),
             num_predictions,
             dtype=torch.int32,
-            device=bbox_pred.device,
         )
         bbox_pred = bbox_pred.reshape(-1, 6)
         return bbox_pred, bbox_num, mask_pred
