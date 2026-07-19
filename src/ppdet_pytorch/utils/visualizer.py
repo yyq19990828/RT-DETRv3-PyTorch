@@ -22,6 +22,7 @@ Paddle-compatible visualization functions.
 """
 
 import logging
+from typing import Any, Union
 
 import numpy as np
 
@@ -117,13 +118,14 @@ def draw_bbox(image, im_id, catid2name, bboxes, threshold):
     draw = ImageDraw.Draw(image)
 
     # Use default font
+    font: Union[ImageFont.FreeTypeFont, ImageFont.ImageFont]
     try:
         font = ImageFont.truetype("DejaVuSans.ttf", 18)
     except OSError:
         font = ImageFont.load_default()
 
     # Generate colors for categories
-    catid2color = {}
+    catid2color: dict[Any, np.ndarray] = {}
     color_list = _colormap(rgb=True)[:40]
 
     for dt in np.array(bboxes):
@@ -139,7 +141,7 @@ def draw_bbox(image, im_id, catid2name, bboxes, threshold):
         if catid not in catid2color:
             catid2color[catid] = color_list[len(catid2color) % len(color_list)]
 
-        color = tuple(catid2color[catid])
+        color = tuple(int(component) for component in catid2color[catid])
 
         # Draw box
         xmin, ymin, w, h = bbox

@@ -80,7 +80,7 @@ def _load_config_with_base(file_path: str) -> Dict:
 
     # NOTE: cfgs outside have higher priority than cfgs in _BASE_
     if BASE_KEY in file_cfg:
-        all_base_cfg = AttrDict()
+        all_base_cfg: Dict = AttrDict()
         base_ymls = list(file_cfg[BASE_KEY])
 
         for base_yml in base_ymls:
@@ -225,13 +225,13 @@ def save_config(config: AttrDict, save_path: str):
         config: Config AttrDict
         save_path: Output YAML file path
     """
-    save_path = Path(save_path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
+    save_file = Path(save_path)
+    save_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(save_path, "w") as f:
+    with open(save_file, "w") as f:
         yaml.safe_dump(dict(config), f, default_flow_style=False, sort_keys=False)
 
-    logger.info(f"Saved config to {save_path}")
+    logger.info(f"Saved config to {save_file}")
 
 
 def parse_args():

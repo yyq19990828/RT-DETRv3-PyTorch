@@ -91,7 +91,7 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，托管 CPU 的非 Paddle 全包覆盖率实测为 43.95%，已建立 43%/65% 双回退下限；完整 Mypy、90% 覆盖率目标、CUDA、性能和发布验收仍未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，显式隐藏 GPU 的本地非 Paddle 全包覆盖率实测为 44.33%，已建立 44%/65% 双回退下限；完整 Mypy、90% 覆盖率目标、CUDA、性能和发布验收仍未完成。
 
 - [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
@@ -102,9 +102,10 @@
   - [x] Mypy 扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
   - [x] Mypy 继续扩展到完整 `optimizer`，累计 22 个 source file 通过。
   - [x] Mypy 扩展到完整 `metrics`，累计 27 个 source file 通过。
+  - [x] Mypy 扩展到完整 `utils`，累计 36 个 source file 通过。
   - [ ] 将 Mypy 门禁扩展到其余活跃模块并清理剩余类型错误。
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
-  - [x] 记录全包和逐模块基线，建立并将全包回退下限从 42% 提高到 43%，`cli/conversion/core/deploy` 保持 65%。
+  - [x] 记录全包和逐模块基线，建立并将全包回退下限从 42% 逐步提高到 44%，`cli/conversion/core/deploy` 保持 65%。
   - [ ] 为用户可见的低覆盖路径补测，并用实际证据逐步提高阈值至 90% 目标。
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
   - [x] 增加 Python 3.9–3.12 非 Paddle CPU workflow，并在本机 UV 隔离环境验证锁文件安装和测试。

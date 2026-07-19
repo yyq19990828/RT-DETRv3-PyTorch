@@ -155,26 +155,26 @@ def save_checkpoint(
     checkpoint.update(kwargs)
 
     # Create directory if needed
-    save_path = Path(save_path)
-    save_path.parent.mkdir(parents=True, exist_ok=True)
+    save_file = Path(save_path)
+    save_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Publish atomically so an interrupted write does not replace a valid
     # checkpoint with a partial file.
     temporary_path = None
     try:
         with tempfile.NamedTemporaryFile(
-            dir=save_path.parent,
-            prefix=".{}.".format(save_path.name),
+            dir=save_file.parent,
+            prefix=".{}.".format(save_file.name),
             suffix=".tmp",
             delete=False,
         ) as temporary_file:
             temporary_path = Path(temporary_file.name)
         torch.save(checkpoint, temporary_path)
-        temporary_path.replace(save_path)
+        temporary_path.replace(save_file)
     finally:
         if temporary_path is not None and temporary_path.exists():
             temporary_path.unlink()
-    logger.info(f"Saved checkpoint to {save_path} (epoch={epoch}, iter={iteration})")
+    logger.info(f"Saved checkpoint to {save_file} (epoch={epoch}, iter={iteration})")
     return True
 
 
@@ -206,19 +206,19 @@ def load_checkpoint(
     Returns:
         Dictionary with checkpoint metadata (epoch, iteration, etc.)
     """
-    checkpoint_path = Path(checkpoint_path)
+    checkpoint_file = Path(checkpoint_path)
 
-    if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+    if not checkpoint_file.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_file}")
 
-    logger.info(f"Loading checkpoint from {checkpoint_path}")
+    logger.info(f"Loading checkpoint from {checkpoint_file}")
 
     # Load checkpoint
     if map_location is None:
         map_location = f"cuda:{get_rank()}" if torch.cuda.is_available() else "cpu"
 
     checkpoint = torch.load(
-        checkpoint_path,
+        checkpoint_file,
         map_location=map_location,
         weights_only=False,
     )
@@ -306,15 +306,15 @@ def load_pretrained_weights(
         strict: Whether to strictly enforce key matching
         prefix: Optional prefix to add/remove from keys
     """
-    pretrained_path = Path(pretrained_path)
+    pretrained_file = Path(pretrained_path)
 
-    if not pretrained_path.exists():
-        raise FileNotFoundError(f"Pretrained weights not found: {pretrained_path}")
+    if not pretrained_file.exists():
+        raise FileNotFoundError(f"Pretrained weights not found: {pretrained_file}")
 
-    logger.info(f"Loading pretrained weights from {pretrained_path}")
+    logger.info(f"Loading pretrained weights from {pretrained_file}")
 
     # Load weights
-    state_dict = torch.load(pretrained_path, map_location="cpu")
+    state_dict = torch.load(pretrained_file, map_location="cpu")
 
     # Handle checkpoint format
     if "model" in state_dict:
@@ -350,17 +350,17 @@ def get_latest_checkpoint(checkpoint_dir: str) -> Optional[Path]:
     Returns:
         Path to latest checkpoint or None
     """
-    checkpoint_dir = Path(checkpoint_dir)
+    checkpoint_directory = Path(checkpoint_dir)
 
-    if not checkpoint_dir.exists():
+    if not checkpoint_directory.exists():
         return None
 
     # Find all checkpoint files
-    checkpoints = list(checkpoint_dir.glob("checkpoint_*.pth"))
+    checkpoints = list(checkpoint_directory.glob("checkpoint_*.pth"))
 
     if not checkpoints:
         # Try 'model_*.pth' pattern
-        checkpoints = list(checkpoint_dir.glob("model_*.pth"))
+        checkpoints = list(checkpoint_directory.glob("model_*.pth"))
 
     if not checkpoints:
         return None

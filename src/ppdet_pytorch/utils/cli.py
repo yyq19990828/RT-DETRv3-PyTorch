@@ -13,13 +13,16 @@
 # limitations under the License.
 
 import re
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from typing import Any, Optional, Sequence, TypeVar, overload
 
 import yaml
 
 from ppdet_pytorch.core.workspace import dump_value, get_registered_modules
 
 __all__ = ["ColorTTY", "ArgsParser"]
+
+_NamespaceT = TypeVar("_NamespaceT")
 
 
 class ColorTTY(object):
@@ -52,13 +55,34 @@ class ArgsParser(ArgumentParser):
         )
         self.add_argument("-o", "--opt", nargs="*", help="set configuration options")
 
-    def parse_args(self, argv=None):
-        args = super(ArgsParser, self).parse_args(argv)
-        args.opt = self._parse_opt(args.opt)
-        return args
+    @overload
+    def parse_args(
+        self,
+        args: Optional[Sequence[str]] = None,
+        namespace: None = None,
+    ) -> Namespace: ...
 
-    def _parse_opt(self, opts):
-        config = {}
+    @overload
+    def parse_args(
+        self,
+        args: Optional[Sequence[str]],
+        namespace: _NamespaceT,
+    ) -> _NamespaceT: ...
+
+    @overload
+    def parse_args(self, *, namespace: _NamespaceT) -> _NamespaceT: ...
+
+    def parse_args(
+        self,
+        args: Optional[Sequence[str]] = None,
+        namespace: Any = None,
+    ) -> Any:
+        parsed_args = super(ArgsParser, self).parse_args(args, namespace)
+        parsed_args.opt = self._parse_opt(parsed_args.opt)
+        return parsed_args
+
+    def _parse_opt(self, opts: Optional[Sequence[str]]) -> dict[str, Any]:
+        config: dict[str, Any] = {}
         if not opts:
             return config
         for s in opts:
