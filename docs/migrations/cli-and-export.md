@@ -12,7 +12,7 @@
 | Eval | config + checkpoint | annotation/image override、batch/worker、持久输出、EMA、device、轻量 override | batch 必须 `>=1`、worker 必须 `>=0`；只声明 COCO 当前数据 API |
 | Infer | config + checkpoint + 单图/目录之一 | batch、阈值、可视化、JSON、EMA、device、TestReader Resize override | 不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
 | Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |
-| Export | config + checkpoint | ONNX opset 17、ONNX Runtime CPU 回归、traced TorchScript、动态 batch、固定高宽重新导出、EMA | 不声明单个产物动态高宽、GPU provider、TensorRT、C++ 或 Paddle 导出参数兼容 |
+| Export | config + checkpoint | R18/R34/R50 的 ONNX opset 17、ONNX Runtime CPU 回归、traced TorchScript、动态 batch、固定高宽重新导出、EMA | 不声明单个产物动态高宽、GPU provider、TensorRT、C++ 或 Paddle 导出参数兼容 |
 | Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | `v0.1.0` 只接受固定 tag 的 GitHub Release URL；三个检测权重均经 CLI 回读，backbone 由 11-asset 整体回读覆盖 |
 
 Train/Eval/Infer 推荐连字符参数；为既有仓库命令保留的下划线别名只覆盖文档列出的参数，不等于完整复刻 Paddle ArgsParser。各入口的 override 语法仍不同，复杂结构应放进派生 YAML。
@@ -95,14 +95,16 @@ uv run --extra export rtdetrv3-export \
 | ONNX | opset 17；checker 通过；ONNX Runtime `CPUExecutionProvider` 回归；默认 batch 轴动态，batch 1/4/8 运行 | 高宽固定为导出时数值；`--fixed-batch` 可关闭动态 batch；未验证其他 execution provider |
 | TorchScript | `torch.jit.trace` 保存、重新加载和 CPU 回归；同一固定高宽下 batch 1/4/8 运行 | 不是 `script`；高宽被 trace 固化；未声明 C++/GPU 部署合同 |
 
-**已验证（2026-07-19）**：Python `3.12.11`、PyTorch `2.5.1+cu121`、ONNX `1.22.0`、ONNX Runtime `1.27.0`、CPU/FP32、官方 R18 checkpoint 与真实 COCO 图片 `000000000139.jpg` 下，640 产物完成 batch 1/4/8 回归；608 的 ONNX 和 TorchScript 也分别通过导出时回归。验收要求 `bbox_num`、标签和行顺序完全一致，score 最大绝对误差 `<=2e-5`，坐标最大绝对误差 `<=0.01 px`。真实图观测到的 ONNX score/坐标最大绝对误差不超过 `8.76e-6/0.00123 px`，TorchScript 不超过 `5.79e-6/0.000916 px`；全零 640 导出样例的 ONNX 坐标误差最高观测为 `0.00550 px`，因此不能用真实图的更小误差替代公开门槛。
+**已验证（2026-07-19）**：Python `3.12.11`、PyTorch `2.5.1+cu121`、ONNX `1.22.0`、ONNX Runtime `1.27.0`、CPU/FP32 下，官方 R18/R34/R50 的 640 产物完成 batch 1/4/8 和真实 COCO 图片 `000000000139.jpg` 回归；R18 的 608 ONNX/TorchScript 也通过导出时回归。验收要求 `bbox_num` 和每图候选数严格一致，每图全部候选按类别、score 和 box 一对一匹配；score 最大绝对误差 `<=2e-5`，坐标最大绝对误差 `<=0.02 px`。近似并列的低分 top-k 可以交换非语义行序，但不能丢失、跨图匹配或超过数值门槛。
+
+R34 ONNX 在全零 batch 1/4/8 上的最大 score/box 误差为 `2.37e-6/0.01178 px`，真实图为 `9.48e-6/0.00214 px`；真实图有两个低分候选重排。R50 全零输入最高为 `1.90e-5/0.00562 px`，每张图有两个低分候选重排；真实图为 `5.91e-6/0.00461 px` 且不重排。两变体 TorchScript 本次全部逐值为 0。产物摘要和诊断见[多变体导出报告](../reports/variant-export-validation.md)。
 
 ### 动态边界和排错限制
 
 - “动态 batch”不等于“动态高宽”。deformable attention 会把 `value_spatial_shapes` 转成 Python 整数并按层循环，trace/export 警告表明高宽进入常量控制流。当前做法是在构建模型前同步 `cfg.eval_size`，按 608 或 640 等目标尺寸分别导出。
 - ONNX exporter 对 advanced indexing 会给出负 index 警告；当前 RT-DETR 路径生成的是非负索引并已通过实际回归，但不能据此外推到自定义负索引路径。
-- 一次跨进程 batch 8 诊断曾触发 raw top-k 标签/顺序严格门槛，分别复跑 ONNX 与 TorchScript 时 2,400 行又全部一致，未形成稳定复现。严格检查因此继续保留；若再次出现，应先检查 top-k 尾部近似并列项和第一个分歧 score，而不是直接放宽标签合同。
+- R34 真实图和 R50 全零输入稳定复现了低分 top-k 近似并列项重排。旧验证器按行比较时会把不同候选框相减，产生几十到上百像素的假误差。当前验证器在同一 image 内按类别、score 和 box 对全部候选做一对一最大匹配，禁止跨图或漏项，并额外报告重排行数；这不是忽略低分 tail。
 - 空预测属于 Infer 的阈值过滤层：`threshold=1.0` 已验证可返回 shape 为 `[0,4]` 的 boxes。模型导出层仍返回配置规定的 raw top-k 行，不能声称导出图本身产生空候选。
 - `--no-verify` 只适合缺少运行后端的受控场景；发布产物应保留默认回归。`--force` 才允许覆盖既有文件。
 
-这些证据只覆盖官方 R18、CPU/FP32、记录的两个固定尺寸和当前 opset，不应外推为 R34/R50、任意配置、GPU provider 或跨框架导出等价。
+这些证据覆盖官方 R18/R34/R50、CPU/FP32、R18 的 608/640 与 R34/R50 的 640，以及当前 opset；不应外推为任意配置、动态高宽、GPU provider 或跨框架导出等价。

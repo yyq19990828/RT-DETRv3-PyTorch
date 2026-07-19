@@ -13,6 +13,7 @@
 
 ## 当前文档
 
+- [M8——R34/R50 多变体导出验收计划](2026-07-19-m8-variant-export-validation.md)：已完成；R34/R50 的 ONNX/TorchScript 已通过固定 640、动态 batch 1/4/8 和真实图的每图全候选一对一回归。
 - [M7——公开模型多变体运行时验收计划](2026-07-19-m7-variant-runtime-validation.md)：已完成；公开 R18/R34/R50 均通过 Models、真实 COCO Infer 和统一四图 Eval 运行时验收，未恢复 deferred 长训。
 - [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：已完成；Ruff/Mypy、Python 3.9–3.12 CPU CI、本机 CUDA/COCO 性能、直接维护范围 90.80% 覆盖率、三变体可视化和 `v0.1.0` 的 11 个公开 asset 均已验收。
 - [M5——配置、CLI 与导出边界计划](2026-07-19-m5-cli-export-boundaries.md)：已完成；覆盖 workspace/config、五个 CLI 合同、官方 R18 eager 推理，以及 ONNX/TorchScript 固定高宽和动态 batch 边界。

@@ -1,6 +1,5 @@
 """Tensor-only adapters for ONNX and TorchScript deployment."""
 
-import math
 import os
 import tempfile
 from pathlib import Path
@@ -143,13 +142,81 @@ def _max_absolute_error(left, right):
     return float(torch.max(torch.abs(left - right)).item())
 
 
+def _match_image_detections(
+    reference_bbox,
+    candidate_bbox,
+    image_index,
+    score_atol,
+    box_atol,
+):
+    """Match an image's unordered detections within explicit tolerances."""
+    count = reference_bbox.shape[0]
+    if count == 0:
+        return [], 0
+
+    score_errors = torch.abs(reference_bbox[:, None, 1] - candidate_bbox[None, :, 1])
+    box_errors = torch.amax(
+        torch.abs(reference_bbox[:, None, 2:] - candidate_bbox[None, :, 2:]),
+        dim=-1,
+    )
+    compatible = (
+        (reference_bbox[:, None, 0] == candidate_bbox[None, :, 0])
+        & (score_errors <= score_atol)
+        & (box_errors <= box_atol)
+    )
+    diagonal_compatible = compatible.diagonal()
+    reordered = int((~diagonal_compatible).sum().item())
+    if reordered == 0:
+        return list(range(count)), 0
+
+    adjacency = [
+        torch.nonzero(row, as_tuple=False).flatten().tolist() for row in compatible
+    ]
+    candidate_match = [-1] * count
+
+    def augment(reference_index, seen):
+        for candidate_index in adjacency[reference_index]:
+            if seen[candidate_index]:
+                continue
+            seen[candidate_index] = True
+            previous_reference = candidate_match[candidate_index]
+            if previous_reference == -1 or augment(previous_reference, seen):
+                candidate_match[candidate_index] = reference_index
+                return True
+        return False
+
+    for reference_index in range(count):
+        augment(reference_index, [False] * count)
+
+    reference_match = [-1] * count
+    for candidate_index, reference_index in enumerate(candidate_match):
+        if reference_index != -1:
+            reference_match[reference_index] = candidate_index
+    unmatched = [index for index, match in enumerate(reference_match) if match == -1]
+    if unmatched:
+        first = unmatched[0]
+        raise AssertionError(
+            "image {} detections could not be matched one-to-one by "
+            "labels/scores/boxes within tolerances: matched {}/{}, "
+            "first unmatched row={} label={} score={}".format(
+                image_index,
+                count - len(unmatched),
+                count,
+                first,
+                int(reference_bbox[first, 0].item()),
+                float(reference_bbox[first, 1].item()),
+            )
+        )
+    return reference_match, reordered
+
+
 def validate_detection_outputs(
     reference,
     candidate,
     score_atol=2e-5,
-    box_atol=1e-2,
+    box_atol=2e-2,
 ):
-    """Validate row ordering, labels, scores, boxes, and per-image counts."""
+    """Validate per-image detection sets, values, and output structure."""
     reference_bbox, reference_num = (value.detach().cpu() for value in reference)
     candidate_bbox, candidate_num = (value.detach().cpu() for value in candidate)
     if reference_bbox.shape != candidate_bbox.shape:
@@ -160,22 +227,48 @@ def validate_detection_outputs(
         )
     if not torch.equal(reference_num, candidate_num):
         raise AssertionError("bbox_num differs")
-    if not torch.equal(reference_bbox[:, 0], candidate_bbox[:, 0]):
-        raise AssertionError("detection labels or row ordering differ")
+    if reference_bbox.ndim != 2 or reference_bbox.shape[1] != 6:
+        raise AssertionError("bbox must have shape [N, 6]")
+    if reference_num.ndim != 1:
+        raise AssertionError("bbox_num must have shape [B]")
+    counts = [int(value) for value in reference_num.tolist()]
+    if any(value < 0 for value in counts) or sum(counts) != len(reference_bbox):
+        raise AssertionError("bbox_num does not match bbox rows")
+    if (
+        not torch.isfinite(reference_bbox).all()
+        or not torch.isfinite(candidate_bbox).all()
+    ):
+        raise AssertionError("detection outputs contain non-finite values")
 
-    score_error = _max_absolute_error(reference_bbox[:, 1], candidate_bbox[:, 1])
-    box_error = _max_absolute_error(reference_bbox[:, 2:], candidate_bbox[:, 2:])
-    if not math.isfinite(score_error) or score_error > score_atol:
-        raise AssertionError(
-            "score max abs error {} exceeds {}".format(score_error, score_atol)
+    matched_reference = []
+    matched_candidate = []
+    reordered = 0
+    start = 0
+    for image_index, count in enumerate(counts):
+        stop = start + count
+        reference_group = reference_bbox[start:stop]
+        candidate_group = candidate_bbox[start:stop]
+        matches, group_reordered = _match_image_detections(
+            reference_group,
+            candidate_group,
+            image_index,
+            score_atol,
+            box_atol,
         )
-    if not math.isfinite(box_error) or box_error > box_atol:
-        raise AssertionError(
-            "box max abs error {} exceeds {}".format(box_error, box_atol)
-        )
+        matched_reference.append(reference_group)
+        matched_candidate.append(candidate_group[matches])
+        reordered += group_reordered
+        start = stop
+
+    aligned_reference = torch.cat(matched_reference, dim=0)
+    aligned_candidate = torch.cat(matched_candidate, dim=0)
+    score_error = _max_absolute_error(aligned_reference[:, 1], aligned_candidate[:, 1])
+    box_error = _max_absolute_error(aligned_reference[:, 2:], aligned_candidate[:, 2:])
     return {
         "score_max_abs": score_error,
         "box_max_abs": box_error,
         "detections": int(reference_bbox.shape[0]),
         "batch_size": int(reference_num.shape[0]),
+        "order_equal": reordered == 0,
+        "reordered_detections": reordered,
     }

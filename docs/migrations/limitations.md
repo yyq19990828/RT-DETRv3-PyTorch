@@ -6,7 +6,7 @@
 
 - 当前默认测试覆盖权重转换、数据操作、注意力、解码器和部分训练策略；通过并不等于已完成完整 COCO 训练、评估或 mAP 对齐。
 - 迁移早期针对旧构建器、Registry 和模型参数的测试保留在 `tests/legacy/`，默认不收集。这些场景需要按当前 API 重写，不应通过强行恢复旧兼容层来绕过。
-- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。公开 R18/R34/R50 checkpoint 已分别通过 Models CLI 固定 URL 下载、CPU/FP32 真实 COCO 单图 Infer 和统一四图 Eval；R18 另有 batch 4、608/640 和完整 val2017 证据。ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 目前只用 R18 覆盖固定高宽、动态 batch 1/4/8。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、R34/R50 导出、GPU provider、TensorRT 或 C++ 部署已支持。
+- Train/Eval/Infer/Convert/Export/Models 均有当前 CLI contract。公开 R18/R34/R50 checkpoint 已分别通过 Models CLI 固定 URL 下载、CPU/FP32 真实 COCO 单图 Infer 和统一四图 Eval；R18 另有 batch 4 和完整 val2017 证据。ONNX opset 17/ONNX Runtime CPU 与 traced TorchScript 已覆盖三个变体的固定 640、动态 batch 1/4/8 和真实图，R18 另有固定 608。这些证据仍不证明 Paddle CLI 全参数、单产物动态高宽、GPU provider、TensorRT 或 C++ 部署已支持。
 
 ## 数值等价
 
@@ -42,5 +42,5 @@
 
 - 当前 ONNX/TorchScript 图只声明动态 batch；deformable attention 中的 Python 整数转换和按层循环会固化空间 shape。改变高宽必须先同步模型 `eval_size` 并重新导出，不能把 ONNX 的 batch 动态轴解释为任意高宽支持。
 - 导出 tensor 合同从归一化后的 image tensor 开始，止于 raw `bbox/bbox_num`；图片解码、TestReader 和阈值过滤不在图中。部署端预处理未经对比时，导出回归通过也不证明端到端预测一致。
-- 当前回归只使用官方 R18、CPU/FP32、ONNX opset 17 和 ONNX Runtime CPU provider。其他模型、dtype、provider 和图优化级别需要独立证据。
-- raw top-k 尾部可能对近似并列 score 的微小后端误差敏感。当前验收仍要求标签/行顺序和 `bbox_num` 完全相等，并分别限制 score 与坐标误差；若失败，应先定位第一个分歧候选，不能只比较最终可视化。
+- 当前回归使用官方 R18/R34/R50、CPU/FP32、ONNX opset 17 和 ONNX Runtime CPU provider；R34/R50 只验证固定 640。其他配置、dtype、provider 和图优化级别需要独立证据。
+- raw top-k 尾部会对近似并列 score 的微小后端误差敏感，R34/R50 ONNX 已稳定观测到每图最多两个低分候选重排行序。当前验收要求 `bbox_num`/分组严格相等，并在每张图内对全部候选按类别、score 和 box 一对一匹配；score/坐标门槛为 `2e-5/0.02 px`，同时报告重排行数。任何候选缺失、跨图配对或超容差仍失败，不能只比较最终可视化。

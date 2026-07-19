@@ -112,15 +112,78 @@ def test_validate_detection_outputs_accepts_empty_and_rejects_label_changes():
         validate_detection_outputs(reference, candidate)
 
 
+def test_validate_detection_outputs_matches_reordered_near_ties():
+    reference = (
+        torch.tensor(
+            [
+                [1.0, 0.90000, 0.0, 0.0, 10.0, 10.0],
+                [2.0, 0.89999, 20.0, 20.0, 30.0, 30.0],
+            ]
+        ),
+        torch.tensor([2], dtype=torch.int32),
+    )
+    candidate = (
+        torch.tensor(
+            [
+                [2.0, 0.90000, 20.01, 20.0, 30.0, 30.0],
+                [1.0, 0.89999, 0.0, 0.0, 10.0, 10.0],
+            ]
+        ),
+        torch.tensor([2], dtype=torch.int32),
+    )
+
+    metrics = validate_detection_outputs(reference, candidate)
+
+    assert metrics["order_equal"] is False
+    assert metrics["reordered_detections"] == 2
+    assert metrics["detections"] == 2
+    assert metrics["score_max_abs"] == pytest.approx(1e-5, abs=1e-7)
+    assert metrics["box_max_abs"] == pytest.approx(0.01, abs=1e-6)
+
+
+def test_validate_detection_outputs_keeps_identical_duplicate_order():
+    bbox = torch.tensor(
+        [
+            [1.0, 0.9, 0.0, 0.0, 10.0, 10.0],
+            [1.0, 0.9, 0.0, 0.0, 10.0, 10.0],
+        ]
+    )
+    outputs = (bbox, torch.tensor([2], dtype=torch.int32))
+
+    metrics = validate_detection_outputs(outputs, outputs)
+
+    assert metrics["order_equal"] is True
+    assert metrics["reordered_detections"] == 0
+
+
+def test_validate_detection_outputs_does_not_match_across_images():
+    reference = (
+        torch.tensor(
+            [
+                [1.0, 0.9, 0.0, 0.0, 1.0, 1.0],
+                [2.0, 0.8, 2.0, 2.0, 3.0, 3.0],
+            ]
+        ),
+        torch.tensor([1, 1], dtype=torch.int32),
+    )
+    candidate = (
+        reference[0].flip(0),
+        reference[1].clone(),
+    )
+
+    with pytest.raises(AssertionError, match="image 0"):
+        validate_detection_outputs(reference, candidate)
+
+
 def test_validate_detection_outputs_rejects_excessive_coordinate_error():
     reference = (
         torch.tensor([[1.0, 0.9, 0.0, 0.0, 1.0, 1.0]]),
         torch.ones((1,), dtype=torch.int32),
     )
     candidate = (
-        torch.tensor([[1.0, 0.9, 0.02, 0.0, 1.0, 1.0]]),
+        torch.tensor([[1.0, 0.9, 0.03, 0.0, 1.0, 1.0]]),
         torch.ones((1,), dtype=torch.int32),
     )
 
-    with pytest.raises(AssertionError, match="box max abs error"):
+    with pytest.raises(AssertionError, match="within tolerances"):
         validate_detection_outputs(reference, candidate)

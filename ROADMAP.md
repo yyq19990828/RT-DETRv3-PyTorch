@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M7——公开模型多变体运行时验收计划`](docs/plans/2026-07-19-m7-variant-runtime-validation.md)
-**Current execution plan**: 暂无；后续工作从本路线图中的 deferred 项或已记录部署边界重新立项
+**Latest completed execution plan**: [`M8——R34/R50 多变体导出验收计划`](docs/plans/2026-07-19-m8-variant-export-validation.md)
+**Current execution plan**: 暂无；后续工作从 deferred 长训或未覆盖 provider/部署边界重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -141,6 +141,19 @@
 
 **验收记录**：2026-07-19，R34/R50 公开下载的 size/SHA-256 与 manifest 一致；同一 COCO 单图分别生成 `31/28` 条检测和可解码图片，同一四图子集 Eval 均写出 1,200 条候选。未发现变体专属实现故障；完整证据见[公开模型多变体运行时报告](docs/reports/variant-runtime-validation.md)。
 
+## Milestone 8 — R34/R50 多变体导出验收（P1）
+
+**执行计划**：[`M8——R34/R50 多变体导出验收计划`](docs/plans/2026-07-19-m8-variant-export-validation.md)。复用 M5 已建立的 tensor-only 导出和严格输出合同，只扩展另两个已发布检测变体。
+
+- [x] 导出 R34 的 ONNX opset 17 和 traced TorchScript，完成 CPU 重载与输出回归。
+- [x] 导出 R50 的 ONNX opset 17 和 traced TorchScript，完成 CPU 重载与输出回归。
+- [x] 对两变体验证固定 640 下 batch 1/4/8 和真实 COCO 输入；继续明确空间 shape 非动态。
+- [x] 修复近似并列候选行序导致的验证误判，记录产物、误差、警告和限制，并清理全部中间产物。
+
+**Exit criteria**: R34/R50 两种格式均通过 checker/reload，并在 CPU/FP32、640×640 的 batch 1/4/8 和真实输入上满足 `bbox_num`/分组严格一致、每图全部候选按类别/score/box 一对一匹配、score `<=2e-5`、坐标 `<=0.02 px` 的合同。
+
+**验收记录**：2026-07-19，R34/R50 ONNX 最大 score/box 误差分别为 `9.4771e-6/0.011780 px` 和 `1.8962e-5/0.005615 px`；TorchScript 本次逐值为 0。ONNX 近似并列低分候选最多每图重排 2 行，但 300/300 候选均完成同图唯一匹配。详见[多变体导出验证报告](docs/reports/variant-export-validation.md)。
+
 ## 依赖顺序
 
 ```text
@@ -148,7 +161,7 @@ M1 最小训练链
  ├──> M2 权重/数值对齐 ──> M4 精度对齐
  └──> M3 训练/评估/恢复 ─┘
 M1–M3 ──> M5 CLI/导出
-M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵
+M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出
 ```
 
 ## 不作为当前阻塞的延伸项
