@@ -547,6 +547,8 @@ def _profile_torch_forward(
     use_device_time = device == "cuda"
     rows = []
     for event in profile.key_averages():
+        if not event.key.startswith("aten::"):
+            continue
         sort_duration = (
             event.self_device_time_total
             if use_device_time
