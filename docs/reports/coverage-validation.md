@@ -23,6 +23,8 @@ pytest -p no:cacheprovider -q -m "not paddle" \
 
 已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的干净 `test` extra 为准。
 
+GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29671674073) 在提交 `19bcb60` 上完成托管复验：Python 3.12 CPU job 为 `216 passed, 7 skipped, 17 deselected`，全包 `5,606/13,195`（`42.49%`），直接维护范围 `1,169/1,783`（`65.56%`），双门禁通过。托管环境比本地隔离环境多覆盖 1 条全包语句；该差异已观测但不影响当前回退下限。
+
 ## 当前结果
 
 | 模块 | 语句数 | 覆盖语句 | 覆盖率 |
