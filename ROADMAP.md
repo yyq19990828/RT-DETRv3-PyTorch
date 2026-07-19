@@ -91,7 +91,7 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；托管非 Paddle CPU 覆盖率已达到全包 49.42%、直接维护范围 80.67%，回退下限提高到 49%/80%。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 性能证据均已通过。PyTorch 四个 workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%，按维护者决策不追求训练优化完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，R18 的 Paddle 原权重/PyTorch 转换权重还完成了 COCO 单图统一渲染和机器可读差异报告。详见[性能报告](docs/reports/performance-validation.md)、[发布候选报告](docs/reports/release-validation.md)和[预测可视化报告](docs/reports/prediction-visualization.md)。90% 覆盖率、可选 end-to-end DataLoader/profile、权重公开发布和从公开 URL 回读尚未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；托管非 Paddle CPU 覆盖率已达到全包 49.42%、直接维护范围 80.67%，回退下限提高到 49%/80%。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 性能证据均已通过。PyTorch 四个 workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%，按维护者决策不追求训练优化完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，R18/R34/R50 的 Paddle 原权重/PyTorch 转换权重均完成了 COCO 同图统一渲染和机器可读差异报告。详见[性能报告](docs/reports/performance-validation.md)、[发布候选报告](docs/reports/release-validation.md)和[预测可视化报告](docs/reports/prediction-visualization.md)。90% 覆盖率、可选 end-to-end DataLoader/profile、权重公开发布和从公开 URL 回读尚未完成。
 
 - [x] 在同一硬件、驱动、batch 和精度下建立 Paddle/PyTorch 基准；两个官方 wheel 的 CUDA/cuDNN 版本不同，已分别记录而不声称完全同运行时。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
@@ -117,7 +117,7 @@
   - [x] GitHub 托管 Python 3.9–3.12 CPU jobs、质量门禁和 wheel smoke 通过。
   - [x] 补充受控 CUDA job 或自托管验证证据。
 - [x] 生成模型清单、checksum、配置、许可说明和发布候选验证报告。
-- [x] 对 R18 转换权重生成同一 COCO 图片、统一渲染器和机器可读匹配证据。
+- [x] 对 R18/R34/R50 转换权重生成同一 COCO 图片、统一渲染器和机器可读匹配证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态、本地 checksum 校验和发布后 HTTPS 原子下载。
 - [ ] 以固定 tag 公开发布三个转换权重和 `SHA256SUMS`，并从公开 URL 回读验收。
 

@@ -1,0 +1,959 @@
+{
+  "schema_version": 1,
+  "protocol": {
+    "model": "RT-DETRv3-R34",
+    "device": "CPU",
+    "dtype": "FP32",
+    "input_size": [
+      640,
+      640
+    ],
+    "score_threshold": 0.3,
+    "render_threshold": 0.5,
+    "box_match_tolerance_px": 1.0,
+    "renderer": "scripts/render_prediction_comparison.py"
+  },
+  "inputs": {
+    "image": {
+      "path": "COCO val2017/000000000139.jpg",
+      "size_bytes": 161811,
+      "sha256": "ffe0f0cec3b2e27aab1967229cdf0a0d7751dcdd5800322f0b8ac0dffb3b8a8d"
+    },
+    "annotations": {
+      "path": "COCO annotations/instances_val2017.json",
+      "size_bytes": 19987840,
+      "sha256": "e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f"
+    },
+    "paddle_checkpoint": {
+      "path": "pretrained_models/paddle/rtdetrv3_r34vd_6x_coco.pdparams",
+      "size_bytes": 137016081,
+      "sha256": "29b09c64d6c372cde46d94caee1b57a23cee0aae24bd7bd3e2937cf57e581a68"
+    },
+    "pytorch_checkpoint": {
+      "path": "pretrained_models/pytorch/rtdetrv3_r34vd_6x_coco.pth",
+      "size_bytes": 137170947,
+      "sha256": "e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272"
+    }
+  },
+  "comparison": {
+    "paddle_prediction_count": 31,
+    "pytorch_prediction_count": 31,
+    "matched_count": 31,
+    "unmatched_paddle_indices": [],
+    "unmatched_pytorch_indices": [],
+    "max_score_abs_diff": 3.7848949432373047e-06,
+    "max_box_linf_px": 0.0001220703125,
+    "matches": [
+      {
+        "paddle_index": 0,
+        "pytorch_index": 0,
+        "category_id": 72,
+        "score_abs_diff": 2.384185791015625e-07,
+        "box_linf_px": 1.52587890625e-05
+      },
+      {
+        "paddle_index": 1,
+        "pytorch_index": 1,
+        "category_id": 62,
+        "score_abs_diff": 1.1920928955078125e-07,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 2,
+        "pytorch_index": 2,
+        "category_id": 62,
+        "score_abs_diff": 0.0,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 3,
+        "pytorch_index": 3,
+        "category_id": 1,
+        "score_abs_diff": 2.384185791015625e-07,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 4,
+        "pytorch_index": 4,
+        "category_id": 62,
+        "score_abs_diff": 2.384185791015625e-07,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 5,
+        "pytorch_index": 5,
+        "category_id": 85,
+        "score_abs_diff": 3.5762786865234375e-07,
+        "box_linf_px": 1.52587890625e-05
+      },
+      {
+        "paddle_index": 6,
+        "pytorch_index": 6,
+        "category_id": 82,
+        "score_abs_diff": 5.960464477539062e-07,
+        "box_linf_px": 1.52587890625e-05
+      },
+      {
+        "paddle_index": 7,
+        "pytorch_index": 7,
+        "category_id": 64,
+        "score_abs_diff": 4.76837158203125e-07,
+        "box_linf_px": 1.52587890625e-05
+      },
+      {
+        "paddle_index": 8,
+        "pytorch_index": 8,
+        "category_id": 1,
+        "score_abs_diff": 5.960464477539063e-08,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 9,
+        "pytorch_index": 9,
+        "category_id": 72,
+        "score_abs_diff": 3.5762786865234375e-07,
+        "box_linf_px": 1.52587890625e-05
+      },
+      {
+        "paddle_index": 10,
+        "pytorch_index": 10,
+        "category_id": 86,
+        "score_abs_diff": 5.960464477539062e-07,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 11,
+        "pytorch_index": 11,
+        "category_id": 67,
+        "score_abs_diff": 6.556510925292969e-07,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 12,
+        "pytorch_index": 12,
+        "category_id": 44,
+        "score_abs_diff": 1.430511474609375e-06,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 13,
+        "pytorch_index": 13,
+        "category_id": 86,
+        "score_abs_diff": 1.1920928955078125e-07,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 14,
+        "pytorch_index": 14,
+        "category_id": 86,
+        "score_abs_diff": 5.960464477539063e-08,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 15,
+        "pytorch_index": 15,
+        "category_id": 86,
+        "score_abs_diff": 3.337860107421875e-06,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 16,
+        "pytorch_index": 16,
+        "category_id": 64,
+        "score_abs_diff": 3.5762786865234375e-07,
+        "box_linf_px": 9.1552734375e-05
+      },
+      {
+        "paddle_index": 17,
+        "pytorch_index": 17,
+        "category_id": 82,
+        "score_abs_diff": 8.344650268554688e-07,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 18,
+        "pytorch_index": 18,
+        "category_id": 64,
+        "score_abs_diff": 1.4901161193847656e-07,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 19,
+        "pytorch_index": 19,
+        "category_id": 44,
+        "score_abs_diff": 3.7848949432373047e-06,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 20,
+        "pytorch_index": 20,
+        "category_id": 86,
+        "score_abs_diff": 1.2814998626708984e-06,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 21,
+        "pytorch_index": 21,
+        "category_id": 67,
+        "score_abs_diff": 8.940696716308594e-07,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 22,
+        "pytorch_index": 22,
+        "category_id": 64,
+        "score_abs_diff": 8.940696716308594e-08,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 23,
+        "pytorch_index": 23,
+        "category_id": 78,
+        "score_abs_diff": 6.556510925292969e-07,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 24,
+        "pytorch_index": 24,
+        "category_id": 46,
+        "score_abs_diff": 3.5762786865234375e-07,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 25,
+        "pytorch_index": 25,
+        "category_id": 67,
+        "score_abs_diff": 1.3113021850585938e-06,
+        "box_linf_px": 6.103515625e-05
+      },
+      {
+        "paddle_index": 26,
+        "pytorch_index": 26,
+        "category_id": 64,
+        "score_abs_diff": 1.7881393432617188e-07,
+        "box_linf_px": 0.0001220703125
+      },
+      {
+        "paddle_index": 27,
+        "pytorch_index": 27,
+        "category_id": 86,
+        "score_abs_diff": 1.1920928955078125e-07,
+        "box_linf_px": 3.0517578125e-05
+      },
+      {
+        "paddle_index": 28,
+        "pytorch_index": 28,
+        "category_id": 64,
+        "score_abs_diff": 1.4901161193847656e-07,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 29,
+        "pytorch_index": 29,
+        "category_id": 67,
+        "score_abs_diff": 2.9802322387695312e-08,
+        "box_linf_px": 0.0
+      },
+      {
+        "paddle_index": 30,
+        "pytorch_index": 30,
+        "category_id": 67,
+        "score_abs_diff": 2.4139881134033203e-06,
+        "box_linf_px": 3.0517578125e-05
+      }
+    ]
+  },
+  "predictions": {
+    "paddle": [
+      {
+        "category_id": 72,
+        "category_name": "tv",
+        "bbox_xywh": [
+          7.140407562255859,
+          166.94479370117188,
+          147.33974075317383,
+          95.1619873046875
+        ],
+        "score": 0.9425911903381348
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          292.52587890625,
+          217.95957946777344,
+          60.257049560546875,
+          97.59355163574219
+        ],
+        "score": 0.9073933362960815
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          361.987548828125,
+          218.75787353515625,
+          55.2398681640625,
+          100.06011962890625
+        ],
+        "score": 0.9073505997657776
+      },
+      {
+        "category_id": 1,
+        "category_name": "person",
+        "bbox_xywh": [
+          410.1619873046875,
+          157.3874969482422,
+          56.121734619140625,
+          139.2957000732422
+        ],
+        "score": 0.8767762780189514
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          409.97235107421875,
+          219.43080139160156,
+          33.702911376953125,
+          85.51115417480469
+        ],
+        "score": 0.8446211218833923
+      },
+      {
+        "category_id": 85,
+        "category_name": "clock",
+        "bbox_xywh": [
+          448.81622314453125,
+          120.72962188720703,
+          12.11639404296875,
+          21.28270721435547
+        ],
+        "score": 0.8011091947555542
+      },
+      {
+        "category_id": 82,
+        "category_name": "refrigerator",
+        "bbox_xywh": [
+          448.02081298828125,
+          169.1809844970703,
+          64.66571044921875,
+          118.25367736816406
+        ],
+        "score": 0.7541497945785522
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          230.6304931640625,
+          172.69302368164062,
+          36.01788330078125,
+          40.358367919921875
+        ],
+        "score": 0.7223347425460815
+      },
+      {
+        "category_id": 1,
+        "category_name": "person",
+        "bbox_xywh": [
+          383.9622497558594,
+          172.02804565429688,
+          17.728179931640625,
+          36.53157043457031
+        ],
+        "score": 0.7210328578948975
+      },
+      {
+        "category_id": 72,
+        "category_name": "tv",
+        "bbox_xywh": [
+          557.9405517578125,
+          208.1292266845703,
+          81.89715576171875,
+          82.45185852050781
+        ],
+        "score": 0.6881977319717407
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          350.44793701171875,
+          207.82379150390625,
+          11.4398193359375,
+          23.019912719726562
+        ],
+        "score": 0.6277192831039429
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          319.9961242675781,
+          228.2910614013672,
+          69.92385864257812,
+          88.57295227050781
+        ],
+        "score": 0.616509199142456
+      },
+      {
+        "category_id": 44,
+        "category_name": "bottle",
+        "bbox_xywh": [
+          549.7529907226562,
+          297.7809753417969,
+          37.96392822265625,
+          103.22378540039062
+        ],
+        "score": 0.6010673642158508
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          241.07093811035156,
+          197.5740203857422,
+          12.07733154296875,
+          15.092498779296875
+        ],
+        "score": 0.5823327302932739
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          166.31570434570312,
+          233.05322265625,
+          20.381820678710938,
+          34.30224609375
+        ],
+        "score": 0.5665202140808105
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          549.7529907226562,
+          297.7809753417969,
+          37.96392822265625,
+          103.22378540039062
+        ],
+        "score": 0.5316966772079468
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          491.5810546875,
+          152.98751831054688,
+          12.455810546875,
+          20.571380615234375
+        ],
+        "score": 0.5238617658615112
+      },
+      {
+        "category_id": 82,
+        "category_name": "refrigerator",
+        "bbox_xywh": [
+          490.4698486328125,
+          172.75497436523438,
+          22.45306396484375,
+          111.77487182617188
+        ],
+        "score": 0.48741260170936584
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          340.6728515625,
+          176.2506103515625,
+          31.185821533203125,
+          54.733917236328125
+        ],
+        "score": 0.4557397663593292
+      },
+      {
+        "category_id": 44,
+        "category_name": "bottle",
+        "bbox_xywh": [
+          549.97119140625,
+          297.9035339355469,
+          37.39190673828125,
+          102.853515625
+        ],
+        "score": 0.45070499181747437
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          313.719482421875,
+          191.68417358398438,
+          11.150360107421875,
+          22.829345703125
+        ],
+        "score": 0.3965992033481598
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          320.1095886230469,
+          229.45526123046875,
+          68.37387084960938,
+          7.2198028564453125
+        ],
+        "score": 0.3661902844905853
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          332.57110595703125,
+          187.5307159423828,
+          13.91058349609375,
+          27.9984130859375
+        ],
+        "score": 0.35263344645500183
+      },
+      {
+        "category_id": 78,
+        "category_name": "microwave",
+        "bbox_xywh": [
+          512.602294921875,
+          206.20266723632812,
+          14.5579833984375,
+          15.579269409179688
+        ],
+        "score": 0.35238534212112427
+      },
+      {
+        "category_id": 46,
+        "category_name": "wine glass",
+        "bbox_xywh": [
+          361.2556457519531,
+          214.5199432373047,
+          12.927154541015625,
+          16.976654052734375
+        ],
+        "score": 0.3306971788406372
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          313.8179931640625,
+          215.71730041503906,
+          110.55859375,
+          102.37635803222656
+        ],
+        "score": 0.3294670283794403
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          396.4569091796875,
+          198.14768981933594,
+          11.81524658203125,
+          19.16204833984375
+        ],
+        "score": 0.3228435218334198
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          361.2556457519531,
+          214.5199432373047,
+          12.927154541015625,
+          16.976654052734375
+        ],
+        "score": 0.31755679845809937
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          512.3925170898438,
+          194.14553833007812,
+          15.51104736328125,
+          27.476577758789062
+        ],
+        "score": 0.31320473551750183
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          461.4478759765625,
+          351.5409851074219,
+          178.49755859375,
+          71.9453125
+        ],
+        "score": 0.31291288137435913
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          320.00360107421875,
+          228.54771423339844,
+          68.82611083984375,
+          10.160797119140625
+        ],
+        "score": 0.30039963126182556
+      }
+    ],
+    "pytorch": [
+      {
+        "category_id": 72,
+        "category_name": "tv",
+        "bbox_xywh": [
+          7.140398025512695,
+          166.9447784423828,
+          147.33976554870605,
+          95.16200256347656
+        ],
+        "score": 0.9425909519195557
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          292.52587890625,
+          217.95960998535156,
+          60.257049560546875,
+          97.59355163574219
+        ],
+        "score": 0.907393217086792
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          361.9875793457031,
+          218.75787353515625,
+          55.239776611328125,
+          100.06011962890625
+        ],
+        "score": 0.9073505997657776
+      },
+      {
+        "category_id": 1,
+        "category_name": "person",
+        "bbox_xywh": [
+          410.1620178222656,
+          157.3874969482422,
+          56.121734619140625,
+          139.2957000732422
+        ],
+        "score": 0.8767760396003723
+      },
+      {
+        "category_id": 62,
+        "category_name": "chair",
+        "bbox_xywh": [
+          409.97235107421875,
+          219.43080139160156,
+          33.702911376953125,
+          85.51115417480469
+        ],
+        "score": 0.8446208834648132
+      },
+      {
+        "category_id": 85,
+        "category_name": "clock",
+        "bbox_xywh": [
+          448.81622314453125,
+          120.72960662841797,
+          12.11639404296875,
+          21.28270721435547
+        ],
+        "score": 0.8011088371276855
+      },
+      {
+        "category_id": 82,
+        "category_name": "refrigerator",
+        "bbox_xywh": [
+          448.02081298828125,
+          169.18096923828125,
+          64.66571044921875,
+          118.25369262695312
+        ],
+        "score": 0.7541491985321045
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          230.6304931640625,
+          172.6930389404297,
+          36.01788330078125,
+          40.35835266113281
+        ],
+        "score": 0.7223342657089233
+      },
+      {
+        "category_id": 1,
+        "category_name": "person",
+        "bbox_xywh": [
+          383.9622497558594,
+          172.028076171875,
+          17.728179931640625,
+          36.53157043457031
+        ],
+        "score": 0.7210329174995422
+      },
+      {
+        "category_id": 72,
+        "category_name": "tv",
+        "bbox_xywh": [
+          557.9405517578125,
+          208.12924194335938,
+          81.89715576171875,
+          82.45184326171875
+        ],
+        "score": 0.6881980895996094
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          350.44793701171875,
+          207.8238525390625,
+          11.4398193359375,
+          23.0198974609375
+        ],
+        "score": 0.6277186870574951
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          319.9961242675781,
+          228.2910614013672,
+          69.92385864257812,
+          88.57295227050781
+        ],
+        "score": 0.6165098547935486
+      },
+      {
+        "category_id": 44,
+        "category_name": "bottle",
+        "bbox_xywh": [
+          549.7529907226562,
+          297.781005859375,
+          37.96392822265625,
+          103.22372436523438
+        ],
+        "score": 0.6010659337043762
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          241.0708770751953,
+          197.5740203857422,
+          12.07733154296875,
+          15.092498779296875
+        ],
+        "score": 0.5823328495025635
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          166.31570434570312,
+          233.05325317382812,
+          20.381820678710938,
+          34.30218505859375
+        ],
+        "score": 0.5665201544761658
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          549.7529907226562,
+          297.781005859375,
+          37.96392822265625,
+          103.22372436523438
+        ],
+        "score": 0.5317000150680542
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          491.5809631347656,
+          152.98753356933594,
+          12.455841064453125,
+          20.571365356445312
+        ],
+        "score": 0.5238621234893799
+      },
+      {
+        "category_id": 82,
+        "category_name": "refrigerator",
+        "bbox_xywh": [
+          490.4698486328125,
+          172.7550048828125,
+          22.45306396484375,
+          111.77484130859375
+        ],
+        "score": 0.487411767244339
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          340.6728515625,
+          176.2506103515625,
+          31.185821533203125,
+          54.733917236328125
+        ],
+        "score": 0.45573991537094116
+      },
+      {
+        "category_id": 44,
+        "category_name": "bottle",
+        "bbox_xywh": [
+          549.9712524414062,
+          297.9035339355469,
+          37.39190673828125,
+          102.853515625
+        ],
+        "score": 0.4507087767124176
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          313.7195129394531,
+          191.68418884277344,
+          11.15032958984375,
+          22.829330444335938
+        ],
+        "score": 0.39660048484802246
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          320.10955810546875,
+          229.45526123046875,
+          68.37396240234375,
+          7.2198028564453125
+        ],
+        "score": 0.3661893904209137
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          332.5710754394531,
+          187.53070068359375,
+          13.910675048828125,
+          27.998428344726562
+        ],
+        "score": 0.352633535861969
+      },
+      {
+        "category_id": 78,
+        "category_name": "microwave",
+        "bbox_xywh": [
+          512.602294921875,
+          206.20266723632812,
+          14.5579833984375,
+          15.579269409179688
+        ],
+        "score": 0.35238468647003174
+      },
+      {
+        "category_id": 46,
+        "category_name": "wine glass",
+        "bbox_xywh": [
+          361.2556457519531,
+          214.51995849609375,
+          12.927154541015625,
+          16.976669311523438
+        ],
+        "score": 0.33069753646850586
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          313.8179931640625,
+          215.71730041503906,
+          110.55853271484375,
+          102.37635803222656
+        ],
+        "score": 0.32946833968162537
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          396.45703125,
+          198.14772033691406,
+          11.81524658203125,
+          19.16204833984375
+        ],
+        "score": 0.3228437006473541
+      },
+      {
+        "category_id": 86,
+        "category_name": "vase",
+        "bbox_xywh": [
+          361.2556457519531,
+          214.51995849609375,
+          12.927154541015625,
+          16.976669311523438
+        ],
+        "score": 0.3175566792488098
+      },
+      {
+        "category_id": 64,
+        "category_name": "potted plant",
+        "bbox_xywh": [
+          512.3925170898438,
+          194.14553833007812,
+          15.51104736328125,
+          27.476577758789062
+        ],
+        "score": 0.31320488452911377
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          461.4478759765625,
+          351.5409851074219,
+          178.49755859375,
+          71.9453125
+        ],
+        "score": 0.3129129111766815
+      },
+      {
+        "category_id": 67,
+        "category_name": "dining table",
+        "bbox_xywh": [
+          320.0036315917969,
+          228.54774475097656,
+          68.8260498046875,
+          10.160797119140625
+        ],
+        "score": 0.30039721727371216
+      }
+    ]
+  },
+  "comparison_image": {
+    "path": "docs/reports/assets/r34-coco-000000000139-comparison.png",
+    "size_bytes": 903225,
+    "sha256": "f3a715f3467ae77e6181db8c5f225335c8a62037d52761133840bc5fc0a83cac"
+  }
+}

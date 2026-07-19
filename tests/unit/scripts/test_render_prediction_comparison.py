@@ -71,12 +71,15 @@ def test_render_and_summarize_predictions(tmp_path, monkeypatch):
                 str(output_image),
                 "--output-json",
                 str(output_json),
+                "--model",
+                "RT-DETRv3-Test",
             ]
         )
         == 0
     )
 
     summary = json.loads(output_json.read_text(encoding="utf-8"))
+    assert summary["protocol"]["model"] == "RT-DETRv3-Test"
     assert summary["comparison"]["matched_count"] == 1
     assert summary["comparison"]["unmatched_paddle_indices"] == []
     assert summary["comparison"]["unmatched_pytorch_indices"] == []

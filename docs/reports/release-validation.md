@@ -33,7 +33,7 @@
 | R34 | `137,170,947` | `e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272` |
 | R50 | `182,510,207` | `5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7` |
 
-三个文件合计 `411,756,783` 字节（约 `392.7 MiB`）。来源 URL、上游 revision、源权重 checksum、转换后 checksum 和 mapping 数以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。R18 同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁见[精度报告](accuracy-validation.md)。
+三个文件合计 `411,756,783` 字节（约 `392.7 MiB`）。来源 URL、上游 revision、源权重 checksum、转换后 checksum 和 mapping 数以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。三变体同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁目前只覆盖 R18，见[精度报告](accuracy-validation.md)。
 
 ## 权重托管决策
 
@@ -45,6 +45,8 @@
 - Hub 的 model card 可结构化记录 license、COCO 数据集、评估结果、预期用途和限制，对模型发现和长期文档更友好。见 [Hugging Face Model Cards](https://huggingface.co/docs/hub/en/model-cards)。
 
 建议的 Release assets 是三个 `.pth`、`SHA256SUMS`、wheel 和 sdist。资产一旦发布不应覆盖同名文件；内容变化则提升 tag，并使用固定 tag 的下载 URL。Hub 镜像同样固定 tag 或 commit revision，不把可变的 `main` URL 写入发布清单。
+
+不建议把权重放入普通 Git、Git LFS 或 PyPI wheel：普通 Git 会增大所有用户的 clone 历史，Git LFS 会让源码 checkout 与模型下载耦合，wheel 则会让只需要代码的安装承担约 `393 MiB` 模型体积。GitHub Release 作为唯一权威源，Hub 只作同 checksum 镜像，可以让版本归属和用户下载路径都保持简单。
 
 `rtdetrv3-models list/verify/download` 已完成 manifest 解析、本地 R18 校验、HTTPS 限制、临时文件校验后原子替换、不匹配既有文件保护和未发布显式失败。当前 manifest 的四个转换产物都标记 `unpublished`且没有 URL；这是如实状态，不是下载端到端证据。
 
