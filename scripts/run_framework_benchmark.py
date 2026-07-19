@@ -9,6 +9,7 @@ import json
 import math
 import os
 import platform
+import re
 import resource
 import subprocess
 import sys
@@ -48,7 +49,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--workload",
-        choices=("inference", "train-step"),
+        choices=("inference", "train-step", "e2e-inference"),
         default="inference",
     )
     parser.add_argument("--model", default=DEFAULT_MODEL)
@@ -59,6 +60,17 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--warmup", type=int, default=2)
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--threads", type=int, default=1)
+    parser.add_argument(
+        "--dataset-root",
+        help="COCO root containing val2017 and annotations for e2e-inference",
+    )
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument(
+        "--profile-top-k",
+        type=int,
+        default=10,
+        help="Number of model-forward operator rows to retain; 0 disables profiling",
+    )
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--torch-config", default=DEFAULT_TORCH_CONFIG)
     parser.add_argument("--paddle-config", default=DEFAULT_PADDLE_CONFIG)
@@ -86,6 +98,12 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         parser.error("--samples must be at least 1")
     if args.threads < 1:
         parser.error("--threads must be at least 1")
+    if args.num_workers < 0:
+        parser.error("--num-workers cannot be negative")
+    if args.profile_top_k < 0:
+        parser.error("--profile-top-k cannot be negative")
+    if args.workload == "e2e-inference" and not args.dataset_root:
+        parser.error("--dataset-root is required for e2e-inference")
     if args._worker and args.framework == "both":
         parser.error("an internal worker must select exactly one framework")
     if args._worker and not args._worker_result:
@@ -206,6 +224,123 @@ def measure_iterations(
     return summarize_durations(durations, batch_size), memory, last_output
 
 
+def summarize_e2e_durations(
+    input_pipeline_seconds: Sequence[float],
+    model_seconds: Sequence[float],
+    batch_size: int,
+) -> dict[str, Any]:
+    """Summarize visible input-pipeline stalls separately from model execution."""
+    if len(input_pipeline_seconds) != len(model_seconds):
+        raise ValueError("input-pipeline and model duration counts must match")
+    end_to_end_seconds = [
+        input_seconds + forward_seconds
+        for input_seconds, forward_seconds in zip(input_pipeline_seconds, model_seconds)
+    ]
+    total_seconds = sum(end_to_end_seconds)
+    return {
+        "end_to_end": summarize_durations(end_to_end_seconds, batch_size),
+        "input_pipeline": summarize_durations(input_pipeline_seconds, batch_size),
+        "model": summarize_durations(model_seconds, batch_size),
+        "input_pipeline_fraction": sum(input_pipeline_seconds) / total_seconds,
+    }
+
+
+def _batch_image_ids(batch: dict[str, Any]) -> list[int]:
+    value = batch.get("im_id")
+    if value is None:
+        raise ValueError("COCO batch does not contain im_id")
+    if hasattr(value, "detach"):
+        value = value.detach().cpu()
+    if hasattr(value, "numpy"):
+        value = value.numpy()
+    return [int(item) for item in np.asarray(value).reshape(-1)]
+
+
+def measure_e2e_iterations(
+    loader: Any,
+    prepare_batch: Callable[[dict[str, Any]], dict[str, Any]],
+    forward: Callable[[dict[str, Any]], Any],
+    synchronize: Callable[[], None],
+    reset_device_peak: Callable[[], None],
+    device_memory: Callable[[], dict[str, Optional[int]]],
+    *,
+    warmup: int,
+    samples: int,
+    batch_size: int,
+) -> tuple[
+    dict[str, Any],
+    dict[str, Optional[int]],
+    Any,
+    dict[str, Any],
+    list[list[int]],
+]:
+    """Measure batches exactly as consumed by evaluation, excluding profiler tax."""
+    iterator = iter(loader)
+    last_batch: dict[str, Any]
+    last_output: Any = None
+    for _ in range(warmup):
+        try:
+            raw_batch = next(iterator)
+        except StopIteration as error:
+            raise ValueError("DataLoader ended during benchmark warmup") from error
+        last_batch = prepare_batch(raw_batch)
+        synchronize()
+        last_output = forward(last_batch)
+        synchronize()
+
+    baseline_peak_rss = _peak_rss_bytes()
+    baseline_rss = _current_rss_bytes()
+    reset_device_peak()
+    input_durations: list[float] = []
+    model_durations: list[float] = []
+    measured_image_ids: list[list[int]] = []
+    for _ in range(samples):
+        input_started_at = time.perf_counter()
+        try:
+            raw_batch = next(iterator)
+        except StopIteration as error:
+            raise ValueError("DataLoader ended during measured iterations") from error
+        measured_image_ids.append(_batch_image_ids(raw_batch))
+        last_batch = prepare_batch(raw_batch)
+        synchronize()
+        model_started_at = time.perf_counter()
+        last_output = forward(last_batch)
+        synchronize()
+        finished_at = time.perf_counter()
+        input_durations.append(model_started_at - input_started_at)
+        model_durations.append(finished_at - model_started_at)
+
+    process_peak_rss = _peak_rss_bytes()
+    memory = {
+        "baseline_rss_bytes": baseline_rss,
+        "process_peak_rss_bytes": process_peak_rss,
+        "measurement_peak_rss_increase_bytes": max(
+            0, process_peak_rss - baseline_peak_rss
+        ),
+        **device_memory(),
+    }
+    breakdown = summarize_e2e_durations(
+        input_durations,
+        model_durations,
+        batch_size,
+    )
+    return (
+        breakdown["end_to_end"],
+        memory,
+        last_output,
+        {
+            "input_pipeline": breakdown["input_pipeline"],
+            "model": breakdown["model"],
+            "input_pipeline_fraction": breakdown["input_pipeline_fraction"],
+            "definition": (
+                "input pipeline is next(DataLoader) plus conversion/transfer until "
+                "the batch is synchronized and ready for model forward"
+            ),
+        },
+        measured_image_ids,
+    )
+
+
 def _synthetic_arrays(batch_size: int, input_size: int, seed: int) -> dict[str, Any]:
     rng = np.random.default_rng(seed)
     image = rng.standard_normal(
@@ -228,6 +363,107 @@ def _synthetic_arrays(batch_size: int, input_size: int, seed: int) -> dict[str, 
         "origin_gt_bbox": np.repeat(origin_gt_bbox[None], batch_size, axis=0),
         "origin_gt_class": np.repeat(gt_class[None], batch_size, axis=0),
         "pad_origin_gt_mask": np.ones((batch_size, 2, 1), dtype=np.float32),
+    }
+
+
+def _configure_eval_data(
+    cfg: Any,
+    dataset_root: Path,
+    batch_size: int,
+    input_size: int,
+) -> tuple[Path, Path]:
+    dataset_config = cfg.EvalDataset
+    reader_config = cfg.EvalReader
+    dataset_config["dataset_dir"] = str(dataset_root)
+    reader_config["batch_size"] = batch_size
+
+    resize_found = False
+    for transform in reader_config["sample_transforms"]:
+        if "Resize" in transform:
+            transform["Resize"]["target_size"] = [input_size, input_size]
+            resize_found = True
+            break
+    if not resize_found:
+        raise ValueError("EvalReader must define a Resize transform")
+
+    annotation_path = dataset_root / dataset_config["anno_path"]
+    image_directory = dataset_root / dataset_config["image_dir"]
+    if not annotation_path.is_file():
+        raise FileNotFoundError(f"COCO annotation file not found: {annotation_path}")
+    if not image_directory.is_dir():
+        raise FileNotFoundError(f"COCO image directory not found: {image_directory}")
+    return annotation_path, image_directory
+
+
+def _dataset_summary(
+    annotation_path: Path,
+    image_directory: Path,
+    dataset_size: int,
+    measured_image_ids: list[list[int]],
+) -> dict[str, Any]:
+    return {
+        "name": "COCO 2017 val2017",
+        "annotation_file": annotation_path.name,
+        "annotation_size_bytes": annotation_path.stat().st_size,
+        "annotation_sha256": _sha256(annotation_path),
+        "image_directory": image_directory.name,
+        "dataset_size": dataset_size,
+        "measured_image_ids": measured_image_ids,
+    }
+
+
+def _summarize_paddle_trace(trace_path: Path, top_k: int) -> dict[str, Any]:
+    document = json.loads(trace_path.read_text(encoding="utf-8"))
+    events = document.get("traceEvents")
+    if not isinstance(events, list):
+        raise ValueError("Paddle profiler trace has no traceEvents list")
+
+    category_counts: dict[str, int] = {}
+    operator_totals: dict[str, list[float]] = {}
+    kernel_totals: dict[str, list[float]] = {}
+    for event in events:
+        if not isinstance(event, dict) or event.get("ph") != "X":
+            continue
+        category = event.get("cat")
+        name = event.get("name")
+        duration = event.get("dur")
+        if not isinstance(category, str) or not isinstance(name, str):
+            continue
+        if not isinstance(duration, (int, float)):
+            continue
+        name = re.sub(r"\[[0-9.]+ (?:ns|us|ms|s)\]$", "", name)
+        if category == "Operator" and name.endswith(" dygraph"):
+            name = name[: -len(" dygraph")]
+        category_counts[category] = category_counts.get(category, 0) + 1
+        destination: Optional[dict[str, list[float]]] = None
+        if category == "Operator":
+            destination = operator_totals
+        elif category == "Kernel":
+            destination = kernel_totals
+        if destination is None:
+            continue
+        count_and_duration = destination.setdefault(name, [0.0, 0.0])
+        count_and_duration[0] += 1
+        count_and_duration[1] += float(duration)
+
+    def top_rows(values: dict[str, list[float]]) -> list[dict[str, Any]]:
+        ordered = sorted(values.items(), key=lambda item: item[1][1], reverse=True)
+        return [
+            {
+                "name": name,
+                "count": int(count_and_duration[0]),
+                "total_duration_us": count_and_duration[1],
+            }
+            for name, count_and_duration in ordered[:top_k]
+        ]
+
+    return {
+        "scope": "one model forward after timing",
+        "timing_effect": "excluded from benchmark durations",
+        "operator_duration_kind": "inclusive host trace duration",
+        "categories": dict(sorted(category_counts.items())),
+        "operators": top_rows(operator_totals),
+        "device_kernels": top_rows(kernel_totals),
     }
 
 
@@ -270,6 +506,180 @@ def _torch_inputs(arrays: dict[str, Any], device: str) -> dict[str, Any]:
     }
 
 
+def _prepare_torch_eval_batch(batch: Any, device: str) -> Any:
+    import torch
+
+    if isinstance(batch, torch.Tensor):
+        return batch.to(device, non_blocking=device == "cuda")
+    if isinstance(batch, (np.ndarray, np.generic)):
+        return torch.as_tensor(batch).to(device, non_blocking=device == "cuda")
+    if isinstance(batch, dict):
+        return {
+            key: _prepare_torch_eval_batch(value, device)
+            for key, value in batch.items()
+        }
+    if isinstance(batch, tuple):
+        return tuple(_prepare_torch_eval_batch(value, device) for value in batch)
+    if isinstance(batch, list):
+        return [_prepare_torch_eval_batch(value, device) for value in batch]
+    return batch
+
+
+def _profile_torch_forward(
+    model: Any,
+    batch: dict[str, Any],
+    device: str,
+    top_k: int,
+) -> Optional[dict[str, Any]]:
+    if top_k == 0:
+        return None
+    import torch
+
+    activities = [torch.profiler.ProfilerActivity.CPU]
+    if device == "cuda":
+        activities.append(torch.profiler.ProfilerActivity.CUDA)
+    with torch.profiler.profile(activities=activities) as profile:
+        with torch.inference_mode():
+            model(batch)
+        if device == "cuda":
+            torch.cuda.synchronize()
+
+    use_device_time = device == "cuda"
+    rows = []
+    for event in profile.key_averages():
+        sort_duration = (
+            event.self_device_time_total
+            if use_device_time
+            else event.self_cpu_time_total
+        )
+        if sort_duration <= 0:
+            continue
+        rows.append(
+            {
+                "name": event.key,
+                "count": event.count,
+                "self_cpu_time_us": event.self_cpu_time_total,
+                "cpu_time_total_us": event.cpu_time_total,
+                "self_device_time_us": event.self_device_time_total,
+                "device_time_total_us": event.device_time_total,
+            }
+        )
+    sort_key = "self_device_time_us" if use_device_time else "self_cpu_time_us"
+    rows.sort(key=lambda row: row[sort_key], reverse=True)
+    return {
+        "scope": "one model forward after timing",
+        "timing_effect": "excluded from benchmark durations",
+        "sort_key": sort_key,
+        "operators": rows[:top_k],
+    }
+
+
+def _run_pytorch_e2e(
+    args: argparse.Namespace,
+    config_path: Path,
+    checkpoint_path: Path,
+) -> dict[str, Any]:
+    import torch
+    from torch.utils.data import BatchSampler, SequentialSampler
+
+    from ppdet_pytorch import data as _data  # noqa: F401
+    from ppdet_pytorch.core.workspace import create, load_config
+
+    dataset_root = _resolve_path(args.dataset_root)
+    model = _load_torch_model(config_path, checkpoint_path, args.device)
+    cfg = load_config(str(config_path))
+    annotation_path, image_directory = _configure_eval_data(
+        cfg,
+        dataset_root,
+        args.batch_size,
+        args.input_size,
+    )
+    model.load_meanstd(cfg.TestReader["sample_transforms"])
+    model.eval()
+
+    dataset = create(cfg.EvalDataset)
+    sampler = BatchSampler(
+        SequentialSampler(dataset),
+        batch_size=args.batch_size,
+        drop_last=False,
+    )
+    loader = create(cfg.EvalReader)(dataset, args.num_workers, sampler)
+
+    def synchronize() -> None:
+        if args.device == "cuda":
+            torch.cuda.synchronize()
+
+    def reset_device_peak() -> None:
+        if args.device == "cuda":
+            torch.cuda.reset_peak_memory_stats()
+
+    def device_memory() -> dict[str, Optional[int]]:
+        if args.device != "cuda":
+            return {
+                "device_peak_allocated_bytes": None,
+                "device_peak_reserved_bytes": None,
+            }
+        return {
+            "device_peak_allocated_bytes": torch.cuda.max_memory_allocated(),
+            "device_peak_reserved_bytes": torch.cuda.max_memory_reserved(),
+        }
+
+    def prepare_batch(batch: dict[str, Any]) -> dict[str, Any]:
+        return _prepare_torch_eval_batch(batch, args.device)
+
+    def forward(batch: dict[str, Any]) -> Any:
+        with torch.inference_mode():
+            return model(batch)
+
+    timing, memory, last_output, pipeline, measured_image_ids = measure_e2e_iterations(
+        loader,
+        prepare_batch,
+        forward,
+        synchronize,
+        reset_device_peak,
+        device_memory,
+        warmup=args.warmup,
+        samples=args.samples,
+        batch_size=args.batch_size,
+    )
+    profile_batch = prepare_batch(next(iter(loader)))
+    synchronize()
+    operator_profile = _profile_torch_forward(
+        model,
+        profile_batch,
+        args.device,
+        args.profile_top_k,
+    )
+    return {
+        "framework": "pytorch",
+        "framework_version": torch.__version__,
+        "framework_cuda_version": torch.version.cuda,
+        "cudnn_version": torch.backends.cudnn.version(),
+        "device": args.device,
+        "device_name": (
+            torch.cuda.get_device_name(0) if args.device == "cuda" else "cpu"
+        ),
+        "config": _display_path(config_path),
+        "checkpoint": _display_path(checkpoint_path),
+        "checkpoint_sha256": _sha256(checkpoint_path),
+        "timing": timing,
+        "pipeline": pipeline,
+        "memory": memory,
+        "operator_profile": operator_profile,
+        "dataset": _dataset_summary(
+            annotation_path,
+            image_directory,
+            len(dataset),
+            measured_image_ids,
+        ),
+        "output_summary": {
+            key: list(value.shape)
+            for key, value in last_output.items()
+            if hasattr(value, "shape")
+        },
+    }
+
+
 def run_pytorch(args: argparse.Namespace) -> dict[str, Any]:
     import torch
 
@@ -285,6 +695,8 @@ def run_pytorch(args: argparse.Namespace) -> dict[str, Any]:
 
     config_path = _resolve_path(args.torch_config)
     checkpoint_path = _resolve_path(args.torch_checkpoint)
+    if args.workload == "e2e-inference":
+        return _run_pytorch_e2e(args, config_path, checkpoint_path)
     model = _load_torch_model(config_path, checkpoint_path, args.device)
     inputs = _torch_inputs(
         _synthetic_arrays(args.batch_size, args.input_size, args.seed), args.device
@@ -394,6 +806,164 @@ def _paddle_inputs(arrays: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _prepare_paddle_eval_batch(batch: Any) -> Any:
+    import paddle
+
+    if isinstance(batch, paddle.Tensor):
+        return batch
+    if isinstance(batch, np.ndarray):
+        return paddle.to_tensor(batch)
+    if isinstance(batch, np.generic):
+        return paddle.to_tensor(batch.item())
+    if isinstance(batch, dict):
+        return {key: _prepare_paddle_eval_batch(value) for key, value in batch.items()}
+    if isinstance(batch, tuple):
+        return tuple(_prepare_paddle_eval_batch(value) for value in batch)
+    if isinstance(batch, list):
+        return [_prepare_paddle_eval_batch(value) for value in batch]
+    return batch
+
+
+def _profile_paddle_forward(
+    model: Any,
+    batch: dict[str, Any],
+    device: str,
+    top_k: int,
+) -> Optional[dict[str, Any]]:
+    if top_k == 0:
+        return None
+    import paddle
+
+    targets = [paddle.profiler.ProfilerTarget.CPU]
+    if device == "cuda":
+        targets.append(paddle.profiler.ProfilerTarget.GPU)
+    with tempfile.TemporaryDirectory(prefix="rtdetrv3-paddle-profile-") as directory:
+        trace_path = Path(directory) / "trace.json"
+
+        def export_trace(profiler: Any) -> None:
+            profiler.export(str(trace_path), "json")
+
+        with paddle.profiler.Profiler(
+            targets=targets,
+            scheduler=(0, 1),
+            on_trace_ready=export_trace,
+        ) as profiler:
+            with paddle.no_grad():
+                model(batch)
+            if device == "cuda":
+                paddle.device.synchronize()
+            profiler.step()
+        if not trace_path.is_file():
+            raise RuntimeError("Paddle profiler did not produce a trace")
+        return _summarize_paddle_trace(trace_path, top_k)
+
+
+def _run_paddle_e2e(
+    args: argparse.Namespace,
+    config_path: Path,
+    checkpoint_path: Path,
+) -> dict[str, Any]:
+    if str(PADDLE_SOURCE) not in sys.path:
+        sys.path.insert(0, str(PADDLE_SOURCE))
+    import paddle
+    from ppdet.core.workspace import create, load_config
+
+    dataset_root = _resolve_path(args.dataset_root)
+    model = _load_paddle_model(config_path, checkpoint_path)
+    cfg = load_config(str(config_path))
+    annotation_path, image_directory = _configure_eval_data(
+        cfg,
+        dataset_root,
+        args.batch_size,
+        args.input_size,
+    )
+    model.load_meanstd(cfg.TestReader["sample_transforms"])
+    model.eval()
+
+    dataset = create("EvalDataset")()
+    sampler = paddle.io.BatchSampler(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        drop_last=False,
+    )
+    loader = create("EvalReader")(dataset, args.num_workers, sampler)
+
+    def synchronize() -> None:
+        if args.device == "cuda":
+            paddle.device.synchronize()
+
+    def reset_device_peak() -> None:
+        if args.device == "cuda":
+            paddle.device.cuda.reset_max_memory_allocated()
+            paddle.device.cuda.reset_max_memory_reserved()
+
+    def device_memory() -> dict[str, Optional[int]]:
+        if args.device != "cuda":
+            return {
+                "device_peak_allocated_bytes": None,
+                "device_peak_reserved_bytes": None,
+            }
+        return {
+            "device_peak_allocated_bytes": paddle.device.cuda.max_memory_allocated(),
+            "device_peak_reserved_bytes": paddle.device.cuda.max_memory_reserved(),
+        }
+
+    def forward(batch: dict[str, Any]) -> Any:
+        with paddle.no_grad():
+            return model(batch)
+
+    timing, memory, last_output, pipeline, measured_image_ids = measure_e2e_iterations(
+        loader,
+        _prepare_paddle_eval_batch,
+        forward,
+        synchronize,
+        reset_device_peak,
+        device_memory,
+        warmup=args.warmup,
+        samples=args.samples,
+        batch_size=args.batch_size,
+    )
+    profile_batch = _prepare_paddle_eval_batch(next(iter(loader)))
+    synchronize()
+    operator_profile = _profile_paddle_forward(
+        model,
+        profile_batch,
+        args.device,
+        args.profile_top_k,
+    )
+    return {
+        "framework": "paddle",
+        "framework_version": paddle.__version__,
+        "framework_cuda_version": (
+            paddle.version.cuda() if paddle.is_compiled_with_cuda() else None
+        ),
+        "cudnn_version": (paddle.version.cudnn() if args.device == "cuda" else None),
+        "device": args.device,
+        "device_name": (
+            paddle.device.cuda.get_device_name() if args.device == "cuda" else "cpu"
+        ),
+        "config": _display_path(config_path),
+        "checkpoint": _display_path(checkpoint_path),
+        "checkpoint_sha256": _sha256(checkpoint_path),
+        "timing": timing,
+        "pipeline": pipeline,
+        "memory": memory,
+        "operator_profile": operator_profile,
+        "dataset": _dataset_summary(
+            annotation_path,
+            image_directory,
+            len(dataset),
+            measured_image_ids,
+        ),
+        "output_summary": {
+            key: list(value.shape)
+            for key, value in last_output.items()
+            if hasattr(value, "shape")
+        },
+    }
+
+
 def run_paddle(args: argparse.Namespace) -> dict[str, Any]:
     import paddle
 
@@ -404,6 +974,8 @@ def run_paddle(args: argparse.Namespace) -> dict[str, Any]:
 
     config_path = _resolve_path(args.paddle_config)
     checkpoint_path = _resolve_path(args.paddle_checkpoint)
+    if args.workload == "e2e-inference":
+        return _run_paddle_e2e(args, config_path, checkpoint_path)
     model = _load_paddle_model(config_path, checkpoint_path)
     inputs = _paddle_inputs(
         _synthetic_arrays(args.batch_size, args.input_size, args.seed)
@@ -499,13 +1071,29 @@ def build_comparison(results: dict[str, dict[str, Any]]) -> Optional[dict[str, A
         return None
     paddle_result = results["paddle"]
     torch_result = results["pytorch"]
+    if "dataset" in paddle_result or "dataset" in torch_result:
+        paddle_dataset = paddle_result.get("dataset")
+        torch_dataset = torch_result.get("dataset")
+        if not isinstance(paddle_dataset, dict) or not isinstance(torch_dataset, dict):
+            raise ValueError("both frameworks must report dataset identity")
+        identity_keys = (
+            "annotation_sha256",
+            "dataset_size",
+            "measured_image_ids",
+        )
+        if any(
+            paddle_dataset.get(key) != torch_dataset.get(key) for key in identity_keys
+        ):
+            raise ValueError(
+                "Paddle and PyTorch did not benchmark the same COCO samples"
+            )
     paddle_throughput = paddle_result["timing"]["throughput_images_per_second"]
     torch_throughput = torch_result["timing"]["throughput_images_per_second"]
     paddle_latency = paddle_result["timing"]["mean_batch_latency_ms"]
     torch_latency = torch_result["timing"]["mean_batch_latency_ms"]
     paddle_rss = paddle_result["memory"]["process_peak_rss_bytes"]
     torch_rss = torch_result["memory"]["process_peak_rss_bytes"]
-    return {
+    comparison = {
         "pytorch_over_paddle_throughput": torch_throughput / paddle_throughput,
         "pytorch_over_paddle_mean_latency": torch_latency / paddle_latency,
         "pytorch_over_paddle_process_peak_rss": torch_rss / paddle_rss,
@@ -513,6 +1101,28 @@ def build_comparison(results: dict[str, dict[str, Any]]) -> Optional[dict[str, A
             "Observed ratios only; performance thresholds are not correctness gates."
         ),
     }
+    if "pipeline" in paddle_result and "pipeline" in torch_result:
+        paddle_pipeline = paddle_result["pipeline"]
+        torch_pipeline = torch_result["pipeline"]
+        comparison.update(
+            {
+                "pytorch_over_paddle_input_pipeline_latency": (
+                    torch_pipeline["input_pipeline"]["mean_batch_latency_ms"]
+                    / paddle_pipeline["input_pipeline"]["mean_batch_latency_ms"]
+                ),
+                "pytorch_over_paddle_model_latency": (
+                    torch_pipeline["model"]["mean_batch_latency_ms"]
+                    / paddle_pipeline["model"]["mean_batch_latency_ms"]
+                ),
+                "paddle_input_pipeline_fraction": paddle_pipeline[
+                    "input_pipeline_fraction"
+                ],
+                "pytorch_input_pipeline_fraction": torch_pipeline[
+                    "input_pipeline_fraction"
+                ],
+            }
+        )
+    return comparison
 
 
 def _run_command(command: Sequence[str]) -> Optional[str]:
@@ -569,7 +1179,7 @@ def collect_host_metadata() -> dict[str, Any]:
 def build_worker_command(
     args: argparse.Namespace, framework: str, result_path: Path
 ) -> list[str]:
-    return [
+    command = [
         sys.executable,
         str(Path(__file__).resolve()),
         "--framework",
@@ -592,6 +1202,10 @@ def build_worker_command(
         str(args.samples),
         "--threads",
         str(args.threads),
+        "--num-workers",
+        str(args.num_workers),
+        "--profile-top-k",
+        str(args.profile_top_k),
         "--seed",
         str(args.seed),
         "--torch-config",
@@ -606,6 +1220,9 @@ def build_worker_command(
         "--_worker-result",
         str(result_path),
     ]
+    if args.dataset_root:
+        command.extend(["--dataset-root", args.dataset_root])
+    return command
 
 
 def run_isolated_worker(
@@ -657,9 +1274,14 @@ def _protocol(args: argparse.Namespace) -> dict[str, Any]:
             "clear gradients + forward + loss aggregation + backward + "
             "AdamW step (lr=0, weight_decay=0)"
         )
+    e2e_inference = args.workload == "e2e-inference"
     return {
         "model": args.model,
-        "scope": "model-only synthetic preprocessed input",
+        "scope": (
+            "COCO 2017 val2017 end-to-end inference"
+            if e2e_inference
+            else "model-only synthetic preprocessed input"
+        ),
         "workload": args.workload,
         "training_step": training_step,
         "device": args.device,
@@ -669,10 +1291,13 @@ def _protocol(args: argparse.Namespace) -> dict[str, Any]:
         "warmup_iterations": args.warmup,
         "measured_iterations": args.samples,
         "cpu_threads": args.threads,
+        "data_loader_workers": args.num_workers if e2e_inference else None,
+        "operator_profile_top_k": args.profile_top_k if e2e_inference else None,
         "seed": args.seed,
         "synchronization": "before and after every measured iteration",
-        "includes_data_loader": False,
-        "includes_preprocessing": False,
+        "includes_data_loader": e2e_inference,
+        "includes_preprocessing": e2e_inference,
+        "includes_host_to_device_transfer": e2e_inference,
         "includes_scheduler_ema_amp_ddp": False,
     }
 
