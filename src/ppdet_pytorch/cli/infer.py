@@ -52,7 +52,7 @@ def create_argument_parser():
     model_group.add_argument("--checkpoint")
     model_group.add_argument(
         "--onnx-model",
-        help="Run a tensor-only ONNX export with ONNX Runtime CPU.",
+        help="Run a tensor-only ONNX export with ONNX Runtime CPU or CUDA.",
     )
     model_group.add_argument(
         "--torchscript-model",
@@ -136,8 +136,8 @@ def parse_args(argv=None):
         device = torch.device(args.device)
     except (RuntimeError, ValueError):
         parser.error("--device must be a valid PyTorch device")
-    if onnx_model and device.type != "cpu":
-        parser.error("ONNX Infer currently requires --device cpu")
+    if onnx_model and device.type not in ("cpu", "cuda"):
+        parser.error("ONNX Infer supports only --device cpu or cuda[:id]")
     if exported_model and args.use_ema:
         parser.error("--use-ema is only valid with --checkpoint")
     if not 0.0 <= args.threshold <= 1.0:
@@ -311,16 +311,39 @@ def _torchscript_input_size(raw_metadata):
 
 
 class OnnxInferenceRunner:
-    """Adapt one reusable ONNX Runtime CPU session to the Infer batch contract."""
+    """Adapt one reusable ONNX Runtime session to the Infer batch contract."""
 
-    def __init__(self, model_path):
+    def __init__(self, model_path, device):
         import onnxruntime as ort
 
         self.model_path = _model_file(model_path, "ONNX")
-        self.session = ort.InferenceSession(
-            str(self.model_path),
-            providers=["CPUExecutionProvider"],
-        )
+        self.device = torch.device(device)
+        if self.device.type == "cuda":
+            if "CUDAExecutionProvider" not in ort.get_available_providers():
+                raise RuntimeError(
+                    "ONNX Runtime CUDAExecutionProvider is unavailable; install "
+                    "the GPU runtime with `uv sync --extra export-gpu` and verify "
+                    "CUDA/cuDNN compatibility"
+                )
+            providers = [
+                (
+                    "CUDAExecutionProvider",
+                    {
+                        "device_id": self.device.index or 0,
+                        "use_tf32": 1,
+                    },
+                ),
+                "CPUExecutionProvider",
+            ]
+        else:
+            providers = ["CPUExecutionProvider"]
+        self.session = ort.InferenceSession(str(self.model_path), providers=providers)
+        self.providers = tuple(self.session.get_providers())
+        if self.device.type == "cuda" and "CUDAExecutionProvider" not in self.providers:
+            raise RuntimeError(
+                "ONNX Runtime CUDA session fell back to CPU; verify the "
+                "onnxruntime-gpu, CUDA, and cuDNN versions"
+            )
         input_metadata = self.session.get_inputs()
         input_names = tuple(value.name for value in input_metadata)
         output_names = tuple(value.name for value in self.session.get_outputs())
@@ -579,7 +602,7 @@ def build_inference_runner(cfg, args, device):
             use_ema=args.use_ema,
         )
     if args.onnx_model is not None:
-        return OnnxInferenceRunner(args.onnx_model)
+        return OnnxInferenceRunner(args.onnx_model, device)
     return TorchScriptInferenceRunner(args.torchscript_model, device)
 
 
@@ -604,18 +627,26 @@ def main(argv=None):
     )
 
     logger.info(
-        "Running %s inference on %d image(s), batch_size=%d, device=%s",
+        "Running %s inference on %d image(s), batch_size=%d, device=%s%s",
         backend,
         len(image_paths),
         args.batch_size,
         device,
+        (
+            ", providers={}".format(",".join(model.providers))
+            if isinstance(model, OnnxInferenceRunner)
+            else ""
+        ),
+    )
+    preprocessing_device = (
+        torch.device("cpu") if args.onnx_model is not None else device
     )
     detections = predict_images(
         model,
         image_paths,
         sample_transform,
         batch_transform,
-        device,
+        preprocessing_device,
         batch_size=args.batch_size,
         threshold=args.threshold,
     )

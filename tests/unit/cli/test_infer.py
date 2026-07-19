@@ -131,12 +131,26 @@ def test_parse_args_accepts_explicit_torchscript_cpu_and_cuda():
     assert infer_cli.parse_args([*base_args, "--device", "cuda:0"]).device == "cuda:0"
 
 
+def test_parse_args_accepts_explicit_onnx_cpu_and_cuda():
+    base_args = [
+        "--config",
+        "model.yml",
+        "--onnx-model",
+        "model.onnx",
+        "--infer-img",
+        "image.jpg",
+    ]
+
+    assert infer_cli.parse_args([*base_args, "--device", "cpu"]).device == "cpu"
+    assert infer_cli.parse_args([*base_args, "--device", "cuda:1"]).device == "cuda:1"
+
+
 @pytest.mark.parametrize(
     "extra_args",
     [
         ["--onnx-model", "model.onnx", "--checkpoint", "model.pth"],
         ["--onnx-model", "model.onnx", "--use-ema"],
-        ["--onnx-model", "model.onnx", "--device", "cuda"],
+        ["--onnx-model", "model.onnx", "--device", "mps"],
     ],
 )
 def test_parse_args_rejects_invalid_exported_model_combinations(extra_args, capsys):
@@ -462,6 +476,9 @@ def test_onnx_inference_runner_reuses_session_and_maps_batch(tmp_path, monkeypat
         def get_outputs(self):
             return [SimpleNamespace(name=name) for name in ("bbox", "bbox_num")]
 
+        def get_providers(self):
+            return ["CPUExecutionProvider"]
+
         def run(self, output_names, feed):
             assert output_names is None
             batch_size = feed["image"].shape[0]
@@ -473,9 +490,12 @@ def test_onnx_inference_runner_reuses_session_and_maps_batch(tmp_path, monkeypat
     monkeypatch.setitem(
         sys.modules,
         "onnxruntime",
-        SimpleNamespace(InferenceSession=FakeSession),
+        SimpleNamespace(
+            InferenceSession=FakeSession,
+            get_available_providers=lambda: ["CPUExecutionProvider"],
+        ),
     )
-    runner = infer_cli.OnnxInferenceRunner(model_path)
+    runner = infer_cli.OnnxInferenceRunner(model_path, torch.device("cpu"))
     batch = {
         "image": torch.zeros((2, 3, 8, 12)),
         "im_shape": torch.tensor([[8.0, 12.0], [8.0, 12.0]]),
@@ -492,11 +512,117 @@ def test_onnx_inference_runner_reuses_session_and_maps_batch(tmp_path, monkeypat
         str(model_path),
         ["CPUExecutionProvider"],
     )
+    assert runner.device == torch.device("cpu")
+    assert runner.providers == ("CPUExecutionProvider",)
     assert first["bbox"].shape == (2, 6)
     assert first["bbox_num"].tolist() == [1, 1]
     assert second["bbox_num"].tolist() == [1, 1]
     with pytest.raises(RuntimeError, match="expects fixed spatial size 8x12"):
         runner({**batch, "image": torch.zeros((2, 3, 7, 12))})
+
+
+def test_onnx_inference_runner_selects_cuda_device_and_cpu_fallback(
+    tmp_path,
+    monkeypatch,
+):
+    model_path = tmp_path / "model.onnx"
+    model_path.write_bytes(b"fixture")
+    sessions = []
+
+    class FakeSession:
+        def __init__(self, path, providers):
+            sessions.append((path, providers))
+
+        def get_providers(self):
+            return ["CUDAExecutionProvider", "CPUExecutionProvider"]
+
+        def get_inputs(self):
+            return [
+                SimpleNamespace(
+                    name=name,
+                    shape=["batch", 3, 8, 12] if name == "image" else ["batch", 2],
+                )
+                for name in ("image", "im_shape", "scale_factor")
+            ]
+
+        def get_outputs(self):
+            return [SimpleNamespace(name=name) for name in ("bbox", "bbox_num")]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "onnxruntime",
+        SimpleNamespace(
+            InferenceSession=FakeSession,
+            get_available_providers=lambda: [
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider",
+            ],
+        ),
+    )
+
+    runner = infer_cli.OnnxInferenceRunner(model_path, torch.device("cuda:1"))
+
+    assert sessions == [
+        (
+            str(model_path),
+            [
+                (
+                    "CUDAExecutionProvider",
+                    {"device_id": 1, "use_tf32": 1},
+                ),
+                "CPUExecutionProvider",
+            ],
+        )
+    ]
+    assert runner.device == torch.device("cuda:1")
+    assert runner.providers == ("CUDAExecutionProvider", "CPUExecutionProvider")
+
+
+def test_onnx_inference_runner_rejects_missing_cuda_provider(tmp_path, monkeypatch):
+    model_path = tmp_path / "model.onnx"
+    model_path.write_bytes(b"fixture")
+
+    def unexpected_session(*args, **kwargs):
+        raise AssertionError("session must not be created without the CUDA provider")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "onnxruntime",
+        SimpleNamespace(
+            InferenceSession=unexpected_session,
+            get_available_providers=lambda: ["CPUExecutionProvider"],
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="export-gpu"):
+        infer_cli.OnnxInferenceRunner(model_path, torch.device("cuda"))
+
+
+def test_onnx_inference_runner_rejects_session_cuda_fallback(tmp_path, monkeypatch):
+    model_path = tmp_path / "model.onnx"
+    model_path.write_bytes(b"fixture")
+
+    class FakeSession:
+        def __init__(self, path, providers):
+            pass
+
+        def get_providers(self):
+            return ["CPUExecutionProvider"]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "onnxruntime",
+        SimpleNamespace(
+            InferenceSession=FakeSession,
+            get_available_providers=lambda: [
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider",
+            ],
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="fell back to CPU"):
+        infer_cli.OnnxInferenceRunner(model_path, torch.device("cuda"))
 
 
 def test_torchscript_inference_runner_maps_batch(tmp_path):
@@ -550,7 +676,7 @@ def test_build_inference_runner_selects_exported_backend(monkeypatch):
     monkeypatch.setattr(
         infer_cli,
         "OnnxInferenceRunner",
-        lambda path: observed.append(path) or expected,
+        lambda path, device: observed.append((path, device)) or expected,
     )
     args = SimpleNamespace(
         checkpoint=None,
@@ -566,7 +692,81 @@ def test_build_inference_runner_selects_exported_backend(monkeypatch):
     )
 
     assert result is expected
-    assert observed == ["model.onnx"]
+    assert observed == [("model.onnx", torch.device("cpu"))]
+
+
+def test_main_keeps_onnx_cuda_preprocessing_on_cpu(tmp_path, monkeypatch):
+    image_path = tmp_path / "sample.jpg"
+    assert cv2.imwrite(str(image_path), np.zeros((8, 12, 3), dtype=np.uint8))
+    output_directory = tmp_path / "results"
+    observed = {}
+    runner = object()
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(
+        infer_cli,
+        "load_config",
+        lambda path: AttrDict(eval_size=[8, 12]),
+    )
+    monkeypatch.setattr(infer_cli, "apply_overrides", lambda cfg, overrides: None)
+    monkeypatch.setattr(
+        infer_cli,
+        "create_preprocessors",
+        lambda cfg, image_size=None: (object(), object()),
+    )
+
+    def fake_build_runner(cfg, args, device):
+        observed["runner_device"] = device
+        return runner
+
+    monkeypatch.setattr(infer_cli, "build_inference_runner", fake_build_runner)
+    monkeypatch.setattr(
+        infer_cli,
+        "get_category_metadata",
+        lambda cfg, annotation: ({0: 1}, {0: "person"}),
+    )
+
+    def fake_predict(
+        model,
+        image_paths,
+        sample_transform,
+        batch_transform,
+        device,
+        **kwargs,
+    ):
+        observed["preprocessing_device"] = device
+        return [
+            {
+                "labels": torch.empty(0, dtype=torch.int64),
+                "scores": torch.empty(0),
+                "boxes": torch.empty((0, 4)),
+            }
+        ]
+
+    monkeypatch.setattr(infer_cli, "predict_images", fake_predict)
+
+    assert (
+        infer_cli.main(
+            [
+                "--config",
+                "model.yml",
+                "--onnx-model",
+                "model.onnx",
+                "--infer-img",
+                str(image_path),
+                "--output-dir",
+                str(output_directory),
+                "--device",
+                "cuda:1",
+            ]
+        )
+        == 0
+    )
+
+    assert observed == {
+        "runner_device": torch.device("cuda:1"),
+        "preprocessing_device": torch.device("cpu"),
+    }
 
 
 def test_main_writes_visualization_and_machine_readable_results(

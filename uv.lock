@@ -18,6 +18,19 @@ resolution-markers = [
 required-markers = [
     "platform_machine == 'x86_64' and sys_platform == 'linux'",
 ]
+conflicts = [[
+    { package = "rtdetrv3-pytorch", extra = "dev" },
+    { package = "rtdetrv3-pytorch", extra = "export" },
+], [
+    { package = "rtdetrv3-pytorch", extra = "dev" },
+    { package = "rtdetrv3-pytorch", extra = "test" },
+], [
+    { package = "rtdetrv3-pytorch", extra = "export" },
+    { package = "rtdetrv3-pytorch", extra = "export-gpu" },
+], [
+    { package = "rtdetrv3-pytorch", extra = "export-gpu" },
+    { package = "rtdetrv3-pytorch", extra = "test" },
+]]
 
 [[package]]
 name = "anyio"
@@ -171,7 +184,7 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "python_full_version < '3.10' and sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/2e/0090cbf739cee7d23781ad4b89a9894a41538e4fcf4c31dcdd705b78eb8b/click-8.1.8.tar.gz", hash = "sha256:ed53c9d8990d83c2a27deae68e4ee337473f6330c040a31d4225c9574d16096a", size = 226593, upload-time = "2024-12-21T18:38:44.339Z" }
 wheels = [
@@ -194,7 +207,7 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "python_full_version >= '3.10' and sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/46/61/de6cd827efad202d7057d93e0fed9294b96952e188f7384832791c7b2254/click-8.3.0.tar.gz", hash = "sha256:e7b8232224eba16f4ebe410c25ced9f7875cb5f3263ffc93cc3e8da705e229c4", size = 276943, upload-time = "2025-09-18T17:32:23.696Z" }
 wheels = [
@@ -215,7 +228,7 @@ name = "coloredlogs"
 version = "15.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "humanfriendly" },
+    { name = "humanfriendly", marker = "python_full_version < '3.11' or extra == 'extra-16-rtdetrv3-pytorch-dev' or extra == 'extra-16-rtdetrv3-pytorch-export-gpu' or (extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cc/c7/eed8f27100517e8c0e6b923d5f0845d0cb99763da6fdee00478f91db7325/coloredlogs-15.0.1.tar.gz", hash = "sha256:7c991aa71a4577af2f82600d8f8f3a89f936baeaf9b50a9c197da014e5bf16b0", size = 278520, upload-time = "2021-06-11T10:22:45.202Z" }
 wheels = [
@@ -232,7 +245,7 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/f6/31a8f28b4a2a4fa0e01085e542f3081ab0588eff8e589d39d775172c9792/contourpy-1.3.0.tar.gz", hash = "sha256:7ffa0db17717a8ffb127efd0c95a4362d996b892c2904db72428d5b52e1938a4", size = 13464370, upload-time = "2024-08-27T21:00:03.328Z" }
 wheels = [
@@ -294,7 +307,7 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version == '3.10.*'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/66/54/eb9bfc647b19f2009dd5c7f5ec51c4e6ca831725f1aea7a993034f483147/contourpy-1.3.2.tar.gz", hash = "sha256:b6945942715a034c671b7fc54f9588126b0b8bf23db2696e3ca8328f3ff0ab54", size = 13466130, upload-time = "2025-04-15T17:47:53.79Z" }
 wheels = [
@@ -349,7 +362,7 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880", size = 13466174, upload-time = "2025-07-26T12:03:12.549Z" }
 wheels = [
@@ -448,7 +461,7 @@ wheels = [
 
 [package.optional-dependencies]
 toml = [
-    { name = "tomli" },
+    { name = "tomli", marker = "python_full_version < '3.10'" },
 ]
 
 [[package]]
@@ -511,7 +524,7 @@ wheels = [
 
 [package.optional-dependencies]
 toml = [
-    { name = "tomli", marker = "python_full_version <= '3.11'" },
+    { name = "tomli", marker = "python_full_version >= '3.10' and python_full_version <= '3.11'" },
 ]
 
 [[package]]
@@ -577,7 +590,7 @@ name = "exceptiongroup"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
 wheels = [
@@ -624,8 +637,8 @@ version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "blinker" },
-    { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "click", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "click", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "importlib-metadata", marker = "python_full_version < '3.10'" },
     { name = "itsdangerous" },
     { name = "jinja2" },
@@ -729,10 +742,10 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "requests", extra = ["socks"] },
-    { name = "tqdm" },
+    { name = "beautifulsoup4", marker = "python_full_version < '3.10'" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "requests", extra = ["socks"], marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "tqdm", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5d/e2/831920e510e3cce91627adab9997944b32842f7cd0dc4c023f24655531e0/gdown-5.2.2.tar.gz", hash = "sha256:a4bafbaa627d67bdaa68d274e9e957127ba810b4bcf4505e2b57ea45aa0aa1e6", size = 360218, upload-time = "2026-04-12T06:00:10.571Z" }
 wheels = [
@@ -755,11 +768,11 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "requests", extra = ["socks"] },
-    { name = "tqdm" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "beautifulsoup4", marker = "python_full_version >= '3.10'" },
+    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "requests", extra = ["socks"], marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "tqdm", marker = "python_full_version >= '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.10' and python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6a/b5/a45f62f20664031bf74a6aeb6f8d8cd5910e411bf90d756bd6b09bdc6c35/gdown-6.1.0.tar.gz", hash = "sha256:361c6e04c6ca335df50b9d71f40bcfe9ab70fb26a1b0e890a427267781389553", size = 269670, upload-time = "2026-05-30T11:56:21.322Z" }
 wheels = [
@@ -808,7 +821,7 @@ name = "humanfriendly"
 version = "10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyreadline3", marker = "sys_platform == 'win32'" },
+    { name = "pyreadline3", marker = "(python_full_version < '3.11' and sys_platform == 'win32') or (python_full_version >= '3.11' and extra != 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'win32' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (sys_platform != 'win32' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'win32' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'win32' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'win32' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'win32' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'win32' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cc/3f/2c29224acb2e2df4d2046e4c73ee2662023c58ff5b113c4c1adac0886c43/humanfriendly-10.0.tar.gz", hash = "sha256:6b0b831ce8f15f7300721aa49829fc4e83921a9a301cc7f606be6686a2288ddc", size = 360702, upload-time = "2021-09-17T21:40:43.31Z" }
 wheels = [
@@ -830,8 +843,8 @@ version = "2.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0c/47/57e897fb7094afb2d26e8b2e4af9a45c7cf1a405acdeeca001fdf2c98501/imageio-2.37.0.tar.gz", hash = "sha256:71b57b3669666272c818497aebba2b4c5f20d5b37c81720e5e1a56d59c492996", size = 389963, upload-time = "2025-01-20T02:42:37.089Z" }
 wheels = [
@@ -844,19 +857,19 @@ version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "imageio" },
-    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "numpy" },
     { name = "opencv-python" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "scikit-image", version = "0.24.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "scikit-image", version = "0.25.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scikit-image", version = "0.24.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scikit-image", version = "0.25.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "six" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/25/7d/820295b8fdaf06dce9688ef2fdeb5a317896d3276db7723e5a94e85e1253/imgaug-0.4.0.tar.gz", hash = "sha256:46bab63ed38f8980630ff721a09ca2281b7dbd4d8c11258818b6ebcc69ea46c7", size = 937254, upload-time = "2020-02-05T20:54:24.835Z" }
@@ -869,7 +882,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -881,7 +894,7 @@ name = "importlib-resources"
 version = "6.5.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693, upload-time = "2025-01-03T18:51:56.698Z" }
 wheels = [
@@ -1201,16 +1214,16 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "contourpy", version = "1.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "cycler" },
-    { name = "fonttools" },
-    { name = "importlib-resources" },
-    { name = "kiwisolver", version = "1.4.7", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "pyparsing" },
-    { name = "python-dateutil" },
+    { name = "contourpy", version = "1.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "cycler", marker = "python_full_version < '3.10'" },
+    { name = "fonttools", marker = "python_full_version < '3.10'" },
+    { name = "importlib-resources", marker = "python_full_version < '3.10'" },
+    { name = "kiwisolver", version = "1.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "packaging", marker = "python_full_version < '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "pyparsing", marker = "python_full_version < '3.10'" },
+    { name = "python-dateutil", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/df/17/1747b4154034befd0ed33b52538f5eb7752d05bb51c5e2a31470c3bc7d52/matplotlib-3.9.4.tar.gz", hash = "sha256:1e00e8be7393cbdc6fedfa8a6fba02cf3e83814b285db1c60b906a023ba41bc3", size = 36106529, upload-time = "2024-12-13T05:56:34.184Z" }
 wheels = [
@@ -1260,16 +1273,16 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "cycler" },
-    { name = "fonttools" },
-    { name = "kiwisolver", version = "1.4.9", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "pyparsing" },
-    { name = "python-dateutil" },
+    { name = "contourpy", version = "1.3.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "contourpy", version = "1.3.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "cycler", marker = "python_full_version >= '3.10'" },
+    { name = "fonttools", marker = "python_full_version >= '3.10'" },
+    { name = "kiwisolver", version = "1.4.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "numpy", marker = "python_full_version >= '3.10'" },
+    { name = "packaging", marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pyparsing", marker = "python_full_version >= '3.10'" },
+    { name = "python-dateutil", marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/e2/d2d5295be2f44c678ebaf3544ba32d20c1f9ef08c49fe47f496180e1db15/matplotlib-3.10.7.tar.gz", hash = "sha256:a06ba7e2a2ef9131c79c49e63dad355d2d878413a0376c1727c8b9335ff731c7", size = 34804865, upload-time = "2025-10-09T00:28:00.669Z" }
 wheels = [
@@ -1337,9 +1350,9 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "pandas" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "xmltodict" },
 ]
 wheels = [
@@ -1362,7 +1375,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mypy-extensions" },
     { name = "pathspec" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c0/77/8f0d0001ffad290cef2f7f216f96c814866248a0b92a722365ed54648e7e/mypy-1.18.2.tar.gz", hash = "sha256:06a398102a5f203d7477b2923dda3634c36727fa5c237d8f859ef90c42a9924b", size = 3448846, upload-time = "2025-09-19T00:11:10.519Z" }
@@ -1497,7 +1510,9 @@ version = "11.11.3.6"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/be/c222e33e60d28ecd496a46fc4d78ccae0ee28e1fd7dc705b6288b4cad27e/nvidia_cublas_cu11-11.11.3.6-py3-none-manylinux1_x86_64.whl", hash = "sha256:39fb40e8f486dd8a2ddb8fdeefe1d5b28f5b99df01c87ab3676f057a74a5a6f3", size = 417870452, upload-time = "2022-10-18T21:17:48.638Z" },
+    { url = "https://files.pythonhosted.org/packages/96/df/c5ac9ac5096355c47c606e613ecc7aa50fbccf5e0145df857d11da6464b1/nvidia_cublas_cu11-11.11.3.6-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5ccae9e069a2c6be9af9cb5a0b0c6928c19c7915e390d15f598a1eead2a01a7a", size = 291428448, upload-time = "2024-08-16T23:59:46.358Z" },
     { url = "https://files.pythonhosted.org/packages/ea/2e/9d99c60771d275ecf6c914a612e9a577f740a615bc826bec132368e1d3ae/nvidia_cublas_cu11-11.11.3.6-py3-none-manylinux2014_x86_64.whl", hash = "sha256:60252822adea5d0b10cd990a7dc7bedf7435f30ae40083c7a624a85a43225abc", size = 417870460, upload-time = "2024-08-17T00:00:26.889Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/1d/7a78cd36fd5e3da4021b3ac2c2c8b2651dd72345b7c3ecc0d3e051884f50/nvidia_cublas_cu11-11.11.3.6-py3-none-win_amd64.whl", hash = "sha256:6ab12b1302bef8ac1ff4414edd1c059e57f4833abef9151683fb8f4de25900be", size = 427234740, upload-time = "2022-10-18T21:21:50.058Z" },
 ]
 
 [[package]]
@@ -1506,6 +1521,7 @@ version = "12.1.3.1"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/6d/121efd7382d5b0284239f4ab1fc1590d86d34ed4a4a2fdb13b30ca8e5740/nvidia_cublas_cu12-12.1.3.1-py3-none-manylinux1_x86_64.whl", hash = "sha256:ee53ccca76a6fc08fb9701aa95b6ceb242cdaab118c3bb152af4e579af792728", size = 410594774, upload-time = "2023-04-19T15:50:03.519Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/ef/32a375b74bea706c93deea5613552f7c9104f961b21df423f5887eca713b/nvidia_cublas_cu12-12.1.3.1-py3-none-win_amd64.whl", hash = "sha256:2b964d60e8cf11b5e1073d179d85fa340c120e99b3067558f3cf98dd69d02906", size = 439918445, upload-time = "2023-04-19T15:56:13.346Z" },
 ]
 
 [[package]]
@@ -1514,7 +1530,9 @@ version = "11.8.87"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/27/c9/b4b15f709a694ea9f84871c6c4fbeeb54bab225962d852665a2c6f77f90d/nvidia_cuda_cupti_cu11-11.8.87-py3-none-manylinux1_x86_64.whl", hash = "sha256:0e50c707df56c75a2c0703dc6b886f3c97a22f37d6f63839f75b7418ba672a8d", size = 13093657, upload-time = "2022-10-03T21:46:12.544Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/5a/fb7e315aaa9d2bb28d3f2d9127375823c43646e07db4fe1b08746626e677/nvidia_cuda_cupti_cu11-11.8.87-py3-none-manylinux2014_aarch64.whl", hash = "sha256:9aaa638963a8271df26b6ee0d93b781730b7acc6581ff700bd023d7934e4385e", size = 11687484, upload-time = "2024-08-16T23:56:27.303Z" },
     { url = "https://files.pythonhosted.org/packages/74/42/9f5c5cc084ce6f3073048c4f6806f45ba4c8c73f227c9587215d9c372e05/nvidia_cuda_cupti_cu11-11.8.87-py3-none-manylinux2014_x86_64.whl", hash = "sha256:4191a17913a706b5098681280cd089cd7d8d3df209a6f5cb79384974a96d24f2", size = 13093662, upload-time = "2024-08-16T23:56:38.082Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/b9/371cff81be29e008a69f1681f468a2b428fa4ea03842196c178cb4cf1991/nvidia_cuda_cupti_cu11-11.8.87-py3-none-win_amd64.whl", hash = "sha256:4332d8550ad5f5b673f98d08e4e4f82030cb604c66d8d5ee919399ea01312e58", size = 9952361, upload-time = "2022-10-03T23:38:14.399Z" },
 ]
 
 [[package]]
@@ -1523,6 +1541,7 @@ version = "12.1.105"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/00/6b218edd739ecfc60524e585ba8e6b00554dd908de2c9c66c1af3e44e18d/nvidia_cuda_cupti_cu12-12.1.105-py3-none-manylinux1_x86_64.whl", hash = "sha256:e54fde3983165c624cb79254ae9818a456eb6e87a7fd4d56a2352c24ee542d7e", size = 14109015, upload-time = "2023-04-19T15:47:32.502Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/56/0021e32ea2848c24242f6b56790bd0ccc8bf99f973ca790569c6ca028107/nvidia_cuda_cupti_cu12-12.1.105-py3-none-win_amd64.whl", hash = "sha256:bea8236d13a0ac7190bd2919c3e8e6ce1e402104276e6f9694479e48bb0eb2a4", size = 10154340, upload-time = "2023-04-19T15:53:33.563Z" },
 ]
 
 [[package]]
@@ -1531,7 +1550,9 @@ version = "11.8.89"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/08/a9833e4e9f9165bedb7f36033b47aa399b053b9cb2eaf7b84d1e28705cf7/nvidia_cuda_nvrtc_cu11-11.8.89-py3-none-manylinux1_x86_64.whl", hash = "sha256:1f27d67b0f72902e9065ae568b4f6268dfe49ba3ed269c9a3da99bb86d1d2008", size = 23173264, upload-time = "2022-10-03T21:47:00.705Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/ad/58a9f86b0280190582691b1141ac3678c08f698d3d6161eed5cbe4e43b46/nvidia_cuda_nvrtc_cu11-11.8.89-py3-none-manylinux2014_aarch64.whl", hash = "sha256:8ab17ed51e7c4928f7170a0551e3e3b42f89d973bd267ced9688c238b3e10aef", size = 22671777, upload-time = "2024-08-16T23:57:58.688Z" },
     { url = "https://files.pythonhosted.org/packages/60/44/202e027c224c26e15a53f01c5c7604c7f6b4fd368882d3164ea08fead207/nvidia_cuda_nvrtc_cu11-11.8.89-py3-none-manylinux2014_x86_64.whl", hash = "sha256:a8d02f3cba345be56b1ffc3e74d8f61f02bb758dd31b0f20e12277a5a244f756", size = 23173745, upload-time = "2024-08-16T23:58:16.539Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/19/17745076214b0cc985cfdbabe2b3108f1237704985dab5b748e48432aca1/nvidia_cuda_nvrtc_cu11-11.8.89-py3-none-win_amd64.whl", hash = "sha256:e18a23a8f4064664a6f1c4a64f38c581cbebfb5935280e94a4943ea8ae3791b1", size = 19034935, upload-time = "2022-10-03T23:39:03.211Z" },
 ]
 
 [[package]]
@@ -1540,6 +1561,7 @@ version = "12.1.105"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/9f/c64c03f49d6fbc56196664d05dba14e3a561038a81a638eeb47f4d4cfd48/nvidia_cuda_nvrtc_cu12-12.1.105-py3-none-manylinux1_x86_64.whl", hash = "sha256:339b385f50c309763ca65456ec75e17bbefcbbf2893f462cb8b90584cd27a1c2", size = 23671734, upload-time = "2023-04-19T15:48:32.42Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/1d/f76987c4f454eb86e0b9a0e4f57c3bf1ac1d13ad13cd1a4da4eb0e0c0ce9/nvidia_cuda_nvrtc_cu12-12.1.105-py3-none-win_amd64.whl", hash = "sha256:0a98a522d9ff138b96c010a65e145dc1b4850e9ecb75a0172371793752fd46ed", size = 19331863, upload-time = "2023-04-19T15:54:34.603Z" },
 ]
 
 [[package]]
@@ -1548,7 +1570,9 @@ version = "11.8.89"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/45/3e/84db02be49fe6d6df6e42f69fd64501c22d0f9ada9c9877f885612085d20/nvidia_cuda_runtime_cu11-11.8.89-py3-none-manylinux1_x86_64.whl", hash = "sha256:f587bd726eb2f7612cf77ce38a2c1e65cf23251ff49437f6161ce0d647f64f7c", size = 875585, upload-time = "2022-10-03T21:46:03.05Z" },
+    { url = "https://files.pythonhosted.org/packages/da/16/86d6f3f25c1d69cfcaa01c9a9704b7e946387b7aa13cc2f385b50eb46da5/nvidia_cuda_runtime_cu11-11.8.89-py3-none-manylinux2014_aarch64.whl", hash = "sha256:e53bf160b6b660819cb6e4a9da2cc89e6aa2329858299780a2459780a2b8d012", size = 805995, upload-time = "2024-08-16T23:56:10.507Z" },
     { url = "https://files.pythonhosted.org/packages/a6/ec/a540f28b31de7bc1ed49eecc72035d4cb77db88ead1d42f7bfa5ae407ac6/nvidia_cuda_runtime_cu11-11.8.89-py3-none-manylinux2014_x86_64.whl", hash = "sha256:92d04069a987e1fbc9213f8376d265df0f7bb42617d44f5eda1f496acea7f2d1", size = 875592, upload-time = "2024-08-16T23:56:18.774Z" },
+    { url = "https://files.pythonhosted.org/packages/48/ae/09f335dfbca630ae213e53d2a9294540620453fe2b37e7489ff05817a525/nvidia_cuda_runtime_cu11-11.8.89-py3-none-win_amd64.whl", hash = "sha256:f60c9fdaed8065b38de8097867240efc5556a8a710007146daeb9082334a6e63", size = 1021163, upload-time = "2022-10-03T23:37:53.656Z" },
 ]
 
 [[package]]
@@ -1557,6 +1581,7 @@ version = "12.1.105"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/d5/c68b1d2cdfcc59e72e8a5949a37ddb22ae6cade80cd4a57a84d4c8b55472/nvidia_cuda_runtime_cu12-12.1.105-py3-none-manylinux1_x86_64.whl", hash = "sha256:6e258468ddf5796e25f1dc591a31029fa317d97a0a94ed93468fc86301d61e40", size = 823596, upload-time = "2023-04-19T15:47:22.471Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/e2/7a2b4b5064af56ea8ea2d8b2776c0f2960d95c88716138806121ae52a9c9/nvidia_cuda_runtime_cu12-12.1.105-py3-none-win_amd64.whl", hash = "sha256:dfb46ef84d73fababab44cf03e3b83f80700d27ca300e537f85f636fac474344", size = 821226, upload-time = "2023-04-19T15:53:23.082Z" },
 ]
 
 [[package]]
@@ -1564,8 +1589,8 @@ name = "nvidia-cudnn-cu11"
 version = "8.9.6.50"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu11" },
-    { name = "nvidia-cuda-nvrtc-cu11" },
+    { name = "nvidia-cublas-cu11", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "nvidia-cuda-nvrtc-cu11", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/85/2d/3f083fcff1c302119f48e7b30a5f7b23db793f262f900943a9eb456b9e4d/nvidia_cudnn_cu11-8.9.6.50-py3-none-manylinux1_x86_64.whl", hash = "sha256:319a8f7ca3d65139f1b69998595c7076ae0e4271a325e5dfde50a3ca31f55584", size = 699874407, upload-time = "2023-11-01T23:40:02.18Z" },
@@ -1576,10 +1601,11 @@ name = "nvidia-cudnn-cu12"
 version = "9.1.0.70"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9f/fd/713452cd72343f682b1c7b9321e23829f00b842ceaedcda96e742ea0b0b3/nvidia_cudnn_cu12-9.1.0.70-py3-none-manylinux2014_x86_64.whl", hash = "sha256:165764f44ef8c61fcdfdfdbe769d687e06374059fbb388b6c89ecb0e28793a6f", size = 664752741, upload-time = "2024-04-22T15:24:15.253Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/d0/f90ee6956a628f9f04bf467932c0a25e5a7e706a684b896593c06c82f460/nvidia_cudnn_cu12-9.1.0.70-py3-none-win_amd64.whl", hash = "sha256:6278562929433d68365a07a4a1546c237ba2849852c0d4b2262a486e805b977a", size = 679925892, upload-time = "2024-04-22T15:24:53.333Z" },
 ]
 
 [[package]]
@@ -1588,7 +1614,9 @@ version = "10.9.0.58"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/74/79/b912a77e38e41f15a0581a59f5c3548d1ddfdda3225936fb67c342719e7a/nvidia_cufft_cu11-10.9.0.58-py3-none-manylinux1_x86_64.whl", hash = "sha256:222f9da70c80384632fd6035e4c3f16762d64ea7a843829cb278f98b3cb7dd81", size = 168405414, upload-time = "2022-10-03T23:29:47.505Z" },
+    { url = "https://files.pythonhosted.org/packages/71/7a/a2ad9951d57c3cc23f4fa6d84b146afd9f375ffbc744b38935930ac4393f/nvidia_cufft_cu11-10.9.0.58-py3-none-manylinux2014_aarch64.whl", hash = "sha256:34b7315104e615b230dc3c2d1861f13bff9ec465c5d3b4bb65b4986d03a1d8d4", size = 111231060, upload-time = "2024-08-17T00:00:57.04Z" },
     { url = "https://files.pythonhosted.org/packages/64/c8/133717b43182ba063803e983e7680a94826a9f4ff5734af0ca315803f1b3/nvidia_cufft_cu11-10.9.0.58-py3-none-manylinux2014_x86_64.whl", hash = "sha256:e21037259995243cc370dd63c430d77ae9280bedb68d5b5a18226bfc92e5d748", size = 168405419, upload-time = "2024-08-17T00:02:03.562Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/b4/e432a74f8db0e84f734dc14d36c0e529225132bf7e239da21f55893351a6/nvidia_cufft_cu11-10.9.0.58-py3-none-win_amd64.whl", hash = "sha256:c4d316f17c745ec9c728e30409612eaf77a8404c3733cdf6c9c1569634d1ca03", size = 172237004, upload-time = "2022-10-03T23:39:58.288Z" },
 ]
 
 [[package]]
@@ -1597,6 +1625,7 @@ version = "11.0.2.54"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/86/94/eb540db023ce1d162e7bea9f8f5aa781d57c65aed513c33ee9a5123ead4d/nvidia_cufft_cu12-11.0.2.54-py3-none-manylinux1_x86_64.whl", hash = "sha256:794e3948a1aa71fd817c3775866943936774d1c14e7628c74f6f7417224cdf56", size = 121635161, upload-time = "2023-04-19T15:50:46Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/57/7927a3aa0e19927dfed30256d1c854caf991655d847a4e7c01fe87e3d4ac/nvidia_cufft_cu12-11.0.2.54-py3-none-win_amd64.whl", hash = "sha256:d9ac353f78ff89951da4af698f80870b1534ed69993f10a4cf1d96f21357e253", size = 121344196, upload-time = "2023-04-19T15:56:59.562Z" },
 ]
 
 [[package]]
@@ -1605,7 +1634,9 @@ version = "10.3.0.86"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/28/c47f8e2439ddbcbeae3cf74d43ed572b651d630ea72863d5357f3759eb66/nvidia_curand_cu11-10.3.0.86-py3-none-manylinux1_x86_64.whl", hash = "sha256:ac439548c88580269a1eb6aeb602a5aed32f0dbb20809a31d9ed7d01d77f6bf5", size = 58124493, upload-time = "2022-10-03T23:30:05.413Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/c0/aec095de6cb3b07197042f9ff8958eda2a5eaaefabc8db2e3bfa32aafb97/nvidia_curand_cu11-10.3.0.86-py3-none-manylinux2014_aarch64.whl", hash = "sha256:64defc3016d8c1de351a764617818c2961210430f12476faee10084b269b188c", size = 58134524, upload-time = "2024-08-17T00:02:48.788Z" },
     { url = "https://files.pythonhosted.org/packages/58/e5/ce5806afc48a6e4e0dddd25316ac60b6fa94fd1791bdbf4ca17bf52696ea/nvidia_curand_cu11-10.3.0.86-py3-none-manylinux2014_x86_64.whl", hash = "sha256:cd4cffbf78bb06580206b4814d5dc696d1161c902aae37b2bba00056832379e6", size = 58124497, upload-time = "2024-08-17T00:03:01.833Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/e0/a68e20f37512c2ff22c1b2707383faec80acc20c39727e4007065ed284ea/nvidia_curand_cu11-10.3.0.86-py3-none-win_amd64.whl", hash = "sha256:8fa8365065fc3e3760d7437b08f164a6bcf8f7124f3b544d2463ded01e6bdc70", size = 57597791, upload-time = "2022-10-03T23:40:27.142Z" },
 ]
 
 [[package]]
@@ -1614,6 +1645,7 @@ version = "10.3.2.106"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/44/31/4890b1c9abc496303412947fc7dcea3d14861720642b49e8ceed89636705/nvidia_curand_cu12-10.3.2.106-py3-none-manylinux1_x86_64.whl", hash = "sha256:9d264c5036dde4e64f1de8c50ae753237c12e0b1348738169cd0f8a536c0e1e0", size = 56467784, upload-time = "2023-04-19T15:51:04.804Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/97/4c9c7c79efcdf5b70374241d48cf03b94ef6707fd18ea0c0f53684931d0b/nvidia_curand_cu12-10.3.2.106-py3-none-win_amd64.whl", hash = "sha256:75b6b0c574c0037839121317e17fd01f8a69fd2ef8e25853d826fec30bdba74a", size = 55995813, upload-time = "2023-04-19T15:57:16.676Z" },
 ]
 
 [[package]]
@@ -1621,11 +1653,13 @@ name = "nvidia-cusolver-cu11"
 version = "11.4.1.48"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu11" },
+    { name = "nvidia-cublas-cu11", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/55/ee/939ff0104991dd7bdabb4c9767994c612ba0e1c9a55672a1ddd42f5e5b16/nvidia_cusolver_cu11-11.4.1.48-py3-none-manylinux1_x86_64.whl", hash = "sha256:ca538f545645b7e6629140786d3127fe067b3d5a085bd794cde5bfe877c8926f", size = 128240842, upload-time = "2022-10-03T23:30:24.348Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/32/676f0cfea4ff5bbc6dcfe00b5f385ba49d322dc8e9ff1ef864b570e27e9e/nvidia_cusolver_cu11-11.4.1.48-py3-none-manylinux2014_aarch64.whl", hash = "sha256:1a96acb05768610bc414dbef5b25ebd2d820fc8a1e8c72097f41f53d80934d61", size = 127903177, upload-time = "2024-08-17T00:03:20.657Z" },
     { url = "https://files.pythonhosted.org/packages/52/fe/866e87e6e6a1b0a5fcf8524a058042656702f2057e22bfdb8899a7c38e10/nvidia_cusolver_cu11-11.4.1.48-py3-none-manylinux2014_x86_64.whl", hash = "sha256:ea9fb1ad8c644ca9ed55af13cc39af3b7ba4c3eb5aef18471fe1fe77d94383cb", size = 128246438, upload-time = "2024-08-17T00:03:52.432Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/94/4fd658d09776307b98411eca09dd77773d8c3bdc484b186a2084038b75e2/nvidia_cusolver_cu11-11.4.1.48-py3-none-win_amd64.whl", hash = "sha256:7efe43b113495a64e2cf9a0b4365bd53b0a82afb2e2cf91e9f993c9ef5e69ee8", size = 125732382, upload-time = "2022-10-03T23:40:44.179Z" },
 ]
 
 [[package]]
@@ -1633,12 +1667,13 @@ name = "nvidia-cusolver-cu12"
 version = "11.4.5.107"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
-    { name = "nvidia-cusparse-cu12" },
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/1d/8de1e5c67099015c834315e333911273a8c6aaba78923dd1d1e25fc5f217/nvidia_cusolver_cu12-11.4.5.107-py3-none-manylinux1_x86_64.whl", hash = "sha256:8a7ec542f0412294b15072fa7dab71d31334014a69f953004ea7a118206fe0dd", size = 124161928, upload-time = "2023-04-19T15:51:25.781Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/80/8fca0bf819122a631c3976b6fc517c1b10741b643b94046bd8dd451522c5/nvidia_cusolver_cu12-11.4.5.107-py3-none-win_amd64.whl", hash = "sha256:74e0c3a24c78612192a74fcd90dd117f1cf21dea4822e66d89e8ea80e3cd2da5", size = 121643081, upload-time = "2023-04-19T15:57:43.035Z" },
 ]
 
 [[package]]
@@ -1647,7 +1682,9 @@ version = "11.7.5.86"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/e0/21b829c535d569831835a4ca5d049a19ba00d3e91f3e12ab4ad27bd7385f/nvidia_cusparse_cu11-11.7.5.86-py3-none-manylinux1_x86_64.whl", hash = "sha256:4ae709fe78d3f23f60acaba8c54b8ad556cf16ca486e0cc1aa92dca7555d2d2b", size = 204126221, upload-time = "2022-10-18T21:19:28.04Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/6e/4eb2842e7ab1804072bca43030a8b92731e5a35f6a4a1b8f1aa8fa5f411c/nvidia_cusparse_cu11-11.7.5.86-py3-none-manylinux2014_aarch64.whl", hash = "sha256:6c7da46abee7567e619d4aa2e90a1b032cfcbd1211d429853b1a6e87514a14b2", size = 203917797, upload-time = "2024-08-17T00:04:22.798Z" },
     { url = "https://files.pythonhosted.org/packages/ed/5c/b0333b07c51ced77397c2fb0d9826072cea0da9d421aa7e792aa0f8ecc72/nvidia_cusparse_cu11-11.7.5.86-py3-none-manylinux2014_x86_64.whl", hash = "sha256:8d7cf1628fd8d462b5d2ba6678fae34733a48ecb80495b9c68672ec6a6dde5ef", size = 204126227, upload-time = "2024-08-17T00:05:20.798Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/36/a670e8ca1deccd3c63be4d0286491cf5c6375253f0d948e7cc5167fe1da9/nvidia_cusparse_cu11-11.7.5.86-py3-none-win_amd64.whl", hash = "sha256:a0f6ee81cd91be606fc2f55992d06b09cd4e86d74b6ae5e8dd1631cf7f5a8706", size = 203420667, upload-time = "2022-10-18T21:22:55.982Z" },
 ]
 
 [[package]]
@@ -1655,10 +1692,11 @@ name = "nvidia-cusparse-cu12"
 version = "12.1.0.106"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine != 'arm64' and sys_platform == 'darwin') or (platform_machine != 'aarch64' and sys_platform == 'linux') or (sys_platform != 'darwin' and sys_platform != 'linux') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/65/5b/cfaeebf25cd9fdec14338ccb16f6b2c4c7fa9163aefcf057d86b9cc248bb/nvidia_cusparse_cu12-12.1.0.106-py3-none-manylinux1_x86_64.whl", hash = "sha256:f3b50f42cf363f86ab21f720998517a659a48131e8d538dc02f8768237bd884c", size = 195958278, upload-time = "2023-04-19T15:51:49.939Z" },
+    { url = "https://files.pythonhosted.org/packages/0f/95/48fdbba24c93614d1ecd35bc6bdc6087bd17cbacc3abc4b05a9c2a1ca232/nvidia_cusparse_cu12-12.1.0.106-py3-none-win_amd64.whl", hash = "sha256:b798237e81b9719373e8fae8d4f091b70a0cf09d9d85c95a557e11df2d8e9a5a", size = 195414588, upload-time = "2023-04-19T15:58:08.389Z" },
 ]
 
 [[package]]
@@ -1683,6 +1721,8 @@ version = "12.9.86"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/46/0c/c75bbfb967457a0b7670b8ad267bfc4fffdf341c074e0a80db06c24ccfd4/nvidia_nvjitlink_cu12-12.9.86-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:e3f1171dbdc83c5932a45f0f4c99180a70de9bd2718c1ab77d14104f6d7147f9", size = 39748338, upload-time = "2025-06-05T20:10:25.613Z" },
+    { url = "https://files.pythonhosted.org/packages/97/bc/2dcba8e70cf3115b400fef54f213bcd6715a3195eba000f8330f11e40c45/nvidia_nvjitlink_cu12-12.9.86-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:994a05ef08ef4b0b299829cde613a424382aff7efb08a7172c1fa616cc3af2ca", size = 39514880, upload-time = "2025-06-05T20:10:04.89Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/7e/2eecb277d8a98184d881fb98a738363fd4f14577a4d2d7f8264266e82623/nvidia_nvjitlink_cu12-12.9.86-py3-none-win_amd64.whl", hash = "sha256:cc6fcec260ca843c10e34c936921a1c426b351753587fdd638e8cff7b16bb9db", size = 35584936, upload-time = "2025-06-05T20:16:08.525Z" },
 ]
 
 [[package]]
@@ -1691,7 +1731,9 @@ version = "11.8.86"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d5/a2/23214c23118784dc2189ac2d2e48190df3e4206e2f73eb17d47140797a2b/nvidia_nvtx_cu11-11.8.86-py3-none-manylinux1_x86_64.whl", hash = "sha256:890656d8bd9b4e280231c832e1f0d03459200ba4824ddda3dcb59b1e1989b9f5", size = 99125, upload-time = "2022-10-03T21:47:19.565Z" },
+    { url = "https://files.pythonhosted.org/packages/42/b9/385e4323646d21f9aedb9e953e5c778311cd8df32eb2237f1ce242c58572/nvidia_nvtx_cu11-11.8.86-py3-none-manylinux2014_aarch64.whl", hash = "sha256:5e84b97062eb102b45a8a9172a06cfe28b239b1635075a13d6474e91295e0468", size = 100401, upload-time = "2024-08-16T23:58:25.484Z" },
     { url = "https://files.pythonhosted.org/packages/b5/ad/973a187b137a3d45dc3faac421ef1275fb41fc169fd3889e2d5ceb0daa54/nvidia_nvtx_cu11-11.8.86-py3-none-manylinux2014_x86_64.whl", hash = "sha256:979f5b2aef5da164c5c53c64c85c3dfa61b8b4704f4f963bb568bf98fa8472e8", size = 99130, upload-time = "2024-08-16T23:58:33.479Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/3f/0e1dd2bc4d89f838b86c76956ffa514307d3be4d8b5ee0da4e9d12a8b54b/nvidia_nvtx_cu11-11.8.86-py3-none-win_amd64.whl", hash = "sha256:54031010ee38d774b2991004d88f90bbd7bbc1458a96bbc4b42662756508c252", size = 66297, upload-time = "2022-10-03T23:39:12.132Z" },
 ]
 
 [[package]]
@@ -1700,6 +1742,7 @@ version = "12.1.105"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/d3/8057f0587683ed2fcd4dbfbdfdfa807b9160b809976099d36b8f60d08f03/nvidia_nvtx_cu12-12.1.105-py3-none-manylinux1_x86_64.whl", hash = "sha256:dc21cf308ca5691e7c04d962e213f8a4aa9bbfa23d95412f452254c2caeb09e5", size = 99138, upload-time = "2023-04-19T15:48:43.556Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/d7/bd7cb2d95ac6ac6e8d05bfa96cdce69619f1ef2808e072919044c2d47a8c/nvidia_nvtx_cu12-12.1.105-py3-none-win_amd64.whl", hash = "sha256:65f4d98982b31b60026e0e6de73fbdfc09d08a96f4656dd3665ca616a11e1e82", size = 66307, upload-time = "2023-04-19T15:54:45.736Z" },
 ]
 
 [[package]]
@@ -1712,10 +1755,10 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ml-dtypes" },
-    { name = "numpy" },
-    { name = "protobuf" },
-    { name = "typing-extensions" },
+    { name = "ml-dtypes", marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "protobuf", marker = "python_full_version < '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/27/2f/c619eb65769357e9b6de9212c9a821ab39cd484448e5d6b3fb5fb0a64c6d/onnx-1.19.1.tar.gz", hash = "sha256:737524d6eb3907d3499ea459c6f01c5a96278bb3a0f2ff8ae04786fb5d7f1ed5", size = 12033525, upload-time = "2025-10-10T04:01:34.342Z" }
 wheels = [
@@ -1759,10 +1802,10 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "ml-dtypes" },
-    { name = "numpy" },
-    { name = "protobuf" },
-    { name = "typing-extensions" },
+    { name = "ml-dtypes", marker = "python_full_version >= '3.10'" },
+    { name = "numpy", marker = "python_full_version >= '3.10'" },
+    { name = "protobuf", marker = "python_full_version >= '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/04/19/8ea73a64b368b75fe339771a20a02bc61ea1f551484c9e3d9d0bfbd0450f/onnx-1.22.0.tar.gz", hash = "sha256:ef40c0aaf0b643857ea9306fc7eddce17eaf9fb0407e4801f1fc5758443a38e0", size = 12024721, upload-time = "2026-06-15T12:50:05.354Z" }
 wheels = [
@@ -1796,12 +1839,12 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "coloredlogs" },
-    { name = "flatbuffers" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "sympy" },
+    { name = "coloredlogs", marker = "python_full_version < '3.10'" },
+    { name = "flatbuffers", marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "packaging", marker = "python_full_version < '3.10'" },
+    { name = "protobuf", marker = "python_full_version < '3.10'" },
+    { name = "sympy", marker = "python_full_version < '3.10'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/18/272d3d7406909141d3c9943796e3e97cafa53f4342d9231c0cfd8cb05702/onnxruntime-1.19.2-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:84fa57369c06cadd3c2a538ae2a26d76d583e7c34bdecd5769d71ca5c0fc750e", size = 16776408, upload-time = "2024-09-04T06:37:02.431Z" },
@@ -1836,12 +1879,12 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "coloredlogs" },
-    { name = "flatbuffers" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "sympy" },
+    { name = "coloredlogs", marker = "python_full_version == '3.10.*'" },
+    { name = "flatbuffers", marker = "python_full_version == '3.10.*'" },
+    { name = "numpy", marker = "python_full_version == '3.10.*'" },
+    { name = "packaging", marker = "python_full_version == '3.10.*'" },
+    { name = "protobuf", marker = "python_full_version == '3.10.*'" },
+    { name = "sympy", marker = "python_full_version == '3.10.*'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/28/99f903b0eb1cd6f3faa0e343217d9fb9f47b84bca98bd9859884631336ee/onnxruntime-1.20.1-cp310-cp310-macosx_13_0_universal2.whl", hash = "sha256:e50ba5ff7fed4f7d9253a6baf801ca2883cc08491f9d32d78a80da57256a5439", size = 30996314, upload-time = "2024-11-21T00:48:31.43Z" },
@@ -1874,10 +1917,10 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "flatbuffers" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "protobuf" },
+    { name = "flatbuffers", marker = "python_full_version >= '3.11'" },
+    { name = "numpy", marker = "python_full_version >= '3.11'" },
+    { name = "packaging", marker = "python_full_version >= '3.11'" },
+    { name = "protobuf", marker = "python_full_version >= '3.11'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/e4/5353d7e09ced4a8f473f843223fc75d726b2b5519dcefc12f22a6c92852d/onnxruntime-1.27.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:8ba14a38c570087f3cdb8cfba33f7a38a1e826c1e5b29e17c28ceda0cc910016", size = 18416484, upload-time = "2026-06-15T22:43:43.894Z" },
@@ -1890,6 +1933,66 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/26/81/24dd9b31b0fb912ee19ca53ac1c9764bfd79d58a2ccef564eb693be831a5/onnxruntime-1.27.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:7c65a7438632d55dfbc8a02ee60bd6cf7dd9d1ba05a43d4b851452f32338e194", size = 18658316, upload-time = "2026-06-15T22:43:04.012Z" },
     { url = "https://files.pythonhosted.org/packages/4f/88/8ec9db1a4d126bb8b758992beb40d1249df171917d75f44a327eb5f20dda/onnxruntime-1.27.0-cp312-cp312-win_amd64.whl", hash = "sha256:20c321cf187ba496e648acf6b4cf90b4d398b0d17c2a77fdaeba365b908cc1c1", size = 13358769, upload-time = "2026-06-15T22:43:34.581Z" },
     { url = "https://files.pythonhosted.org/packages/ae/9f/fdad359dfcba7e7cd8815569b304a596531d4efa77a75d77f8b4981891a2/onnxruntime-1.27.0-cp312-cp312-win_arm64.whl", hash = "sha256:d0d1f68868e2ef30ef70998ba9bbbc5c305e9b17041e3936751c1b8aa6aade06", size = 13104440, upload-time = "2026-06-15T22:43:22.893Z" },
+]
+
+[[package]]
+name = "onnxruntime-gpu"
+version = "1.19.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version < '3.10' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version < '3.10' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
+]
+dependencies = [
+    { name = "coloredlogs", marker = "python_full_version < '3.10'" },
+    { name = "flatbuffers", marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "packaging", marker = "python_full_version < '3.10'" },
+    { name = "protobuf", marker = "python_full_version < '3.10'" },
+    { name = "sympy", marker = "python_full_version < '3.10'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/9c/3fa310e0730643051eb88e884f19813a6c8b67d0fbafcda610d960e589db/onnxruntime_gpu-1.19.2-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:a49740e079e7c5215830d30cde3df792e903df007aa0b0fd7aa797937061b27a", size = 226178508, upload-time = "2024-09-04T06:43:40.83Z" },
+    { url = "https://files.pythonhosted.org/packages/92/82/95e3446724f9e99299c40495d5e04cb7cb319c3a4836c724dbdceb2facd9/onnxruntime_gpu-1.19.2-cp310-cp310-win_amd64.whl", hash = "sha256:b895920bb5e4241299f68874e0becdc2635ea0142939c11e7ff5ae5b28993613", size = 226376693, upload-time = "2024-09-04T06:43:53.348Z" },
+    { url = "https://files.pythonhosted.org/packages/85/33/06e856502a1d482532cfa7d4c7ca775dfddcd851c7bd1833f5177e567055/onnxruntime_gpu-1.19.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:562fc7c755393eaad9751e56149339dd201ffbfdb3ef5f43ff21d0619ba9045f", size = 226175096, upload-time = "2024-09-04T06:44:07.847Z" },
+    { url = "https://files.pythonhosted.org/packages/0b/0f/d0f728c950b23d8293ceb2f261e16b8a83d967f979b4834d26a86d609a94/onnxruntime_gpu-1.19.2-cp311-cp311-win_amd64.whl", hash = "sha256:522f7495918176cb8c1a3c78bde7152d984f7096acc786c73a27643af8af87c9", size = 226377266, upload-time = "2024-09-04T06:44:21.548Z" },
+    { url = "https://files.pythonhosted.org/packages/68/55/49e5b4b4d6e9a8841dcdec2f102069716b626bf6ce9640b832a9497504eb/onnxruntime_gpu-1.19.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:554a02a3fac0119707eb87327908afd21c4e6f0fa5bf9a034398f098adc316c5", size = 226163139, upload-time = "2024-09-04T06:44:34.076Z" },
+    { url = "https://files.pythonhosted.org/packages/df/5a/0f700aaff26be2c17c9ababba125d79094742d99afe7c24a020010cf2569/onnxruntime_gpu-1.19.2-cp312-cp312-win_amd64.whl", hash = "sha256:e7c6165a405027e3c0f11d189ae7013b5d66919b3381f9bfb3405c0c0cf07968", size = 226370340, upload-time = "2024-09-04T06:44:46.276Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/75/7d6dafa54255a978b0698cfe3d073208e6b0df311b15468b3cf9e33e6053/onnxruntime_gpu-1.19.2-cp39-cp39-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c9e369f01f55ea726ae5d28f18236426e52e97c433f0b7682054e61c478a06c9", size = 226174164, upload-time = "2024-09-04T06:45:12.199Z" },
+    { url = "https://files.pythonhosted.org/packages/10/6d/fae011a8a9ef7a8c0496be684ff576e520a8adeccaf9dd85d7d20236dfc2/onnxruntime_gpu-1.19.2-cp39-cp39-win_amd64.whl", hash = "sha256:c8b8128174b0470537e9f4983aeecc002a435d13914970c2af2f41d244ef2781", size = 226377602, upload-time = "2024-09-04T06:45:24.482Z" },
+]
+
+[[package]]
+name = "onnxruntime-gpu"
+version = "1.23.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.11.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version >= '3.12' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "python_full_version == '3.11.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version >= '3.12' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.12' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.12' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "(python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+    "python_full_version == '3.10.*' and platform_machine == 'arm64' and sys_platform == 'darwin'",
+    "python_full_version == '3.10.*' and platform_machine == 'aarch64' and sys_platform == 'linux'",
+    "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
+]
+dependencies = [
+    { name = "coloredlogs", marker = "python_full_version >= '3.10'" },
+    { name = "flatbuffers", marker = "python_full_version >= '3.10'" },
+    { name = "numpy", marker = "python_full_version >= '3.10'" },
+    { name = "packaging", marker = "python_full_version >= '3.10'" },
+    { name = "protobuf", marker = "python_full_version >= '3.10'" },
+    { name = "sympy", marker = "python_full_version >= '3.10'" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/ae/39283748c68a96be4f5f8a9561e0e3ca92af1eae6c2b1c07fb1da5f65cd1/onnxruntime_gpu-1.23.2-cp310-cp310-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:18de50c6c8eea50acc405ea13d299aec593e46478d7a22cd32cdbbdf7c42899d", size = 300525411, upload-time = "2025-10-22T16:56:08.415Z" },
+    { url = "https://files.pythonhosted.org/packages/21/c9/47abd3ec1f34498224d2a8f5cc4d1445eb5cc7dee8e3644b1a972619c0d2/onnxruntime_gpu-1.23.2-cp310-cp310-win_amd64.whl", hash = "sha256:deba091e15357355aa836fd64c6c4ac97dd0c4609c38b08a69675073ea46b321", size = 244505340, upload-time = "2025-10-27T22:47:43.215Z" },
+    { url = "https://files.pythonhosted.org/packages/43/a4/e3d7fbe32b44e814ae24ed642f05fac5d96d120efd82db7a7cac936e85a9/onnxruntime_gpu-1.23.2-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d76d1ac7a479ecc3ac54482eea4ba3b10d68e888a0f8b5f420f0bdf82c5eec59", size = 300525715, upload-time = "2025-10-22T16:56:19.928Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/5c/dba7c009e73dcce02e7f714574345b5e607c5c75510eb8d7bef682b45e5d/onnxruntime_gpu-1.23.2-cp311-cp311-win_amd64.whl", hash = "sha256:054282614c2fc9a4a27d74242afbae706a410f1f63cc35bc72f99709029a5ba4", size = 244506823, upload-time = "2025-10-22T16:55:09.526Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/d9/b7140a4f1615195938c7e358c0804bb84271f0d6886b5cbf105c6cb58aae/onnxruntime_gpu-1.23.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:4f2d1f720685d729b5258ec1b36dee1de381b8898189908c98cbeecdb2f2b5c2", size = 300509596, upload-time = "2025-10-22T16:56:31.728Z" },
+    { url = "https://files.pythonhosted.org/packages/87/da/2685c79e5ea587beddebe083601fead0bdf3620bc2f92d18756e7de8a636/onnxruntime_gpu-1.23.2-cp312-cp312-win_amd64.whl", hash = "sha256:fe925a84b00e291e0ad3fac29bfd8f8e06112abc760cdc82cb711b4f3935bd95", size = 244508327, upload-time = "2025-10-22T16:55:19.397Z" },
 ]
 
 [[package]]
@@ -1936,9 +2039,9 @@ version = "3.3.0"
 source = { registry = "https://www.paddlepaddle.org.cn/packages/stable/cu118/" }
 dependencies = [
     { name = "httpx" },
-    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "numpy" },
     { name = "nvidia-cublas-cu11", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-cuda-cupti-cu11", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
@@ -1952,8 +2055,8 @@ dependencies = [
     { name = "nvidia-nccl-cu11", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "nvidia-nvtx-cu11", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
     { name = "opt-einsum" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "protobuf" },
     { name = "safetensors" },
     { name = "setuptools", marker = "python_full_version >= '3.12'" },
@@ -2353,8 +2456,8 @@ name = "pytest-cov"
 version = "7.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "coverage", version = "7.10.7", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version < '3.10'" },
-    { name = "coverage", version = "7.11.0", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "python_full_version >= '3.10'" },
+    { name = "coverage", version = "7.10.7", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version < '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "coverage", version = "7.11.0", source = { registry = "https://pypi.org/simple" }, extra = ["toml"], marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
     { name = "pluggy" },
     { name = "pytest" },
 ]
@@ -2465,15 +2568,15 @@ source = { editable = "." }
 dependencies = [
     { name = "numpy" },
     { name = "opencv-python" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "pycocotools" },
     { name = "pyyaml" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "shapely", version = "2.0.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "shapely", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "terminaltables" },
     { name = "torch" },
     { name = "torchvision" },
@@ -2483,51 +2586,56 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "cython" },
-    { name = "gdown", version = "5.2.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "gdown", version = "6.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "gdown", version = "5.2.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "gdown", version = "6.1.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "imgaug" },
     { name = "lapx" },
     { name = "motmetrics" },
     { name = "mypy" },
     { name = "numpy" },
-    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "onnxruntime", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime-gpu", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime-gpu", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "opencv-python" },
     { name = "paddlepaddle-gpu" },
     { name = "pyclipper" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
-    { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "scikit-learn", version = "1.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "setuptools" },
     { name = "typeguard" },
-    { name = "types-pyyaml", version = "6.0.12.20250915", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "types-pyyaml", version = "6.0.12.20260518", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "types-pyyaml", version = "6.0.12.20250915", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "types-pyyaml", version = "6.0.12.20260518", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "visualdl" },
 ]
 export = [
-    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "onnxruntime", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+]
+export-gpu = [
+    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version < '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version < '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version >= '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
+    { name = "onnxruntime-gpu", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version < '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version < '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime-gpu", version = "1.23.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version >= '3.10' and extra != 'extra-16-rtdetrv3-pytorch-export' and extra != 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
 ]
 quality = [
     { name = "mypy" },
     { name = "ruff" },
-    { name = "types-pyyaml", version = "6.0.12.20250915", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "types-pyyaml", version = "6.0.12.20260518", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "types-pyyaml", version = "6.0.12.20250915", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "types-pyyaml", version = "6.0.12.20260518", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 test = [
-    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
-    { name = "onnxruntime", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "onnx", version = "1.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnx", version = "1.22.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
+    { name = "onnxruntime", version = "1.19.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "onnxruntime", version = "1.20.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
+    { name = "onnxruntime", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu')" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "typeguard" },
@@ -2546,16 +2654,20 @@ requires-dist = [
     { name = "numpy", marker = "extra == 'dev'", specifier = "<2" },
     { name = "onnx", marker = "extra == 'dev'", specifier = ">=1.16" },
     { name = "onnx", marker = "extra == 'export'", specifier = ">=1.16" },
+    { name = "onnx", marker = "extra == 'export-gpu'", specifier = ">=1.16" },
     { name = "onnx", marker = "extra == 'test'", specifier = ">=1.16" },
-    { name = "onnxruntime", marker = "python_full_version == '3.10.*' and extra == 'dev'", specifier = ">=1.18,<1.24" },
     { name = "onnxruntime", marker = "python_full_version == '3.10.*' and extra == 'export'", specifier = ">=1.18,<1.24" },
     { name = "onnxruntime", marker = "python_full_version == '3.10.*' and extra == 'test'", specifier = ">=1.18,<1.24" },
-    { name = "onnxruntime", marker = "python_full_version < '3.10' and extra == 'dev'", specifier = ">=1.18,<1.20" },
     { name = "onnxruntime", marker = "python_full_version < '3.10' and extra == 'export'", specifier = ">=1.18,<1.20" },
     { name = "onnxruntime", marker = "python_full_version < '3.10' and extra == 'test'", specifier = ">=1.18,<1.20" },
-    { name = "onnxruntime", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = ">=1.18" },
     { name = "onnxruntime", marker = "python_full_version >= '3.11' and extra == 'export'", specifier = ">=1.18" },
     { name = "onnxruntime", marker = "python_full_version >= '3.11' and extra == 'test'", specifier = ">=1.18" },
+    { name = "onnxruntime-gpu", marker = "python_full_version == '3.10.*' and extra == 'dev'", specifier = ">=1.19,<1.24" },
+    { name = "onnxruntime-gpu", marker = "python_full_version == '3.10.*' and extra == 'export-gpu'", specifier = ">=1.19,<1.24" },
+    { name = "onnxruntime-gpu", marker = "python_full_version < '3.10' and extra == 'dev'", specifier = ">=1.19,<1.20" },
+    { name = "onnxruntime-gpu", marker = "python_full_version < '3.10' and extra == 'export-gpu'", specifier = ">=1.19,<1.20" },
+    { name = "onnxruntime-gpu", marker = "python_full_version >= '3.11' and extra == 'dev'", specifier = ">=1.19,<1.27" },
+    { name = "onnxruntime-gpu", marker = "python_full_version >= '3.11' and extra == 'export-gpu'", specifier = ">=1.19,<1.27" },
     { name = "opencv-python", specifier = ">=4.5.5" },
     { name = "opencv-python", marker = "extra == 'dev'", specifier = "<=4.6.0" },
     { name = "paddlepaddle-gpu", marker = "extra == 'dev'", specifier = "==3.3.0", index = "https://www.paddlepaddle.org.cn/packages/stable/cu118/" },
@@ -2583,7 +2695,7 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'quality'", specifier = ">=6.0" },
     { name = "visualdl", marker = "extra == 'dev'", specifier = ">=2.2" },
 ]
-provides-extras = ["dev", "export", "quality", "test"]
+provides-extras = ["dev", "export", "export-gpu", "quality", "test"]
 
 [[package]]
 name = "ruff"
@@ -2642,14 +2754,14 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "imageio" },
-    { name = "lazy-loader" },
-    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "tifffile", version = "2024.8.30", source = { registry = "https://pypi.org/simple" } },
+    { name = "imageio", marker = "python_full_version < '3.10'" },
+    { name = "lazy-loader", marker = "python_full_version < '3.10'" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "packaging", marker = "python_full_version < '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "tifffile", version = "2024.8.30", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5d/c5/bcd66bf5aae5587d3b4b69c74bee30889c46c9778e858942ce93a030e1f3/scikit_image-0.24.0.tar.gz", hash = "sha256:5d16efe95da8edbeb363e0c4157b99becbd650a60b77f6e3af5768b66cf007ab", size = 22693928, upload-time = "2024-06-18T19:05:31.49Z" }
 wheels = [
@@ -2691,17 +2803,17 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "imageio" },
-    { name = "lazy-loader" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "tifffile", version = "2025.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "tifffile", version = "2025.10.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "imageio", marker = "python_full_version >= '3.10'" },
+    { name = "lazy-loader", marker = "python_full_version >= '3.10'" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "numpy", marker = "python_full_version >= '3.10'" },
+    { name = "packaging", marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "tifffile", version = "2025.5.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "tifffile", version = "2025.10.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c7/a8/3c0f256012b93dd2cb6fda9245e9f4bff7dc0486880b248005f15ea2255e/scikit_image-0.25.2.tar.gz", hash = "sha256:e5a37e6cd4d0c018a7a55b9d601357e3382826d3888c10d0213fc63bff977dde", size = 22693594, upload-time = "2025-02-18T18:05:24.538Z" }
 wheels = [
@@ -2732,10 +2844,10 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "joblib" },
-    { name = "numpy" },
-    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" } },
-    { name = "threadpoolctl" },
+    { name = "joblib", marker = "python_full_version < '3.10'" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
+    { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "threadpoolctl", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9e/a5/4ae3b3a0755f7b35a280ac90b28817d1f380318973cff14075ab41ef50d9/scikit_learn-1.6.1.tar.gz", hash = "sha256:b4fc2525eca2c69a59260f583c56a7557c6ccdf8deafdba6e060f94c1c59738e", size = 7068312, upload-time = "2025-01-10T08:07:55.348Z" }
 wheels = [
@@ -2777,11 +2889,11 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "joblib" },
-    { name = "numpy" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "threadpoolctl" },
+    { name = "joblib", marker = "python_full_version >= '3.10'" },
+    { name = "numpy", marker = "python_full_version >= '3.10'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version == '3.10.*' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "threadpoolctl", marker = "python_full_version >= '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/98/c2/a7855e41c9d285dfe86dc50b250978105dce513d6e459ea66a6aeb0e1e0c/scikit_learn-1.7.2.tar.gz", hash = "sha256:20e9e49ecd130598f1ca38a1d85090e1a600147b9c02fa6f15d69cb53d968fda", size = 7193136, upload-time = "2025-09-09T08:21:29.075Z" }
 wheels = [
@@ -2812,7 +2924,7 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ae/00/48c2f661e2816ccf2ecd77982f6605b2950afe60f60a52b4cbbc2504aa8f/scipy-1.13.1.tar.gz", hash = "sha256:095a87a0312b08dfd6a6155cbbd310a8c51800fc931b8c0b84003014b874ed3c", size = 57210720, upload-time = "2024-05-23T03:29:26.079Z" }
 wheels = [
@@ -2852,7 +2964,7 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version == '3.10.*' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/37/6964b830433e654ec7485e45a00fc9a27cf868d622838f6b6d9c5ec0d532/scipy-1.15.3.tar.gz", hash = "sha256:eae3cf522bc7df64b42cad3925c876e1b0b6c35c1337c93e12c0f366f55b0eaf", size = 59419214, upload-time = "2025-05-08T16:13:05.955Z" }
 wheels = [
@@ -2898,7 +3010,7 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version >= '3.11' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4c/3b/546a6f0bfe791bbb7f8d591613454d15097e53f906308ec6f7c1ce588e8e/scipy-1.16.2.tar.gz", hash = "sha256:af029b153d243a80afb6eabe40b0a07f8e35c9adc269c019f364ad747f826a6b", size = 30580599, upload-time = "2025-09-11T17:48:08.271Z" }
 wheels = [
@@ -2943,7 +3055,7 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/21/c0/a911d1fd765d07a2b6769ce155219a281bfbe311584ebe97340d75c5bdb1/shapely-2.0.7.tar.gz", hash = "sha256:28fe2997aab9a9dc026dc6a355d04e85841546b2a5d232ed953e3321ab958ee5", size = 283413, upload-time = "2025-01-31T01:10:20.787Z" }
 wheels = [
@@ -2989,7 +3101,7 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4d/bc/0989043118a27cccb4e906a46b7565ce36ca7b57f5a18b78f4f1b0f72d9d/shapely-2.1.2.tar.gz", hash = "sha256:2ed4ecb28320a433db18a5bf029986aa8afcfd740745e78847e330d5d94922a9", size = 315489, upload-time = "2025-09-24T13:51:41.432Z" }
 wheels = [
@@ -3086,7 +3198,7 @@ resolution-markers = [
     "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version < '3.10'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/54/30/7017e5560154c100cad3a801c02adb48879cd8e8cb862b82696d84187184/tifffile-2024.8.30.tar.gz", hash = "sha256:2c9508fe768962e30f87def61819183fb07692c258cb175b3c114828368485a4", size = 365714, upload-time = "2024-08-31T17:32:43.945Z" }
 wheels = [
@@ -3103,7 +3215,7 @@ resolution-markers = [
     "(python_full_version == '3.10.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.10.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.10.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version == '3.10.*'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/44/d0/18fed0fc0916578a4463f775b0fbd9c5fed2392152d039df2fb533bfdd5d/tifffile-2025.5.10.tar.gz", hash = "sha256:018335d34283aa3fd8c263bae5c3c2b661ebc45548fde31504016fcae7bf1103", size = 365290, upload-time = "2025-05-10T19:22:34.386Z" }
 wheels = [
@@ -3123,7 +3235,7 @@ resolution-markers = [
     "(python_full_version == '3.11.*' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version == '3.11.*' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 dependencies = [
-    { name = "numpy" },
+    { name = "numpy", marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/13/1dcd158fdcd99d697ba60af153db5034613011516fc0b37a4ca0b7e61b66/tifffile-2025.10.4.tar.gz", hash = "sha256:2e437c16ab211be5bcdc79f71b4907359115f1f83b5d919e7c297c29725d3e38", size = 369486, upload-time = "2025-10-06T00:14:00.46Z" }
 wheels = [
@@ -3160,27 +3272,27 @@ name = "torch"
 version = "2.5.1+cu121"
 source = { registry = "https://download.pytorch.org/whl/cu121" }
 dependencies = [
-    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "fsspec" },
     { name = "jinja2" },
-    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "nvidia-cublas-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-cupti-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cuda-runtime-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cudnn-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cufft-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-curand-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusolver-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-cusparse-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nccl-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "nvidia-nvtx-cu12", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
-    { name = "setuptools", marker = "python_full_version >= '3.12'" },
+    { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "networkx", version = "3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cudnn-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cufft-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-curand-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cusolver-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-nccl-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "nvidia-nvtx-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "setuptools", marker = "python_full_version >= '3.12' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "sympy" },
-    { name = "triton", marker = "platform_machine == 'x86_64' and sys_platform == 'linux'" },
+    { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine != 'x86_64' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "typing-extensions" },
 ]
 wheels = [
@@ -3200,8 +3312,8 @@ version = "0.20.1+cu121"
 source = { registry = "https://download.pytorch.org/whl/cu121" }
 dependencies = [
     { name = "numpy" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "torch" },
 ]
 wheels = [
@@ -3220,7 +3332,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
 wheels = [
@@ -3232,8 +3344,8 @@ name = "triton"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "filelock", version = "3.19.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version < '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.10' and sys_platform != 'darwin' and sys_platform != 'linux') or (python_full_version >= '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (python_full_version >= '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version >= '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version >= '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version >= '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (python_full_version >= '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version >= '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version >= '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "filelock", version = "3.20.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and platform_machine != 'arm64' and sys_platform == 'darwin') or (python_full_version >= '3.10' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version >= '3.10' and sys_platform != 'darwin' and sys_platform != 'linux') or (python_full_version < '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (python_full_version < '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version < '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version < '3.10' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (python_full_version < '3.10' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (platform_machine == 'aarch64' and sys_platform == 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/29/69aa56dc0b2eb2602b553881e34243475ea2afd9699be042316842788ff5/triton-3.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6b0dd10a925263abbe9fa37dcde67a5e9b2383fc269fdf59f5657cac38c5d1d8", size = 209460013, upload-time = "2024-10-14T16:05:32.106Z" },
@@ -3324,13 +3436,13 @@ dependencies = [
     { name = "bce-python-sdk" },
     { name = "flask" },
     { name = "flask-babel" },
-    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "matplotlib", version = "3.10.7", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "numpy" },
     { name = "packaging" },
     { name = "pandas" },
-    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "pillow", version = "11.3.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
+    { name = "pillow", version = "12.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.10' and extra == 'extra-16-rtdetrv3-pytorch-dev') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-export') or (extra == 'extra-16-rtdetrv3-pytorch-dev' and extra == 'extra-16-rtdetrv3-pytorch-test') or (extra == 'extra-16-rtdetrv3-pytorch-export' and extra == 'extra-16-rtdetrv3-pytorch-export-gpu') or (extra == 'extra-16-rtdetrv3-pytorch-export-gpu' and extra == 'extra-16-rtdetrv3-pytorch-test')" },
     { name = "protobuf" },
     { name = "psutil" },
     { name = "rarfile" },

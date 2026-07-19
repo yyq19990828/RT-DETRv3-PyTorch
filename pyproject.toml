@@ -48,9 +48,9 @@ dev = [
     "numpy<2",
     "opencv-python<=4.6.0",
     "onnx>=1.16",
-    "onnxruntime>=1.18,<1.20; python_version < '3.10'",
-    "onnxruntime>=1.18,<1.24; python_version >= '3.10' and python_version < '3.11'",
-    "onnxruntime>=1.18; python_version >= '3.11'",
+    "onnxruntime-gpu>=1.19,<1.20; python_version < '3.10'",
+    "onnxruntime-gpu>=1.19,<1.24; python_version >= '3.10' and python_version < '3.11'",
+    "onnxruntime-gpu>=1.19,<1.27; python_version >= '3.11'",
     "paddlepaddle-gpu==3.3.0",
     "pyclipper>=1.3",
     "pytest>=8.0",
@@ -67,6 +67,12 @@ export = [
     "onnxruntime>=1.18,<1.20; python_version < '3.10'",
     "onnxruntime>=1.18,<1.24; python_version >= '3.10' and python_version < '3.11'",
     "onnxruntime>=1.18; python_version >= '3.11'",
+]
+export-gpu = [
+    "onnx>=1.16",
+    "onnxruntime-gpu>=1.19,<1.20; python_version < '3.10'",
+    "onnxruntime-gpu>=1.19,<1.24; python_version >= '3.10' and python_version < '3.11'",
+    "onnxruntime-gpu>=1.19,<1.27; python_version >= '3.11'",
 ]
 quality = [
     "mypy>=1.0",
@@ -125,6 +131,24 @@ required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
 index-url = "https://pypi.org/simple"
+conflicts = [
+    [
+        { extra = "dev" },
+        { extra = "export" },
+    ],
+    [
+        { extra = "dev" },
+        { extra = "test" },
+    ],
+    [
+        { extra = "export-gpu" },
+        { extra = "export" },
+    ],
+    [
+        { extra = "export-gpu" },
+        { extra = "test" },
+    ],
+]
 
 [[tool.uv.index]]
 name = "pytorch"
