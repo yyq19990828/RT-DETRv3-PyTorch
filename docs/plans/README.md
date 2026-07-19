@@ -13,6 +13,7 @@
 
 ## 当前文档
 
+- [M10——TorchScript CUDA/CPU 推理计划](2026-07-19-m10-torchscript-cuda-inference.md)：本地验收完成、托管 CI 待确认；已拆分 ONNX provider 与 TorchScript device 合同并通过真实四图验收。
 - [M9——导出产物端到端推理计划](2026-07-19-m9-exported-inference.md)：已完成；Infer 可直接消费 checkpoint/ONNX/TorchScript，真实图和托管矩阵均通过。
 - [M8——R34/R50 多变体导出验收计划](2026-07-19-m8-variant-export-validation.md)：已完成；R34/R50 的 ONNX/TorchScript 已通过固定 640、动态 batch 1/4/8 和真实图的每图全候选一对一回归。
 - [M7——公开模型多变体运行时验收计划](2026-07-19-m7-variant-runtime-validation.md)：已完成；公开 R18/R34/R50 均通过 Models、真实 COCO Infer 和统一四图 Eval 运行时验收，未恢复 deferred 长训。
