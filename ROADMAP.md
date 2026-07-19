@@ -4,7 +4,7 @@
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M8——R34/R50 多变体导出验收计划`](docs/plans/2026-07-19-m8-variant-export-validation.md)
-**Current execution plan**: 暂无；后续工作从 deferred 长训或未覆盖 provider/部署边界重新立项
+**Current execution plan**: [`M9——导出产物端到端推理计划`](docs/plans/2026-07-19-m9-exported-inference.md)
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -154,6 +154,19 @@
 
 **验收记录**：2026-07-19，R34/R50 ONNX 最大 score/box 误差分别为 `9.4771e-6/0.011780 px` 和 `1.8962e-5/0.005615 px`；TorchScript 本次逐值为 0。ONNX 近似并列低分候选最多每图重排 2 行，但 300/300 候选均完成同图唯一匹配。详见[多变体导出验证报告](docs/reports/variant-export-validation.md)。
 
+## Milestone 9 — 导出产物端到端推理（P1）
+
+**执行计划**：[`M9——导出产物端到端推理计划`](docs/plans/2026-07-19-m9-exported-inference.md)。在不复制预处理和展示逻辑的前提下，让 Infer CLI 直接消费 M5/M8 已验证的 ONNX/TorchScript tensor 合同。
+
+- [x] Infer 模型源互斥接受 checkpoint、ONNX 和 TorchScript，保留原 checkpoint 用法。
+- [x] 导出后端复用同一 TestReader、batch、阈值、JSON、类别映射和可视化路径。
+- [x] 对 CPU-only、EMA 和固定尺寸边界做显式参数校验。
+- [x] 使用 R18 真实 COCO 图片完成 eager/ONNX/TorchScript 用户侧输出对照并记录限制。
+
+**Exit criteria**: 安装后的 `rtdetrv3-infer` 可使用三种模型源；R18 真实图片三后端在同一预处理和阈值下满足 M8 每图全候选数值合同，并均生成可解码可视化与机器可读 JSON。
+
+**验收记录**：2026-07-19，R18 同一真实图在 checkpoint/ONNX/TorchScript 下均输出 30 条阈值后检测；ONNX 相对 eager 的最大 score/框误差为 `1.49e-6/9.16e-5 px`，TorchScript 为 0，三份渲染图字节一致。640 产物与 608 预处理的负例在执行前明确失败。详见[导出产物推理报告](docs/reports/exported-inference-validation.md)。
+
 ## 依赖顺序
 
 ```text
@@ -161,7 +174,7 @@ M1 最小训练链
  ├──> M2 权重/数值对齐 ──> M4 精度对齐
  └──> M3 训练/评估/恢复 ─┘
 M1–M3 ──> M5 CLI/导出
-M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出
+M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出 ──> M9 导出产物推理
 ```
 
 ## 不作为当前阻塞的延伸项

@@ -1,11 +1,14 @@
 """Tensor-only adapters for ONNX and TorchScript deployment."""
 
+import json
 import os
 import tempfile
 from pathlib import Path
 
 import torch
 from torch import nn
+
+TORCHSCRIPT_METADATA_FILE = "rtdetrv3-export.json"
 
 
 class DetectionExportAdapter(nn.Module):
@@ -104,8 +107,26 @@ def export_torchscript(adapter, example_inputs, output_path):
                 strict=False,
                 check_trace=True,
             )
-        traced.save(str(temporary_path))
-        torch.jit.load(str(temporary_path), map_location="cpu")
+        image = example_inputs[0]
+        metadata = {
+            "input_size": [int(image.shape[-2]), int(image.shape[-1])],
+            "schema_version": 1,
+        }
+        torch.jit.save(
+            traced,
+            str(temporary_path),
+            _extra_files={
+                TORCHSCRIPT_METADATA_FILE: json.dumps(metadata, sort_keys=True)
+            },
+        )
+        loaded_metadata = {TORCHSCRIPT_METADATA_FILE: b""}
+        torch.jit.load(
+            str(temporary_path),
+            map_location="cpu",
+            _extra_files=loaded_metadata,
+        )
+        if json.loads(loaded_metadata[TORCHSCRIPT_METADATA_FILE]) != metadata:
+            raise RuntimeError("TorchScript export metadata verification failed")
         temporary_path.replace(output_path)
     finally:
         if temporary_path.exists():

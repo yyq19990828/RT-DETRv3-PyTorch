@@ -1,7 +1,10 @@
+import json
+
 import pytest
 import torch
 
 from ppdet_pytorch.deploy import (
+    TORCHSCRIPT_METADATA_FILE,
     DetectionExportAdapter,
     export_onnx,
     export_torchscript,
@@ -49,11 +52,17 @@ def test_torchscript_export_reloads_with_another_batch_size(tmp_path):
     output_path = tmp_path / "model.pt"
 
     export_torchscript(adapter, example, output_path)
+    extra_files = {TORCHSCRIPT_METADATA_FILE: b""}
+    torch.jit.load(str(output_path), _extra_files=extra_files)
     candidate_inputs = make_example_inputs(4, 8, 12)
     reference = adapter(*candidate_inputs)
     candidate = run_torchscript(output_path, candidate_inputs)
 
     assert validate_detection_outputs(reference, candidate)["batch_size"] == 4
+    assert json.loads(extra_files[TORCHSCRIPT_METADATA_FILE]) == {
+        "input_size": [8, 12],
+        "schema_version": 1,
+    }
     assert not list(tmp_path.glob(".*.tmp"))
 
 

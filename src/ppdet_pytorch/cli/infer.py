@@ -15,12 +15,14 @@ from ppdet_pytorch.cli.eval import load_evaluation_weights
 from ppdet_pytorch.core.workspace import create, load_config
 from ppdet_pytorch.data.reader import BatchCompose, Compose
 from ppdet_pytorch.data.source.category import get_categories
+from ppdet_pytorch.deploy import TORCHSCRIPT_METADATA_FILE
 from ppdet_pytorch.utils.config import apply_overrides
 from ppdet_pytorch.utils.logger import setup_logger
 
 logger = setup_logger("infer")
 
 _IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp"}
+_TENSOR_INPUT_NAMES = ("image", "im_shape", "scale_factor")
 _COLORS = (
     np.array(
         [
@@ -46,7 +48,16 @@ _COLORS = (
 def create_argument_parser():
     parser = argparse.ArgumentParser(description="RT-DETRv3 inference")
     parser.add_argument("-c", "--config", required=True)
-    parser.add_argument("--checkpoint", required=True)
+    model_group = parser.add_mutually_exclusive_group(required=True)
+    model_group.add_argument("--checkpoint")
+    model_group.add_argument(
+        "--onnx-model",
+        help="Run a tensor-only ONNX export with ONNX Runtime CPU.",
+    )
+    model_group.add_argument(
+        "--torchscript-model",
+        help="Run a tensor-only traced TorchScript export on CPU.",
+    )
 
     image_group = parser.add_mutually_exclusive_group(required=True)
     image_group.add_argument(
@@ -106,7 +117,7 @@ def create_argument_parser():
     )
     parser.add_argument(
         "--device",
-        default="cuda" if torch.cuda.is_available() else "cpu",
+        default=None,
     )
     parser.add_argument("-o", "--override", nargs="*", default=[])
     return parser
@@ -115,6 +126,21 @@ def create_argument_parser():
 def parse_args(argv=None):
     parser = create_argument_parser()
     args = parser.parse_args(argv)
+    exported_model = args.onnx_model is not None or args.torchscript_model is not None
+    if args.device is None:
+        args.device = (
+            "cpu"
+            if exported_model
+            else ("cuda" if torch.cuda.is_available() else "cpu")
+        )
+    try:
+        device = torch.device(args.device)
+    except (RuntimeError, ValueError):
+        parser.error("--device must be a valid PyTorch device")
+    if exported_model and device.type != "cpu":
+        parser.error("ONNX/TorchScript Infer currently requires --device cpu")
+    if exported_model and args.use_ema:
+        parser.error("--use-ema is only valid with --checkpoint")
     if not 0.0 <= args.threshold <= 1.0:
         parser.error("--threshold must be between 0 and 1")
     if args.batch_size < 1:
@@ -210,6 +236,156 @@ def prepare_image_batch(
         }
         samples.append(sample_transform(sample))
     return _move_to_device(batch_transform(samples), device)
+
+
+def _tensor_inputs(batch):
+    if not isinstance(batch, Mapping):
+        raise RuntimeError("Inference batch must be a mapping")
+    missing = [name for name in _TENSOR_INPUT_NAMES if name not in batch]
+    if missing:
+        raise RuntimeError("Inference batch is missing: {}".format(", ".join(missing)))
+    return tuple(torch.as_tensor(batch[name]) for name in _TENSOR_INPUT_NAMES)
+
+
+def _model_file(path, model_type):
+    model_path = Path(path)
+    if not model_path.is_file():
+        raise FileNotFoundError("{} model not found: {}".format(model_type, model_path))
+    return model_path
+
+
+def _fixed_spatial_shape(shape):
+    if not isinstance(shape, (list, tuple)) or len(shape) != 4:
+        return None
+    height, width = shape[-2:]
+    if not all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in (height, width)
+    ):
+        return None
+    return height, width
+
+
+def _validate_spatial_shape(inputs, expected, model_type):
+    image = inputs[0]
+    if image.ndim != 4:
+        raise RuntimeError(
+            "{} image input must have shape [B, C, H, W]".format(model_type)
+        )
+    actual = (int(image.shape[-2]), int(image.shape[-1]))
+    if expected is not None and actual != expected:
+        raise RuntimeError(
+            "{} model expects fixed spatial size {}x{}, got {}x{}".format(
+                model_type,
+                expected[0],
+                expected[1],
+                actual[0],
+                actual[1],
+            )
+        )
+
+
+def _torchscript_input_size(raw_metadata):
+    if not raw_metadata:
+        return None
+    try:
+        if isinstance(raw_metadata, bytes):
+            raw_metadata = raw_metadata.decode("utf-8")
+        metadata = json.loads(raw_metadata)
+    except (TypeError, ValueError, UnicodeDecodeError) as error:
+        raise RuntimeError("TorchScript export metadata is invalid") from error
+    if not isinstance(metadata, Mapping):
+        raise RuntimeError("TorchScript export metadata must be an object")
+    if metadata.get("schema_version") != 1:
+        raise RuntimeError("Unsupported TorchScript export metadata schema")
+    input_size = metadata.get("input_size")
+    if (
+        not isinstance(input_size, list)
+        or len(input_size) != 2
+        or not all(
+            isinstance(value, int) and not isinstance(value, bool) and value > 0
+            for value in input_size
+        )
+    ):
+        raise RuntimeError("TorchScript export metadata input_size is invalid")
+    return tuple(input_size)
+
+
+class OnnxInferenceRunner:
+    """Adapt one reusable ONNX Runtime CPU session to the Infer batch contract."""
+
+    def __init__(self, model_path):
+        import onnxruntime as ort
+
+        self.model_path = _model_file(model_path, "ONNX")
+        self.session = ort.InferenceSession(
+            str(self.model_path),
+            providers=["CPUExecutionProvider"],
+        )
+        input_metadata = self.session.get_inputs()
+        input_names = tuple(value.name for value in input_metadata)
+        output_names = tuple(value.name for value in self.session.get_outputs())
+        if set(input_names) != set(_TENSOR_INPUT_NAMES):
+            raise RuntimeError(
+                "ONNX inputs must be image, im_shape, and scale_factor; got {}".format(
+                    input_names
+                )
+            )
+        if set(output_names) != {"bbox", "bbox_num"}:
+            raise RuntimeError(
+                "ONNX outputs must be bbox and bbox_num; got {}".format(output_names)
+            )
+        self.input_names = input_names
+        self.output_names = output_names
+        image_metadata = next(
+            value for value in input_metadata if value.name == "image"
+        )
+        self.input_size = _fixed_spatial_shape(image_metadata.shape)
+
+    def eval(self):
+        return self
+
+    def __call__(self, batch):
+        tensor_inputs = _tensor_inputs(batch)
+        _validate_spatial_shape(tensor_inputs, self.input_size, "ONNX")
+        inputs = dict(zip(_TENSOR_INPUT_NAMES, tensor_inputs))
+        feed = {name: inputs[name].detach().cpu().numpy() for name in self.input_names}
+        values = self.session.run(None, feed)
+        outputs = dict(zip(self.output_names, values))
+        return {
+            "bbox": torch.from_numpy(np.asarray(outputs["bbox"])),
+            "bbox_num": torch.from_numpy(np.asarray(outputs["bbox_num"])),
+        }
+
+
+class TorchScriptInferenceRunner:
+    """Adapt one loaded tensor-only TorchScript module to the Infer batch contract."""
+
+    def __init__(self, model_path, device):
+        self.model_path = _model_file(model_path, "TorchScript")
+        self.device = torch.device(device)
+        extra_files = {TORCHSCRIPT_METADATA_FILE: b""}
+        self.model = torch.jit.load(
+            str(self.model_path),
+            map_location=self.device,
+            _extra_files=extra_files,
+        ).eval()
+        self.input_size = _torchscript_input_size(
+            extra_files[TORCHSCRIPT_METADATA_FILE]
+        )
+
+    def eval(self):
+        self.model.eval()
+        return self
+
+    def __call__(self, batch):
+        inputs = _tensor_inputs(batch)
+        _validate_spatial_shape(inputs, self.input_size, "TorchScript")
+        inputs = tuple(value.to(self.device) for value in inputs)
+        outputs = self.model(*inputs)
+        if not isinstance(outputs, (tuple, list)) or len(outputs) != 2:
+            raise RuntimeError("TorchScript model must return bbox and bbox_num")
+        return {"bbox": outputs[0], "bbox_num": outputs[1]}
 
 
 def split_detections(outputs, threshold=0.0):
@@ -394,6 +570,20 @@ def build_model(cfg, checkpoint_path, device, use_ema=False):
     return model
 
 
+def build_inference_runner(cfg, args, device):
+    """Build the one model source selected by the Infer CLI."""
+    if args.checkpoint is not None:
+        return build_model(
+            cfg,
+            args.checkpoint,
+            device,
+            use_ema=args.use_ema,
+        )
+    if args.onnx_model is not None:
+        return OnnxInferenceRunner(args.onnx_model)
+    return TorchScriptInferenceRunner(args.torchscript_model, device)
+
+
 def main(argv=None):
     args = parse_args(argv)
     image_paths = get_image_list(args.infer_dir, args.infer_img)
@@ -406,16 +596,17 @@ def main(argv=None):
         raise RuntimeError("CUDA inference requested but CUDA is unavailable")
 
     sample_transform, batch_transform = create_preprocessors(cfg, image_size=args.imgsz)
-    model = build_model(
-        cfg,
-        args.checkpoint,
-        device,
-        use_ema=args.use_ema,
-    )
+    model = build_inference_runner(cfg, args, device)
     clsid2catid, class_names = get_category_metadata(cfg, args.anno_file)
+    backend = (
+        "checkpoint"
+        if args.checkpoint is not None
+        else ("onnx" if args.onnx_model is not None else "torchscript")
+    )
 
     logger.info(
-        "Running inference on %d image(s), batch_size=%d, device=%s",
+        "Running %s inference on %d image(s), batch_size=%d, device=%s",
+        backend,
         len(image_paths),
         args.batch_size,
         device,

@@ -65,6 +65,22 @@ uv run rtdetrv3-infer \
   --output-dir output/infer \
   --save-results
 
+# 使用导出的 ONNX（需要 export 或 dev 附加依赖）
+uv run --extra export rtdetrv3-infer \
+  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
+  --onnx-model output/export/rtdetrv3_r18vd_6x_coco.onnx \
+  --infer-img path/to/image.jpg \
+  --imgsz 640 \
+  --output-dir output/infer-onnx
+
+# 使用导出的 TorchScript
+uv run rtdetrv3-infer \
+  -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
+  --torchscript-model output/export/rtdetrv3_r18vd_6x_coco.torchscript.pt \
+  --infer-img path/to/image.jpg \
+  --imgsz 640 \
+  --output-dir output/infer-torchscript
+
 # Paddle 权重转换（需要 dev 附加依赖）
 uv run --extra dev rtdetrv3-convert \
   --input path/to/model.pdparams \
@@ -89,7 +105,7 @@ uv run --extra export rtdetrv3-export \
   --output-dir output/export
 ```
 
-推理入口复用配置中的 `TestReader` 和模型内置 RT-DETR 后处理，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；训练 checkpoint 可加 `--use-ema`。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
+推理入口互斥接受 `--checkpoint`、`--onnx-model` 或 `--torchscript-model`，三者复用配置中的 `TestReader`、RT-DETR 后处理结果、阈值、JSON 和可视化，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；只有训练 checkpoint 可加 `--use-ema`。导出产物当前默认并只声明 CPU/FP32，`--imgsz` 必须与导出时的固定高宽一致。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
 
 导出入口使用 tensor-only 适配层，默认生成动态 batch、固定导出高宽的 ONNX opset 17，以及相同固定高宽的 traced TorchScript；空间尺寸改变时需要按新尺寸重新导出。Train/Eval/Infer/Convert/Export 只声明文档中列出的当前合同；未迁移的 Paddle Train 参数会直接报错，不会静默忽略。完整参数和部署边界同样见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
 

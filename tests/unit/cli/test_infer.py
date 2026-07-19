@@ -1,5 +1,7 @@
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -9,6 +11,7 @@ import torch
 from ppdet_pytorch.cli import infer as infer_cli
 from ppdet_pytorch.core.workspace import AttrDict
 from ppdet_pytorch.data.utils import default_collate_fn
+from ppdet_pytorch.deploy import TORCHSCRIPT_METADATA_FILE
 
 
 def _config_with_test_reader():
@@ -61,6 +64,49 @@ def test_parse_args_accepts_current_and_legacy_flag_spellings():
     assert args.save_results is True
     assert args.batch_size == 4
     assert args.threshold == pytest.approx(0.25)
+
+
+def test_parse_args_accepts_cpu_exported_model_sources():
+    onnx_args = infer_cli.parse_args(
+        [
+            "--config",
+            "model.yml",
+            "--onnx-model",
+            "model.onnx",
+            "--infer-img",
+            "image.jpg",
+        ]
+    )
+    torchscript_args = infer_cli.parse_args(
+        [
+            "--config",
+            "model.yml",
+            "--torchscript-model",
+            "model.pt",
+            "--infer-img",
+            "image.jpg",
+        ]
+    )
+
+    assert onnx_args.device == "cpu"
+    assert torchscript_args.device == "cpu"
+
+
+@pytest.mark.parametrize(
+    "extra_args",
+    [
+        ["--onnx-model", "model.onnx", "--checkpoint", "model.pth"],
+        ["--onnx-model", "model.onnx", "--use-ema"],
+        ["--torchscript-model", "model.pt", "--device", "cuda"],
+    ],
+)
+def test_parse_args_rejects_invalid_exported_model_combinations(extra_args, capsys):
+    with pytest.raises(SystemExit):
+        infer_cli.parse_args(
+            ["--config", "model.yml", *extra_args, "--infer-img", "image.jpg"]
+        )
+
+    assert "error:" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize(
@@ -354,6 +400,134 @@ def test_build_model_wires_config_checkpoint_and_eval_mode(monkeypatch):
 def test_build_model_requires_architecture_block():
     with pytest.raises(ValueError, match="architecture block"):
         infer_cli.build_model(AttrDict(), "model.pth", torch.device("cpu"))
+
+
+def test_onnx_inference_runner_reuses_session_and_maps_batch(tmp_path, monkeypatch):
+    model_path = tmp_path / "model.onnx"
+    model_path.write_bytes(b"fixture")
+    sessions = []
+
+    class FakeSession:
+        def __init__(self, path, providers):
+            sessions.append((path, providers, self))
+
+        def get_inputs(self):
+            return [
+                SimpleNamespace(
+                    name=name,
+                    shape=["batch", 3, 8, 12] if name == "image" else ["batch", 2],
+                )
+                for name in ("image", "im_shape", "scale_factor")
+            ]
+
+        def get_outputs(self):
+            return [SimpleNamespace(name=name) for name in ("bbox", "bbox_num")]
+
+        def run(self, output_names, feed):
+            assert output_names is None
+            batch_size = feed["image"].shape[0]
+            return [
+                np.zeros((batch_size, 6), dtype=np.float32),
+                np.ones((batch_size,), dtype=np.int32),
+            ]
+
+    monkeypatch.setitem(
+        sys.modules,
+        "onnxruntime",
+        SimpleNamespace(InferenceSession=FakeSession),
+    )
+    runner = infer_cli.OnnxInferenceRunner(model_path)
+    batch = {
+        "image": torch.zeros((2, 3, 8, 12)),
+        "im_shape": torch.tensor([[8.0, 12.0], [8.0, 12.0]]),
+        "scale_factor": torch.ones((2, 2)),
+        "im_id": torch.tensor([[0], [1]]),
+    }
+
+    first = runner(batch)
+    second = runner(batch)
+
+    assert runner.eval() is runner
+    assert len(sessions) == 1
+    assert sessions[0][:2] == (
+        str(model_path),
+        ["CPUExecutionProvider"],
+    )
+    assert first["bbox"].shape == (2, 6)
+    assert first["bbox_num"].tolist() == [1, 1]
+    assert second["bbox_num"].tolist() == [1, 1]
+    with pytest.raises(RuntimeError, match="expects fixed spatial size 8x12"):
+        runner({**batch, "image": torch.zeros((2, 3, 7, 12))})
+
+
+def test_torchscript_inference_runner_maps_batch(tmp_path):
+    class TensorOnlyModel(torch.nn.Module):
+        def forward(self, image, im_shape, scale_factor):
+            batch_size = image.shape[0]
+            labels_and_scores = torch.zeros(
+                (batch_size, 2), dtype=image.dtype, device=image.device
+            )
+            boxes = torch.cat((im_shape, scale_factor), dim=1)
+            return (
+                torch.cat((labels_and_scores, boxes), dim=1),
+                torch.ones(batch_size, dtype=torch.int32, device=image.device),
+            )
+
+    model_path = tmp_path / "model.pt"
+    example = (
+        torch.zeros((1, 3, 8, 12)),
+        torch.tensor([[8.0, 12.0]]),
+        torch.ones((1, 2)),
+    )
+    torch.jit.save(
+        torch.jit.trace(TensorOnlyModel(), example),
+        str(model_path),
+        _extra_files={
+            TORCHSCRIPT_METADATA_FILE: json.dumps(
+                {"schema_version": 1, "input_size": [8, 12]}
+            )
+        },
+    )
+    runner = infer_cli.TorchScriptInferenceRunner(model_path, torch.device("cpu"))
+    batch = {
+        "image": torch.zeros((2, 3, 8, 12)),
+        "im_shape": torch.tensor([[8.0, 12.0], [8.0, 12.0]]),
+        "scale_factor": torch.ones((2, 2)),
+        "im_id": torch.tensor([[0], [1]]),
+    }
+
+    outputs = runner(batch)
+
+    assert runner.eval() is runner
+    assert outputs["bbox"].shape == (2, 6)
+    assert outputs["bbox_num"].tolist() == [1, 1]
+    with pytest.raises(RuntimeError, match="expects fixed spatial size 8x12"):
+        runner({**batch, "image": torch.zeros((2, 3, 8, 11))})
+
+
+def test_build_inference_runner_selects_exported_backend(monkeypatch):
+    observed = []
+    expected = object()
+    monkeypatch.setattr(
+        infer_cli,
+        "OnnxInferenceRunner",
+        lambda path: observed.append(path) or expected,
+    )
+    args = SimpleNamespace(
+        checkpoint=None,
+        onnx_model="model.onnx",
+        torchscript_model=None,
+        use_ema=False,
+    )
+
+    result = infer_cli.build_inference_runner(
+        AttrDict(),
+        args,
+        torch.device("cpu"),
+    )
+
+    assert result is expected
+    assert observed == ["model.onnx"]
 
 
 def test_main_writes_visualization_and_machine_readable_results(
