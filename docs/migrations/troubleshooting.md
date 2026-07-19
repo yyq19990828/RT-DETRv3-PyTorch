@@ -42,6 +42,21 @@ uv sync --extra dev --locked --dry-run
 
 如果要升级 Paddle，先确认目标 Python 和平台的 wheel 实际存在，再有意更新版本、锁文件和数值验证环境；不要只放宽 nightly 版本下限后把“解析成功”当作“可安装”。在 2026-07-19 的本机验证中，同一 GPU wheel 已实际执行 CUDA 算子，随后切换到 `paddle.set_device("cpu")` 执行 CPU 算子。核心 PyTorch 和托管 CPU 测试仍应使用不含 Paddle 的默认/`test` extra。
 
+## UV 锁定依赖下载返回 HTTP 403
+
+UV 锁文件会记录解析时使用的包索引和 artifact URL。即使 CI 机器能够访问另一个索引，`uv sync --locked` 仍可能继续请求锁文件中的旧镜像；只在 workflow 中临时设置索引不能可靠修复这种问题。
+
+**已验证（2026-07-19）**：Python 3.9 CI 曾在安装 `zipp==3.23.0` 时从清华 PyPI 镜像收到 HTTP 403，测试尚未开始。仓库随后把通用 Python 依赖的默认索引切换到官方 PyPI 并重新生成锁文件；PyTorch 的显式 cu121 索引和 Paddle 的显式 cu118 索引保持不变。重建前后没有包名或版本变化，干净 Python 3.9 环境完成 `uv sync --python 3.9 --locked --extra test`，非 Paddle 回归为 `305 passed, 7 skipped, 17 deselected`。
+
+遇到类似问题时应按以下顺序处理：
+
+1. 从失败日志确认 URL 来自哪个索引，并区分解析失败、wheel 缺失和下载端 403/5xx。
+2. 修改负责该包的声明索引并重新运行 `uv lock`，不要手工替换 `uv.lock` 中的 URL。
+3. 审查锁文件中包名和版本是否意外变化；如果只修复来源，版本集合应保持不变。
+4. 在失败的 Python 版本和 extra 上创建干净环境执行 `uv sync --locked`，再运行对应测试。
+
+镜像可能更快，但 CI 的可复现性还取决于可用性和 artifact 保留策略。通用依赖使用官方 PyPI，框架大包只在项目明确固定的专用索引中解析，更容易判断失败责任边界。
+
 ## Paddle 加载 Path 对象报类型错误
 
 部分 Paddle 版本的 `paddle.load` 不接受 `pathlib.Path`。在框架边界显式转换：

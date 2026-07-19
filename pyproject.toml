@@ -124,7 +124,7 @@ required-version = ">=0.11.29,<0.12"
 required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]
-index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+index-url = "https://pypi.org/simple"
 
 [[tool.uv.index]]
 name = "pytorch"

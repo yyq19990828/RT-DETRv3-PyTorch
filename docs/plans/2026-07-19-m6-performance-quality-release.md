@@ -96,6 +96,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | Models CLI 与转换验证核心补测后将覆盖率下限提高到 48%/71% | 隐藏 GPU 的本地 CPU 实测达到全包 48.10%、直接维护范围 71.85%；新增回归同时修复额外输出字段和非有限值误判 |
 | 2026-07-19 | 转换器与 YAML 配置补测后将覆盖率下限提高到 49%/80% | 16 个纯 CPU 回归使本地全包达到 49.41%、直接维护范围达到 80.67%，并修复配置对象共享状态和 mapping 静默覆盖 |
 | 2026-07-19 | 用户可见边界补测后将覆盖率下限提高到 50%/84% | 17 个纯 CPU 回归使本地全包达到 50.08%、直接维护范围达到 84.93%，并拒绝布局误判、Infer 静默漏图和非法 Export 输入 shape |
+| 2026-07-19 | 通用 Python 依赖锁定到官方 PyPI，保留 PyTorch/Paddle 专用索引 | 清华镜像对 Python 3.9 的 `zipp==3.23.0` artifact 返回 HTTP 403；重建锁文件没有改变包名或版本，干净 3.9 安装和回归通过 |
 
 ## 完成记录
 
@@ -160,3 +161,5 @@ GitHub Actions [run 29679546423](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 GitHub Actions [run 29680140237](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29680140237) 在提交 `3fbd4ec` 上通过全部 6 个 jobs：质量 job 为 Ruff 174 个文件和 Mypy 107 个 source file；Python 3.9–3.12 均为 `288 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为全包 `6,690/13,538`（`49.42%`）和直接维护范围 `1,607/1,992`（`80.67%`）；wheel 安装后六个 CLI 和 `34 passed` smoke 均通过。
 
 用户可见边界批次将等元素数 shape 从“可自动 reshape”收紧为必须显式验证，只保留二维反转的已知 transpose 候选；Infer 对 `bbox_num` 的 rank、整数类型、非负性、总行数和 batch group 数执行完整检查，并用实际临时图片验证可视化与 JSON 主流程；Export 配置输入必须为整数且为正数的 `[3, H, W]`。本机隐藏 GPU 的定向测试为 `46 passed`，含 Paddle 的默认全量为 `336 passed, 8 skipped`，非 Paddle CPU 全量为 `305 passed, 5 skipped, 34 deselected`；全包 `6,790/13,557`（`50.08%`），直接维护范围 `1,708/2,011`（`84.93%`），门槛提高到 50%/84%。托管复验待本批提交后补录。
+
+该批首次 [GitHub Actions run 29681330920](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29681330920) 的 Python 3.9 job 在测试前失败：锁文件中的清华 PyPI 镜像对 `zipp==3.23.0` 下载返回 HTTP 403，属于依赖源可用性问题，不是测试失败。通用依赖默认索引已改为官方 PyPI 并重建锁文件；包名和版本集合未变化，PyTorch cu121 与 Paddle cu118 的显式索引未改变。干净 Python `3.9.23` 环境完成 `uv sync --python 3.9 --locked --extra test`，确认 `zipp 3.23.0`、`torch 2.5.1+cu121` 可导入，非 Paddle 回归为 `305 passed, 7 skipped, 17 deselected`。临时环境已在验证后删除；新的托管复验将在修复提交后补录。
