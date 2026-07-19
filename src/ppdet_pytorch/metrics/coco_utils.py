@@ -177,10 +177,11 @@ def cocoapi_eval(
         results_flatten = list(itertools.chain(*results_per_category))
         headers = ["category", "AP"] * (num_columns // 2)
         results_2d = itertools.zip_longest(
-            *[results_flatten[i::num_columns] for i in range(num_columns)]
+            *[results_flatten[i::num_columns] for i in range(num_columns)],
+            fillvalue="",
         )
         table_data = [headers]
-        table_data += [result for result in results_2d]
+        table_data.extend([list(result) for result in results_2d])
         table = AsciiTable(table_data)
         logger.info("Per-category of {} AP: \n{}".format(style, table.table))
         logger.info(

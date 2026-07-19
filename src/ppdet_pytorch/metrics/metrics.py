@@ -156,8 +156,13 @@ class COCOMetric(Metric):
     def reset(self):
         """Reset evaluation results"""
         # Only bbox and mask evaluation support currently
-        self.results = {"bbox": [], "mask": [], "segm": [], "keypoint": []}
-        self.eval_results = {}
+        self.results: Dict[str, list] = {
+            "bbox": [],
+            "mask": [],
+            "segm": [],
+            "keypoint": [],
+        }
+        self.eval_results: Dict[str, object] = {}
 
     def update(self, inputs: Dict, outputs: Dict):
         """

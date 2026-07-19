@@ -246,7 +246,9 @@ class DetectionMAP(object):
         """
         Reset metric statics
         """
-        self.class_score_poss = [[] for _ in range(self.class_num)]
+        self.class_score_poss: list[list[list[float]]] = [
+            [] for _ in range(self.class_num)
+        ]
         self.class_gt_counts = [0] * self.class_num
         self.mAP = 0.0
 
@@ -350,10 +352,11 @@ class DetectionMAP(object):
             results_flatten = list(itertools.chain(*results_per_category))
             headers = ["category", "AP"] * (num_columns // 2)
             results_2d = itertools.zip_longest(
-                *[results_flatten[i::num_columns] for i in range(num_columns)]
+                *[results_flatten[i::num_columns] for i in range(num_columns)],
+                fillvalue="",
             )
             table_data = [headers]
-            table_data += [result for result in results_2d]
+            table_data.extend([list(result) for result in results_2d])
             table = AsciiTable(table_data)
             logger.info("Per-category of VOC AP: \n{}".format(table.table))
             logger.info("per-category PR curve has output to voc_pr_curve folder.")
@@ -457,8 +460,10 @@ def compute_ap(recall, precision):
 
     # to calculate area under PR curve, look for points
     # where X axis (recall) changes value
-    i = np.where(mrec[1:] != mrec[:-1])[0]
+    changing_points = np.where(mrec[1:] != mrec[:-1])[0]
 
     # and sum (\Delta recall) * prec
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
+    ap = np.sum(
+        (mrec[changing_points + 1] - mrec[changing_points]) * mpre[changing_points + 1]
+    )
     return ap

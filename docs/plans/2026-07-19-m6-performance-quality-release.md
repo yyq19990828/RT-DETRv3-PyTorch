@@ -35,7 +35,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
   - [x] 将门禁扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
   - [x] 将完整 `optimizer` 目录加入门禁，累计 22 个 source file 通过。
-  - [ ] 清理其余 233 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 26、`core` 21、`utils` 21 和 `metrics` 5。
+  - [x] 将完整 `metrics` 目录加入门禁，累计 27 个 source file 通过。
+  - [ ] 清理其余 228 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 26、`core` 21 和 `utils` 21。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -70,6 +71,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | Mypy 与 Ruff 分工，不把类型检查并入 lint | Ruff 不替代静态类型语义；初始全包 123 项快照需要通过当前重新审计和渐进清理校正 |
 | 2026-07-19 | Mypy 以完整低错误目录为最小扩展单位 | `cli` 和 `conversion` 合计只有 4 项，可在不进行大范围继承代码改写的前提下审核并入门禁 |
 | 2026-07-19 | 同时执行全包 42% 和直接维护范围 65% 的回退下限 | 干净 `test` extra 实测分别为 42.48% 和 65.56%；双范围能防止用排除低覆盖模块的方式制造虚假达标 |
+| 2026-07-19 | 新增 metrics 活跃测试后将全包下限提高到 43% | 新测试使隐藏 GPU 的本地全包实测达到 43.94%，应将真实新增覆盖转换为回退约束 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
 | 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
 | 2026-07-19 | 锁文件与 CI 统一使用 UV 0.11.29.x | UV 0.7 与 0.11 的锁文件修订语义不同；固定版本范围避免本地通过而托管 `--locked` 拒绝 |
@@ -93,3 +95,5 @@ GitHub Actions [run 29672051076](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第三批仅为 `optimizer` 中的 LR multiplier 分组字典和已访问参数名列表补充可证明的元素类型，不改动优化器方程、参数组或更新顺序。完整 `optimizer` 并入后，统一门禁为 22 个 source file，定向测试为 `13 passed`；全包待办降为 233 项、38 个文件。
 
 GitHub Actions [run 29672324668](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29672324668) 在提交 `9979863` 上通过全部 6 个 jobs：质量 job 为 160 个 Ruff 文件和 22 个 Mypy source file 通过；Python 3.12 CPU 为 `217 passed, 7 skipped, 17 deselected`，覆盖率维持全包 `42.50%` 和直接维护范围 `65.60%`；其余 Python 3.9–3.11 CPU 与 wheel smoke 也均通过。
+
+Mypy 第四批清理 `metrics` 的 5 项类型错误，并新增 4 个活跃回归，覆盖 AP 积分、零 padding 裁剪、DetectionMAP classwise 累积和 COCO prediction-only JSON。完整 `metrics` 并入后，统一门禁为 27 个 source file，定向测试为 `17 passed`，默认全量为 `257 passed, 3 skipped`；全包 Mypy 待办降为 228 项、35 个文件。新测试使隐藏 GPU 的本地全包覆盖率提高到 `43.94%`，因此回退下限从 42% 同步提高到 43%。
