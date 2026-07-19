@@ -1,6 +1,6 @@
 # R34/R50 导出后端设备矩阵验证报告
 
-- 状态：`locally verified; hosted CPU CI pending`
+- 状态：`verified with documented ONNX CUDA tolerance deviation`
 - 验证日期：`2026-07-19`
 - 代码基线：`0067cfa`
 - 输入权重：`v0.1.0` R34/R50 转换 checkpoint
@@ -120,6 +120,6 @@ ONNX CUDA 的非零像素差来自亚像素框变化经过整数取整、绘制�
 - 隐藏 GPU 的非 Paddle 全仓为 `358 passed, 7 skipped, 34 deselected`；全包覆盖率 `7,078/13,748 (51.48%)`，直接维护范围 `1,991/2,200 (90.50%)`，通过 `50.5%/90%` 门槛。
 - Ruff format/lint：`174` 个文件通过；Mypy：`107` 个 source file 通过；wheel/sdist 构建和发布内容检查通过。
 - 临时导出约 594 MiB、四图副本、12 组 Infer 图片/JSON、日志、临时 distribution 与测试缓存均已清理；UV `.venv` 保留 GPU `dev` 环境。
-- GitHub Actions 结果待本阶段证据提交后补充。
+- 证据提交 `fc3a6f8` 的 [GitHub Actions run 29693029694](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29693029694) 六个 job 全部通过。Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`；Python 3.12 全包/直接维护范围覆盖率为 `7,079/13,748 (51.49%)` 和 `1,991/2,200 (90.50%)`。托管 Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查、六个安装后 CLI、包外配置加载和 `65 passed` wheel smoke 同时通过。
 
 本报告只声明 R34/R50、当前 Python Infer CLI、固定 640、FP32、ORT 1.23.2 和本机 CUDA 12.1/cuDNN 9。它不证明动态高宽、低精度、I/O Binding、TensorRT、外部客户端预处理、性能收益或其他 GPU/driver/provider 组合。特别是 R34/R50 ONNX CUDA 不应使用 R18 的严格门槛作已通过声明。

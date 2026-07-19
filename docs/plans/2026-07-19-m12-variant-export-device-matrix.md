@@ -1,6 +1,6 @@
 # M12——R34/R50 导出后端设备矩阵计划
 
-- 状态：`in-progress`
+- 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
@@ -66,4 +66,4 @@ M8 已验证 R34/R50 的 ONNX 与 TorchScript 在 CPU 上可导出和重载，M1
 
 ## 完成记录
 
-本地验证已完成。R34/R50 各六条路径均运行；TorchScript CUDA/CPU 逐值一致，ONNX CPU 通过既有门槛，ONNX CUDA 的 R18 门槛外推失败及 TF32/cuDNN A/B 已记录。非 Paddle 全仓 `358 passed, 7 skipped, 34 deselected`，覆盖率 `51.48%/90.50%`，Ruff/Mypy、构建、发布检查通过，临时产物已清理。等待写入证据提交与托管 CI 后关闭计划。
+2026-07-19 完成，证据提交 `fc3a6f8`。R34/R50 各六条路径均运行；TorchScript CUDA/CPU 逐值一致，ONNX CPU 通过既有门槛，ONNX CUDA 的 R18 门槛外推失败及 TF32/cuDNN A/B 已记录。非 Paddle 本地全仓 `358 passed, 7 skipped, 34 deselected`，覆盖率 `51.48%/90.50%`，Ruff/Mypy、构建、发布检查通过，临时产物已清理。[GitHub Actions run 29693029694](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29693029694) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管全包/直接维护范围为 `7,079/13,748 (51.49%)` 和 `1,991/2,200 (90.50%)`，Ruff `174` 个文件、Mypy `107` 个 source file、发布检查和 `65 passed` wheel smoke 同时通过。

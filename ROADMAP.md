@@ -3,8 +3,8 @@
 **Status**: Active
 **Last updated**: 2026-07-19
 **Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)
-**Current execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)；M4 长训保持 deferred
+**Latest completed execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)
+**Current execution plan**: 暂无；M4 长训保持 deferred，后续工作需要重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -206,6 +206,8 @@
 - [x] 更新多变体设备支持矩阵、限制和复现报告，清理全部中间产物。
 
 **Exit criteria**: R34/R50 的两个导出后端在显式 CUDA 与 CPU 上均完成真实四图推理；每项执行计划中预注册的类别、score、box 和分组门槛，任何未通过项必须保留为限制而不能改写成对齐证据；结论不外推到动态高宽、低精度或性能。
+
+**验收记录**：2026-07-19，证据提交 `fc3a6f8`。R34/R50 的 12 条路径、8 组同设备比较和 48 张图片均完成；TorchScript CUDA/CPU 逐值一致，ONNX CPU 通过既有门槛，ONNX CUDA 的 R18 门槛外推失败已按实记录。提交 `fc3a6f8` 的 [GitHub Actions run 29693029694](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29693029694) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[多变体设备验证报告](docs/reports/variant-export-device-validation.md)。
 
 ## 依赖顺序
 

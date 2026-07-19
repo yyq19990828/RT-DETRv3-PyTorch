@@ -13,7 +13,7 @@
 
 ## 当前文档
 
-- [M12——R34/R50 导出后端设备矩阵计划](2026-07-19-m12-variant-export-device-matrix.md)：进行中；本地矩阵、门禁和清理已完成，TorchScript/ONNX CPU 数值门槛通过，R34/R50 ONNX CUDA 的 R18 门槛外推失败已记录，等待托管 CI。
+- [M12——R34/R50 导出后端设备矩阵计划](2026-07-19-m12-variant-export-device-matrix.md)：已完成；12 条用户路径和托管矩阵通过，TorchScript/ONNX CPU 数值门槛通过，R34/R50 ONNX CUDA 的 R18 门槛外推失败作为限制保留。
 - [M11——ONNX Runtime CUDA/CPU 推理计划](2026-07-19-m11-onnx-runtime-cuda-inference.md)：已完成；保持 CPU 默认与 CPU CI，显式 CUDA provider、依赖隔离、R18 四图同设备数值证据和托管矩阵均通过。
 - [M10——TorchScript CUDA/CPU 推理计划](2026-07-19-m10-torchscript-cuda-inference.md)：已完成；拆分 ONNX provider 与 TorchScript device 合同，真实四图和托管矩阵均通过。
 - [M9——导出产物端到端推理计划](2026-07-19-m9-exported-inference.md)：已完成；Infer 可直接消费 checkpoint/ONNX/TorchScript，真实图和托管矩阵均通过。
