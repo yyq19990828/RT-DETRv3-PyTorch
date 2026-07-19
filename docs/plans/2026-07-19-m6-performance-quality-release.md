@@ -47,6 +47,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
 - [x] 编写 Paddle/PyTorch 训练和推理 benchmark runner，固定 warmup、采样、同步、batch、dtype、设备和内存口径。
 - [x] 在同一硬件执行 R18 基准并定位吞吐或峰值显存未达目标的第一处瓶颈，再决定是否扩展 R34/R50。
+- [x] 使用真实 COCO val2017 执行 R18 CUDA 端到端推理，分别记录可见 input-pipeline stall、模型前向、总体吞吐和单次算子 profile。
 - [x] 生成发布清单和发布候选验证报告，包含模型来源、checksum、配置、许可、环境、命令与已知限制。
 - [x] 为 R18/R34/R50 补充官方 Paddle 权重与转换后 PyTorch 权重的 COCO 同图统一渲染及机器可读差异证据。
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
@@ -69,6 +70,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 覆盖率报告与排除规则有文档，不把未支持继承模块排除后仍声称全包覆盖率。
 - [x] Python 3.9–3.12 CPU CI 均能从干净环境安装并通过其声明的测试。
 - [x] Paddle/PyTorch 性能报告记录硬件、软件、命令、warmup、采样、batch、dtype、吞吐、延迟和峰值内存。
+- [x] 端到端性能比较验证 annotation 和 measured image ID 一致，并将 profiler 开销排除在正式计时外。
 - [x] wheel 安装后公开 CLI help、Infer、Eval 和 Export smoke 可重复；Models CLI 安装后合同纳入本轮验收。
 - [x] 发布候选清单、法律文件、wheel/sdist 内容和本地模型文件 checksum 通过自动检查。
 - [x] R18/R34/R50 同权重 COCO 单图对比使用统一渲染器，并保留原始预测和逐项匹配误差。
@@ -103,6 +105,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 四产物下载补测后将直接维护范围下限提高到 85% | 重复 alias、路径逃逸和 backbone 下载回归使本地直接维护范围达到 85.11%；新增发布边界应转化为回退约束 |
 | 2026-07-19 | Convert/Export/转换适配补测后完成 90% 直接维护目标 | 11 项纯 CPU 行为回归使本地直接范围达到 90.80%；门禁提高为全包 50.5%/直接 90% |
 | 2026-07-19 | PyTorch 2.5.1/cu121 改用官方专用索引 | 南京镜像在 GitHub 六个 job 中均超过 45 分钟未完成 744 MiB Torch wheel；官方源空缓存完整安装为 2m21s，包版本不变 |
+| 2026-07-19 | 端到端性能只补 R18 CUDA 推理，不扩展训练/R34/R50 | 真实 COCO 结果已定位 4-worker PyTorch 可见管线等待占 29.68%，总体吞吐仍为 Paddle 的 1.579×；当前没有为性能数字完全对齐继续扩面的实际需求 |
 
 ## 完成记录
 
@@ -189,3 +192,7 @@ GitHub Actions [run 29684281347](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 90% 覆盖率收口批次先用逐文件 JSON 证据锁定 `cli/convert.py` 65.84%、`cli/export.py` 67.78% 和 `conversion/validation.py` 72.13% 三个用户边界，而不扩大排除范围。新增 11 项纯 CPU 回归，覆盖非法输入/输出/辅助路径拒绝、目标感知单文件转换编排和退出码、ONNX/TorchScript 双格式导出与防覆盖，以及不安装 Paddle 的通用/检测模型输出适配合同。显式隐藏 GPU 的非 Paddle 回归为 `328 passed, 5 skipped, 34 deselected`；三个目标文件均达到 99%，全包为 `6,917/13,567`（`50.98%`），直接维护范围为 `1,835/2,021`（`90.80%`）。门禁从 50%/85% 提高到 50.5%/90%；托管结果如下。
 
 GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在提交 `48cc134` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`），新门禁通过。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+
+端到端性能批次在提交 `d823edf` 上使用同一 COCO val2017 annotation、R18 官方 Paddle/转换 PyTorch checkpoint、CUDA/FP32、batch 1、`640×640`、4 workers、10 warmup 和 50 measured batches。两边 annotation SHA-256、5,000 条数据规模和 50 个 measured image ID 完全一致，采样记录 `git_dirty=false`。PyTorch/Paddle 总体吞吐为 `48.349/30.616 image/s`（`1.579×`）；PyTorch 模型前向均值 `14.544 ms`，但可见 input-pipeline stall 均值 `6.139 ms`、占总体 `29.68%`，因此数据管线是已记录的次级瓶颈。定时后额外一次 profile 显示两边首要热点均为卷积；不同 profiler taxonomy 不作逐项时长对比。机器可读结果见[`docs/reports/data/r18-cuda-e2e-inference.json`](../reports/data/r18-cuda-e2e-inference.json)。
+
+GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在提交 `d823edf` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率仍为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。

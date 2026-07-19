@@ -19,7 +19,7 @@ pytest -p no:cacheprovider -q -m "not paddle" \
   --cov=ppdet_pytorch --cov-report=term --cov-report=json:<temporary-path>
 ```
 
-`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU、已安装 `dev` extra 的本地结果为 `328 passed, 5 skipped, 34 deselected`；最新托管 `test` extra 结果为 `328 passed, 7 skipped, 17 deselected`。差异来自已安装能力和测试 extra，核心行为测试计数一致。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
+`scripts/check_coverage.py` 将 coverage data 和 JSON 报告写入临时目录，命令结束时自动清理。当前显式隐藏 GPU、已安装 `dev` extra 的本地结果为 `336 passed, 5 skipped, 34 deselected`；最新托管 `test` extra 结果为 `336 passed, 7 skipped, 17 deselected`。差异来自已安装能力和测试 extra，核心行为测试计数一致。`tests/legacy/` 由 Pytest 配置明确排除，但 `src/ppdet_pytorch/` 内没有源文件被从全包统计中删除。
 
 在提交 `19bcb60` 上，已安装 `dev` extra 的本机 `.venv` 另行观测到 `221 passed, 33 deselected`、全包 `43.11%`；其中 5 个在纯 `test` extra 中跳过的 loss 测试可以执行。为保证托管 CI 可重现，下表和门禁以不含 Paddle 的托管 `test` extra 为准。
 
@@ -48,6 +48,8 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 四产物发布合同批次把 R18-vd backbone 训练初始化权重加入 manifest 驱动的 Models CLI，并新增重复 alias、路径逃逸和真实 backbone 下载合同回归。显式隐藏 GPU 的本地非 Paddle 测试为 `308 passed, 5 skipped, 34 deselected`，全包 `6,802/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`）；`cli` 合计为 `718/876`（`82.0%`），其中 `cli/models.py` 为 `156/176`（`88.64%`）。基于新增的用户下载边界证据，直接维护范围门槛从 84% 提高到 85%。GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在提交 `aa3ccac` 上完成托管复验：Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,803/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`），新门槛通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表采用托管结果。
 
 90% 目标收口批次使用逐文件 coverage JSON 将主要缺口定位到 `cli/convert.py`、`cli/export.py` 和 `conversion/validation.py`，没有为提高数字而排除任何源文件。11 项新增纯 CPU 回归覆盖了 Convert 输入/输出路径拒绝、目标感知编排与退出码，Export 双格式编排与防覆盖，以及不依赖 Paddle 安装的通用/检测模型输出适配。显式隐藏 GPU 的本地非 Paddle 测试为 `328 passed, 5 skipped, 34 deselected`，全包 `6,917/13,567`（`50.98%`），直接维护范围 `1,835/2,021`（`90.80%`）。`cli/convert.py`、`cli/export.py` 和 `conversion/validation.py` 均为 99%；可执行门禁提高到全包 50.5%/直接维护 90%。GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在提交 `48cc134` 上完成托管复验：Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,918/13,567`（`50.99%`），直接维护范围 `1,835/2,021`（`90.80%`），新门禁通过。下表采用托管结果。
+
+端到端 benchmark runner 增加 8 项脚本合同测试后，GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在提交 `d823edf` 上再次通过：Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`；runner 不属于 `src/ppdet_pytorch`，因此 Python 3.12 全包/直接维护覆盖语句仍为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。
 
 ## 当前结果
 
