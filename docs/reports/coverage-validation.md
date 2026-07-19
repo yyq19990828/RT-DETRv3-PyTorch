@@ -31,7 +31,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 新增 utils 活跃测试后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `225 passed, 5 skipped, 34 deselected`，全包 `5,853/13,203`（`44.33%`），直接维护范围 `1,173/1,788`（`65.60%`）。未隐藏 GPU 时额外执行 5 个 CUDA 可用用例，得到 `44.96%`；该设备差异不用于 CPU 门槛。GitHub Actions [run 29673364179](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29673364179) 在提交 `7ee602b` 上完成托管复验：Python 3.12 CPU job 为 `225 passed, 7 skipped, 17 deselected`，全包 `5,854/13,203`（`44.34%`），直接维护范围 `1,173/1,788`（`65.60%`），双门禁通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表已更新为该次托管结果。
 
-新增 core schema 类型检查回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `226 passed, 5 skipped, 34 deselected`，全包 `5,882/13,212`（`44.52%`），直接维护范围 `1,202/1,797`（`66.89%`）。新增 9 条 schema 声明/分支语句的同时覆盖语句净增 29 条，因此直接维护范围回退下限从 65% 提高到 66%；当前提交的托管复验尚待 CI 完成。
+新增 core schema 类型检查回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `226 passed, 5 skipped, 34 deselected`，全包 `5,882/13,212`（`44.52%`），直接维护范围 `1,202/1,797`（`66.89%`）。新增 9 条 schema 声明/分支语句的同时覆盖语句净增 29 条，因此直接维护范围回退下限从 65% 提高到 66%。GitHub Actions [run 29673733080](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29673733080) 在提交 `230c6c3` 上完成托管复验：Python 3.12 CPU job 为 `226 passed, 7 skipped, 17 deselected`，全包 `5,883/13,212`（`44.53%`），直接维护范围 `1,202/1,797`（`66.89%`），新双门禁通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
 ## 当前结果
 
@@ -41,14 +41,14 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 | `cli` | 679 | 486 | 71.6% |
 | `conversion` | 649 | 352 | 54.2% |
 | `core` | 384 | 283 | 73.7% |
-| `data` | 5,584 | 1,463 | 26.2% |
+| `data` | 5,584 | 1,464 | 26.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 705 | 389 | 55.2% |
 | `metrics` | 576 | 265 | 46.0% |
 | `modeling` | 3,386 | 2,012 | 59.4% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,212** | **5,882** | **44.52%** |
+| **全包** | **13,212** | **5,883** | **44.53%** |
 
 直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,797` 条语句，覆盖 `1,202` 条，覆盖率为 **66.89%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
