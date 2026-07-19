@@ -212,10 +212,10 @@ def generate_anchors_for_grid_cell(
         stride_tensor (Tensor): shape[l, 1], contains the stride for each scale.
     """
     assert len(feats) == len(fpn_strides)
-    anchors = []
-    anchor_points = []
+    anchor_tensors = []
+    anchor_point_tensors = []
     num_anchors_list = []
-    stride_tensor = []
+    stride_tensors = []
     for feat, stride in zip(feats, fpn_strides):
         _, _, h, w = feat.shape
         device = feat.device
@@ -238,16 +238,13 @@ def generate_anchors_for_grid_cell(
         ).to(dtype)
         anchor_point = torch.stack([shift_x, shift_y], dim=-1).to(dtype)
 
-        anchors.append(anchor.reshape(-1, 4))
-        anchor_points.append(anchor_point.reshape(-1, 2))
-        num_anchors_list.append(len(anchors[-1]))
-        stride_tensor.append(
+        anchor_tensors.append(anchor.reshape(-1, 4))
+        anchor_point_tensors.append(anchor_point.reshape(-1, 2))
+        num_anchors_list.append(len(anchor_tensors[-1]))
+        stride_tensors.append(
             torch.full([num_anchors_list[-1], 1], stride, dtype=dtype, device=device)
         )
-    anchors = torch.cat(anchors)
-    anchors = anchors.detach()
-    anchor_points = torch.cat(anchor_points)
-    anchor_points = anchor_points.detach()
-    stride_tensor = torch.cat(stride_tensor)
-    stride_tensor = stride_tensor.detach()
+    anchors = torch.cat(anchor_tensors).detach()
+    anchor_points = torch.cat(anchor_point_tensors).detach()
+    stride_tensor = torch.cat(stride_tensors).detach()
     return anchors, anchor_points, num_anchors_list, stride_tensor

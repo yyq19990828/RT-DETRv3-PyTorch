@@ -116,7 +116,7 @@ def nms(dets, match_threshold=0.6, match_metric="iou"):
 @register
 class DETRPostProcess(object):
     __shared__ = ["num_classes", "use_focal_loss", "with_mask"]
-    __inject__ = []
+    __inject__: list[str] = []
 
     def __init__(
         self,
@@ -201,17 +201,22 @@ class DETRPostProcess(object):
         )
 
         if not self.use_focal_loss:
-            scores, labels = scores.max(-1), scores.argmax(-1)
+            scores, labels = scores.max(dim=-1)
+            query_indices = (
+                torch.arange(scores.shape[1], device=scores.device)
+                .unsqueeze(0)
+                .expand(scores.shape[0], -1)
+            )
             if scores.shape[1] > self.num_top_queries:
-                scores, index = torch.topk(scores, self.num_top_queries, dim=-1)
-                batch_ind = (
-                    torch.arange(end=scores.shape[0], device=scores.device)
-                    .unsqueeze(-1)
-                    .tile(1, self.num_top_queries)
-                )
-                index = torch.stack([batch_ind, index], dim=-1)
-                labels = labels[index[..., 0], index[..., 1]]
-                bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
+                scores, query_indices = torch.topk(scores, self.num_top_queries, dim=-1)
+            batch_ind = (
+                torch.arange(end=scores.shape[0], device=scores.device)
+                .unsqueeze(-1)
+                .expand_as(query_indices)
+            )
+            index = torch.stack([batch_ind, query_indices], dim=-1)
+            labels = labels[index[..., 0], index[..., 1]]
+            bbox_pred = bbox_pred[index[..., 0], index[..., 1]]
         else:
             scores, index = torch.topk(scores.flatten(1), self.num_top_queries, dim=-1)
             labels = index % self.num_classes
@@ -252,9 +257,10 @@ class DETRPostProcess(object):
             [labels.unsqueeze(-1).to(torch.float32), scores.unsqueeze(-1), bbox_pred],
             dim=-1,
         )
+        num_predictions = bbox_pred.shape[1]
         bbox_num = torch.full(
             (bbox_pred.shape[0],),
-            self.num_top_queries,
+            num_predictions,
             dtype=torch.int32,
             device=bbox_pred.device,
         )

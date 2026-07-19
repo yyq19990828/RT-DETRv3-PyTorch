@@ -345,10 +345,10 @@ class DETRLoss(nn.Module):
         return src_assign, target_assign
 
     def _get_num_gts(self, targets, dtype="float32"):
-        num_gts = sum(len(a) for a in targets)
+        num_gts_value = sum(len(a) for a in targets)
         device = targets[0].device if targets else None
         num_gts = torch.tensor(
-            num_gts,
+            num_gts_value,
             dtype=torch.float32 if dtype == "float32" else torch.int64,
             device=device,
         )
@@ -530,12 +530,14 @@ class DINOLoss(DETRLoss):
         masks=None,
         gt_mask=None,
         postfix="",
+        gt_score=None,
+        o2m=1,
         dn_out_bboxes=None,
         dn_out_logits=None,
         dn_meta=None,
-        gt_score=None,
         **kwargs,
     ):
+        del o2m
         num_gts = self._get_num_gts(gt_class)
         total_loss = super(DINOLoss, self).forward(
             boxes, logits, gt_bbox, gt_class, num_gts=num_gts, gt_score=gt_score
@@ -606,11 +608,11 @@ class DINOv3Loss(DETRLoss):
         masks=None,
         gt_mask=None,
         postfix="",
+        gt_score=None,
+        o2m=1,
         dn_out_bboxes=None,
         dn_out_logits=None,
         dn_meta=None,
-        gt_score=None,
-        o2m=1,
         **kwargs,
     ):
 
@@ -752,12 +754,15 @@ class MaskDINOLoss(DETRLoss):
         masks=None,
         gt_mask=None,
         postfix="",
+        gt_score=None,
+        o2m=1,
         dn_out_bboxes=None,
         dn_out_logits=None,
         dn_out_masks=None,
         dn_meta=None,
         **kwargs,
     ):
+        del gt_score, o2m
         num_gts = self._get_num_gts(gt_class)
         total_loss = super(MaskDINOLoss, self).forward(
             boxes,

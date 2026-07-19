@@ -1,5 +1,9 @@
+from types import SimpleNamespace
+
 import torch
 
+from ppdet_pytorch.modeling.architectures import rtdetrv3 as rtdetrv3_module
+from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
 from ppdet_pytorch.modeling.backbones.resnet import ResNet
 from ppdet_pytorch.modeling.heads.detr_head import DINOv3Head
 from ppdet_pytorch.modeling.post_process import DETRPostProcess
@@ -57,6 +61,63 @@ def test_detr_post_process_current_api_decodes_top_queries():
     assert torch.all((predictions[:, 1] >= 0) & (predictions[:, 1] <= 1))
     assert torch.all(predictions[:, 2:][..., 0::2] <= 200)
     assert torch.all(predictions[:, 2:][..., 1::2] <= 100)
+
+
+def test_detr_post_process_softmax_handles_masks_without_topk_truncation():
+    post_process = DETRPostProcess(
+        num_classes=2,
+        num_top_queries=3,
+        use_focal_loss=False,
+        with_mask=True,
+    )
+    boxes = torch.tensor([[[0.50, 0.50, 0.40, 0.20], [0.25, 0.25, 0.20, 0.40]]])
+    logits = torch.tensor([[[4.0, -4.0, 0.0], [1.0, 3.0, -2.0]]])
+    masks = torch.ones(1, 2, 2, 2)
+
+    predictions, counts, mask_predictions = post_process(
+        (boxes, logits, masks),
+        torch.tensor([[4.0, 4.0]]),
+        torch.ones(1, 2),
+    )
+
+    expected_scores = torch.softmax(logits, dim=-1)[..., :-1].max(dim=-1).values
+    assert predictions.shape == (2, 6)
+    assert counts.tolist() == [2]
+    assert torch.allclose(predictions[:, 1], expected_scores.flatten())
+    assert mask_predictions is not None
+    assert mask_predictions.shape == (2, 4, 4)
+
+
+def test_rtdetrv3_from_config_uses_backbone_shape_without_neck(monkeypatch):
+    calls = []
+    backbone = SimpleNamespace(out_shape=["backbone-shape"])
+    transformer = SimpleNamespace(hidden_dim=32, nhead=8)
+
+    def fake_create(component, **kwargs):
+        calls.append((component, kwargs))
+        if component == "backbone":
+            return backbone
+        if component == "transformer":
+            return transformer
+        if component == "detr_head":
+            return "head"
+        raise AssertionError(f"unexpected component: {component}")
+
+    monkeypatch.setattr(rtdetrv3_module, "create", fake_create)
+
+    components = RTDETRV3.from_config(
+        {
+            "backbone": "backbone",
+            "neck": None,
+            "transformer": "transformer",
+            "detr_head": "detr_head",
+            "aux_o2m_head": None,
+        }
+    )
+
+    assert components["neck"] is None
+    assert components["aux_o2m_head"] is None
+    assert calls[1] == ("transformer", {"input_shape": backbone.out_shape})
 
 
 def test_dinov3_head_current_eval_api_selects_decoder_layer():

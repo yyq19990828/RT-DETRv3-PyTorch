@@ -73,6 +73,7 @@ class CSPRepLayer(nn.Module):
                 for _ in range(num_blocks)
             ]
         )
+        self.conv3: nn.Module
         if hidden_channels != out_channels:
             self.conv3 = BaseConv(
                 hidden_channels, out_channels, ksize=1, stride=1, bias=bias, act=act

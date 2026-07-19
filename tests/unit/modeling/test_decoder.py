@@ -86,6 +86,45 @@ def test_training_attention_mask_blocks_cross_group_queries():
     assert capture.attn_mask[4:, 4:].all()
 
 
+def test_training_empty_targets_fall_back_to_non_denoising_queries():
+    transformer = RTDETRTransformerv3(
+        num_classes=2,
+        hidden_dim=16,
+        num_queries=2,
+        backbone_feat_channels=[16],
+        feat_strides=[8],
+        num_levels=1,
+        nhead=4,
+        num_decoder_layers=1,
+        dim_feedforward=32,
+        num_denoising=1,
+        label_noise_ratio=0.0,
+        box_noise_scale=0.0,
+        num_noises=0,
+        num_noise_queries=[],
+        o2m_branch=True,
+        num_queries_o2m=2,
+    )
+    capture = _AttentionMaskCapture()
+    transformer.decoder = capture
+    transformer.train()
+
+    outputs = transformer(
+        [torch.randn(1, 16, 2, 2)],
+        gt_meta={
+            "gt_bbox": [torch.empty(0, 4)],
+            "gt_class": [torch.empty(0, 1, dtype=torch.int64)],
+        },
+    )
+
+    assert capture.attn_mask.shape == (4, 4)
+    assert capture.attn_mask[:2, :2].all()
+    assert capture.attn_mask[2:, 2:].all()
+    assert not capture.attn_mask[:2, 2:].any()
+    assert not capture.attn_mask[2:, :2].any()
+    assert outputs[-1] is None
+
+
 class TestMultiHeadAttention:
     """Test MultiHeadAttention module"""
 

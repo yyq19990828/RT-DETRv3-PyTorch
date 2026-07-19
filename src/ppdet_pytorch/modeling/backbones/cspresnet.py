@@ -20,6 +20,8 @@ This module contains ConvBNLayer and RepVggBlock used by PPYOLOEHead.
 Reference: ppdet/modeling/backbones/cspresnet.py
 """
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -92,6 +94,7 @@ class RepVggBlock(nn.Module):
 
         self.act = get_act_fn(act)
 
+        self.alpha: Optional[nn.Parameter]
         if alpha:
             self.alpha = nn.Parameter(torch.ones(1))
         else:

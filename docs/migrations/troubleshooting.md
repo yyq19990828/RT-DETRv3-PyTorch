@@ -104,6 +104,8 @@ uv run --extra dev pytest
 
 2026-07-18 的 R18 对齐中，正是这个初始化错误导致 30 个训练 loss 分项出现分歧。修正为 block-diagonal mask 后，同一官方 checkpoint 和确定性缩减训练配置下，30 项 loss 全部通过 `rtol=1e-4, atol=1e-5`。对应单元测试直接断言主分组与 O2M 分组的交叉块全为 `False`，避免只靠最终 loss 间接覆盖。
 
+2026-07-19 的类型审计还验证了空标注批次边界：denoising helper 在整批没有 GT 时会返回 `None`，不能继续按 Tensor 列表拼接。当前 PyTorch transformer 会退化为只使用 matching/O2M queries，仍保持分组间 attention block 为 `False`，并返回 `dn_meta=None`。这只证明空 GT 前向不再因缺失 denoising tensor 崩溃，不等同于完整随机 denoising 训练已对齐。
+
 如果差异只出现在 `freeze_norm=True` 的 backbone，还要分别检查“参数是否求导”和“前向使用哪组统计”。Paddle ResNet 的冻结 BN 会使用全局 running statistics；PyTorch 仅设置 `requires_grad=False` 后，外层 `model.train()` 仍会把 BN 切到 batch statistics。R50 曾因此出现 eval 完全对齐、训练 backbone 大幅分歧。当前 ResNet 冻结 BN 会在训练态保持 eval/global-statistics 模式，并有直接回归。
 
 ## 前向和 loss 对齐但完整梯度分歧
@@ -117,6 +119,8 @@ uv run --extra dev pytest
 ## 只有少量后处理 label 或 box 不一致
 
 先比较后处理前的 logits/boxes，再看 top-k 边界候选的分数 margin。top-k 和类别索引是离散操作；极小浮点差异可能替换一个边界候选，使按行比较的 label 与 box 同时跳变。此时应明确统计边界候选数量，继续验收全部 score、`bbox_num` 和 label 稳定行的坐标，而不是无限放宽所有坐标的容差。
+
+迁移 Softmax 后处理时不要照搬 `scores.max(-1)` 的返回合同：Paddle 返回最大值 Tensor，而 PyTorch `Tensor.max(dim)` 返回 `(values, indices)`。PyTorch 应直接解包这两个 Tensor；当 query 数小于 `num_top_queries` 时还要为 mask 分支构造完整 query index，并让 `bbox_num` 记录实际 query 数。2026-07-19 的回归已覆盖这一路径；成功 import 或 focal-loss 默认路径不能证明 Softmax 分支正确。
 
 R50 官方权重回归中，decoder box 仅 1/1200 个值在 `rtol=1e-4` 下超差，最大绝对误差 `3.95e-5`；使用记录过的 `rtol=3e-4` 后，中间输出通过。后处理 300 个 label 中仍有 2 个边界差异，但全部 score、298 个稳定候选坐标和 `bbox_num` 通过。该证据属于“观察到的离散边界”，不能写成逐候选完全一致。
 

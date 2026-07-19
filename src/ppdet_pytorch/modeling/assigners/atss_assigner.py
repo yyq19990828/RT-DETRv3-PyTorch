@@ -80,9 +80,9 @@ class ATSSAssigner(nn.Module):
                 .to(gt2anchor_distances.dtype)
             )
             is_in_topk_list.append(is_in_topk * pad_gt_mask)
-        is_in_topk_list = torch.cat(is_in_topk_list, dim=-1)
-        topk_idxs_list = torch.cat(topk_idxs_list, dim=-1)
-        return is_in_topk_list, topk_idxs_list
+        is_in_topk = torch.cat(is_in_topk_list, dim=-1)
+        topk_idxs = torch.cat(topk_idxs_list, dim=-1)
+        return is_in_topk, topk_idxs
 
     @torch.no_grad()
     def forward(

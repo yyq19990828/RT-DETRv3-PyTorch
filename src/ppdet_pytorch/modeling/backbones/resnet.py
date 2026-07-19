@@ -113,6 +113,7 @@ class ConvNormLayer(nn.Module):
             )
             # Initialize offset conv to zero
             nn.init.constant_(self.conv_offset.weight, 0.0)
+            assert self.conv_offset.bias is not None
             nn.init.constant_(self.conv_offset.bias, 0.0)
 
             # Use standard conv as DCN is not implemented
@@ -138,9 +139,9 @@ class ConvNormLayer(nn.Module):
         # parameter itself. Keep the same information for OptimizerBuilder to
         # turn into explicit PyTorch parameter groups.
         for param in self.conv.parameters():
-            param._optimizer_lr_multiplier = float(lr)
+            setattr(param, "_optimizer_lr_multiplier", float(lr))
         for param in self.norm.parameters():
-            param._optimizer_lr_multiplier = float(lr)
+            setattr(param, "_optimizer_lr_multiplier", float(lr))
 
         # Freeze normalization parameters if required
         self.freeze_norm = freeze_norm
@@ -260,6 +261,7 @@ class BasicBlock(nn.Module):
         )
 
         self.shortcut = shortcut
+        self.short: nn.Module
         if not shortcut:
             if variant == "d" and stride == 2:
                 # ResNet-vd: AvgPool + 1x1 conv
@@ -438,6 +440,7 @@ class BottleNeck(nn.Module):
         )
 
         self.shortcut = shortcut
+        self.short: nn.Module
         if not shortcut:
             if variant == "d" and stride == 2:
                 # ResNet-vd: AvgPool + 1x1 conv

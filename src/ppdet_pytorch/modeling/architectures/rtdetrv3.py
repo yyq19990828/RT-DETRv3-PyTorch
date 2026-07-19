@@ -59,10 +59,10 @@ class RTDETRV3(BaseArch):
         # neck
         kwargs = {"input_shape": backbone.out_shape}
         neck = create(cfg["neck"], **kwargs) if cfg["neck"] else None
+        feature_shape = neck.out_shape if neck is not None else backbone.out_shape
 
         # transformer
-        if neck is not None:
-            kwargs = {"input_shape": neck.out_shape}
+        kwargs = {"input_shape": feature_shape}
         transformer = create(cfg["transformer"], **kwargs)
         # head
         kwargs = {
@@ -72,8 +72,10 @@ class RTDETRV3(BaseArch):
         }
         detr_head = create(cfg["detr_head"], **kwargs)
 
-        kwargs = {"input_shape": neck.out_shape}
-        aux_o2m_head = create(cfg["aux_o2m_head"], **kwargs)
+        kwargs = {"input_shape": feature_shape}
+        aux_o2m_head = (
+            create(cfg["aux_o2m_head"], **kwargs) if cfg["aux_o2m_head"] else None
+        )
 
         return {
             "backbone": backbone,

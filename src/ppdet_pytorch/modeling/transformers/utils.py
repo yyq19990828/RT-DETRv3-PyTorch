@@ -120,6 +120,7 @@ class MLP(nn.Module):
             nn.Linear(n, k) for n, k in zip([input_dim] + h, h + [output_dim])
         )
 
+        self.activation: nn.Module
         if activation == "relu":
             self.activation = nn.ReLU(inplace=True)
         elif activation == "gelu":
@@ -336,8 +337,10 @@ def get_contrastive_denoising_training_group(
 
     # Contrastive denoising training positive index
     positive_gt_mask = positive_gt_mask.squeeze(-1) * pad_gt_mask
-    dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
-    dn_positive_idx = torch.split(dn_positive_idx, [n * num_group for n in num_gts])
+    flat_dn_positive_idx = torch.nonzero(positive_gt_mask)[:, 1]
+    dn_positive_idx = torch.split(
+        flat_dn_positive_idx, [n * num_group for n in num_gts]
+    )
 
     # Total denoising queries
     num_denoising = int(max_gt_num * 2 * num_group)

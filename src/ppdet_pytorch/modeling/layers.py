@@ -295,17 +295,17 @@ class MultiClassNMS(object):
 
             if len(batch_outputs) > 0:
                 # Concatenate all classes for this batch
-                batch_outputs = torch.cat(batch_outputs, dim=0)
+                batch_output = torch.cat(batch_outputs, dim=0)
 
                 # Apply keep_top_k
-                if self.keep_top_k > 0 and batch_outputs.shape[0] > self.keep_top_k:
+                if self.keep_top_k > 0 and batch_output.shape[0] > self.keep_top_k:
                     # Sort by confidence (column 1)
-                    _, topk_indices = torch.topk(batch_outputs[:, 1], self.keep_top_k)
-                    batch_outputs = batch_outputs[topk_indices]
+                    _, topk_indices = torch.topk(batch_output[:, 1], self.keep_top_k)
+                    batch_output = batch_output[topk_indices]
 
-                all_outputs.append(batch_outputs)
+                all_outputs.append(batch_output)
                 all_bbox_num.append(
-                    torch.tensor(batch_outputs.shape[0], dtype=torch.int32)
+                    torch.tensor(batch_output.shape[0], dtype=torch.int32)
                 )
             else:
                 # No detections for this batch

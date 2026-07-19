@@ -20,6 +20,8 @@ Complete port of Paddle's PPYOLOEHead implementation.
 Reference: ppdet/modeling/heads/ppyoloe_head.py
 """
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -44,6 +46,7 @@ class ESEAttn(nn.Module):
     def __init__(self, feat_channels, act="swish", attn_conv="convbn"):
         super(ESEAttn, self).__init__()
         self.fc = nn.Conv2d(feat_channels, feat_channels, 1)
+        self.conv: Optional[nn.Module]
         if attn_conv == "convbn":
             self.conv = ConvBNLayer(feat_channels, feat_channels, 1, act=act)
         elif attn_conv == "repvgg":
@@ -156,9 +159,7 @@ class PPYOLOEHead(nn.Module):
 
         # projection conv
         self.proj_conv = nn.Conv2d(self.reg_channels, 1, 1, bias=False)
-        self.proj_conv.skip_quant = (
-            True  # For compatibility with Paddle (quantization flag)
-        )
+        setattr(self.proj_conv, "skip_quant", True)
         self._init_weights()
 
         if self.for_distill:
@@ -217,22 +218,22 @@ class PPYOLOEHead(nn.Module):
             cls_score = torch.sigmoid(cls_logit)
             cls_score_list.append(cls_score.flatten(2).permute(0, 2, 1))
             reg_distri_list.append(reg_distri.flatten(2).permute(0, 2, 1))
-        cls_score_list = torch.cat(cls_score_list, dim=1)
-        reg_distri_list = torch.cat(reg_distri_list, dim=1)
+        cls_scores = torch.cat(cls_score_list, dim=1)
+        reg_distributions = torch.cat(reg_distri_list, dim=1)
 
         # Handle teacher mode or get_data mode
         if targets.get("is_teacher", False):
-            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distri_list)
-            return cls_score_list, pred_deltas * stride_tensor, pred_dfls
+            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distributions)
+            return cls_scores, pred_deltas * stride_tensor, pred_dfls
 
         if targets.get("get_data", False):
-            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distri_list)
-            return cls_score_list, pred_deltas * stride_tensor, pred_dfls
+            pred_deltas, pred_dfls = self._bbox_decode_fake(reg_distributions)
+            return cls_scores, pred_deltas * stride_tensor, pred_dfls
 
         return self.get_loss(
             [
-                cls_score_list,
-                reg_distri_list,
+                cls_scores,
+                reg_distributions,
                 anchors,
                 anchor_points,
                 num_anchors_list,
@@ -268,9 +269,9 @@ class PPYOLOEHead(nn.Module):
                 torch.full((h * w, 1), stride, dtype=dtype, device=device)
             )
 
-        anchor_points = torch.cat(anchor_points)
-        stride_tensor = torch.cat(stride_tensor)
-        return anchor_points, stride_tensor
+        anchor_point_tensor = torch.cat(anchor_points)
+        stride_tensor_out = torch.cat(stride_tensor)
+        return anchor_point_tensor, stride_tensor_out
 
     def forward_eval(self, feats):
         """Evaluation forward pass"""
@@ -303,14 +304,14 @@ class PPYOLOEHead(nn.Module):
             )
             reg_dist_list.append(reg_dist)
 
-        cls_score_list = torch.cat(cls_score_list, dim=-1)
+        cls_scores = torch.cat(cls_score_list, dim=-1)
         if self.use_shared_conv:
-            reg_dist_list = torch.cat(reg_dist_list, dim=1)
+            reg_dist = torch.cat(reg_dist_list, dim=1)
         else:
-            reg_dist_list = torch.cat(reg_dist_list, dim=2)
-            reg_dist_list = self.proj_conv(reg_dist_list).squeeze(1)
+            reg_dist = torch.cat(reg_dist_list, dim=2)
+            reg_dist = self.proj_conv(reg_dist).squeeze(1)
 
-        return cls_score_list, reg_dist_list, anchor_points, stride_tensor
+        return cls_scores, reg_dist, anchor_points, stride_tensor
 
     def forward(self, feats, targets=None, aux_pred=None):
         """Forward pass - matches Paddle's interface"""

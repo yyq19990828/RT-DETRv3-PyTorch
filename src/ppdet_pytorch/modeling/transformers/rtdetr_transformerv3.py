@@ -554,22 +554,22 @@ class RTDETRTransformerv3(nn.Module):
                     proj_feats.append(self.input_proj[i](proj_feats[-1]))
 
         # get encoder inputs
-        feat_flatten = []
+        flattened_features = []
         spatial_shapes = []
         level_start_index = [0]
         for i, feat in enumerate(proj_feats):
             _, _, h, w = feat.shape
             # [b, c, h, w] -> [b, h*w, c]
-            feat_flatten.append(feat.flatten(2).permute(0, 2, 1))
+            flattened_features.append(feat.flatten(2).permute(0, 2, 1))
             # [num_levels, 2]
             spatial_shapes.append([h, w])
             # [l], start index of each level
             level_start_index.append(h * w + level_start_index[-1])
 
         # [b, l, c]
-        feat_flatten = torch.cat(feat_flatten, 1)
+        memory = torch.cat(flattened_features, 1)
         level_start_index.pop()
-        return (feat_flatten, spatial_shapes, level_start_index)
+        return (memory, spatial_shapes, level_start_index)
 
     def forward(
         self,
@@ -582,13 +582,19 @@ class RTDETRTransformerv3(nn.Module):
         memory, spatial_shapes, level_start_index = self._get_encoder_input(feats)
 
         # prepare denoising training
+        denoising_classes: Optional[List[torch.Tensor]] = None
+        denoising_bbox_unacts: Optional[List[torch.Tensor]] = None
+        attn_masks: Optional[List[torch.Tensor]] = None
+        dn_metas: Optional[List[dict]] = None
         if self.training:
-            denoising_classes, denoising_bbox_unacts, attn_masks, dn_metas = (
-                [],
-                [],
-                [],
-                [],
-            )
+            if gt_meta is None:
+                raise ValueError(
+                    "gt_meta is required while training RTDETRTransformerv3"
+                )
+            class_queries = []
+            bbox_queries = []
+            group_attn_masks = []
+            group_dn_metas = []
             for g_id in range(self.num_noises + 1):
                 if g_id == 0:
                     num_denoising = self.num_denoising
@@ -605,17 +611,22 @@ class RTDETRTransformerv3(nn.Module):
                         self.box_noise_scale,
                     )
                 )
-                denoising_classes.append(denoising_class)
-                denoising_bbox_unacts.append(denoising_bbox_unact)
-                attn_masks.append(attn_mask)
-                dn_metas.append(dn_meta)
-        else:
-            denoising_classes, denoising_bbox_unacts, attn_masks, dn_metas = (
-                None,
-                None,
-                None,
-                None,
-            )
+                if (
+                    denoising_class is None
+                    or denoising_bbox_unact is None
+                    or attn_mask is None
+                    or dn_meta is None
+                ):
+                    break
+                class_queries.append(denoising_class)
+                bbox_queries.append(denoising_bbox_unact)
+                group_attn_masks.append(attn_mask)
+                group_dn_metas.append(dn_meta)
+            else:
+                denoising_classes = class_queries
+                denoising_bbox_unacts = bbox_queries
+                attn_masks = group_attn_masks
+                dn_metas = group_dn_metas
 
         target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits = (
             self._get_decoder_input(
@@ -628,6 +639,7 @@ class RTDETRTransformerv3(nn.Module):
         )
 
         # multi group noise attention
+        decoder_attn_mask: Optional[torch.Tensor] = None
         if self.training:
             new_size = target.shape[1]
             # True means allowed by TransformerDecoderLayer. Queries from
@@ -646,6 +658,10 @@ class RTDETRTransformerv3(nn.Module):
                     end = end + self.num_queries_o2m
                     new_mask = new_mask >= 0.0
                     new_attn_mask[begin:end, begin:end] = new_mask
+                elif attn_masks is None or dn_metas is None:
+                    end = end + self.num_queries[g_id]
+                    new_mask = new_mask > 0.1 if g_id > 0 else new_mask >= 0.0
+                    new_attn_mask[begin:end, begin:end] = new_mask
                 else:
                     end = end + attn_masks[g_id].shape[1]
                     dn_size, q_size = dn_metas[g_id]["dn_num_split"]
@@ -658,7 +674,7 @@ class RTDETRTransformerv3(nn.Module):
                     ] = new_mask
                     new_attn_mask[begin:end, begin:end] = attn_masks[g_id]
                 begin = end
-            attn_masks = new_attn_mask
+            decoder_attn_mask = new_attn_mask
 
         # decoder
         out_bboxes, out_logits = self.decoder(
@@ -670,7 +686,7 @@ class RTDETRTransformerv3(nn.Module):
             self.dec_bbox_head,
             self.dec_score_head,
             self.query_pos_head,
-            attn_mask=attn_masks,
+            attn_mask=decoder_attn_mask,
             memory_mask=None,
             query_pos_head_inv_sig=self.query_pos_head_inv_sig,
         )
@@ -682,9 +698,11 @@ class RTDETRTransformerv3(nn.Module):
         spatial_shapes: Optional[List[List[int]]] = None,
         grid_size: float = 0.05,
         dtype: torch.dtype = torch.float32,
-        device: torch.device = None,
+        device: Optional[torch.device] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         if spatial_shapes is None:
+            if self.eval_size is None:
+                raise ValueError("spatial_shapes or eval_size must be provided")
             spatial_shapes = [
                 [int(self.eval_size[0] / s), int(self.eval_size[1] / s)]
                 for s in self.feat_strides
@@ -693,7 +711,7 @@ class RTDETRTransformerv3(nn.Module):
         if device is None:
             device = next(self.parameters()).device
 
-        anchors = []
+        anchor_tensors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
             grid_y, grid_x = torch.meshgrid(
                 torch.arange(h, dtype=dtype, device=device),
@@ -705,15 +723,15 @@ class RTDETRTransformerv3(nn.Module):
             valid_WH = torch.tensor([w, h], dtype=dtype, device=device)
             grid_xy = (grid_xy.unsqueeze(0) + 0.5) / valid_WH
             wh = torch.ones_like(grid_xy) * grid_size * (2.0**lvl)
-            anchors.append(torch.cat([grid_xy, wh], -1).view(-1, h * w, 4))
+            anchor_tensors.append(torch.cat([grid_xy, wh], -1).view(-1, h * w, 4))
 
-        anchors = torch.cat(anchors, 1)
+        anchors = torch.cat(anchor_tensors, 1)
         valid_mask = ((anchors > self.eps) & (anchors < 1 - self.eps)).all(
             -1, keepdim=True
         )
         anchors = torch.log(anchors / (1 - anchors))
         anchors = torch.where(
-            valid_mask, anchors, torch.tensor(float("inf"), device=device)
+            valid_mask, anchors, torch.full_like(anchors, float("inf"))
         )
         return anchors, valid_mask
 
@@ -796,8 +814,8 @@ class RTDETRTransformerv3(nn.Module):
             enc_topk_bboxes.append(enc_topk_bbox)
             enc_topk_logits.append(enc_topk_logit)
 
-        targets = torch.cat(targets, 1)
-        reference_points_unacts = torch.cat(reference_points_unacts, 1)
-        enc_topk_bboxes = torch.cat(enc_topk_bboxes, 1)
-        enc_topk_logits = torch.cat(enc_topk_logits, 1)
-        return targets, reference_points_unacts, enc_topk_bboxes, enc_topk_logits
+        target = torch.cat(targets, 1)
+        reference_points_unact = torch.cat(reference_points_unacts, 1)
+        enc_topk_bbox = torch.cat(enc_topk_bboxes, 1)
+        enc_topk_logit = torch.cat(enc_topk_logits, 1)
+        return target, reference_points_unact, enc_topk_bbox, enc_topk_logit

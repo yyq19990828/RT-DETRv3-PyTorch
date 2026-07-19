@@ -185,8 +185,7 @@ def rbox2poly_np(rboxes):
         poly = np.array([x0, y0, x1, y1, x2, y2, x3, y3], dtype=np.float32)
         poly = get_best_begin_point_single(poly)
         polys.append(poly)
-    polys = np.array(polys)
-    return polys
+    return np.array(polys)
 
 
 # rbox function implemented using PyTorch

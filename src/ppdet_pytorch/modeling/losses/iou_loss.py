@@ -155,7 +155,8 @@ class DIouLoss(GIoULoss):
         super(DIouLoss, self).__init__(loss_weight=loss_weight, eps=eps)
         self.use_complete_iou_loss = use_complete_iou_loss
 
-    def __call__(self, pbox, gbox, iou_weight=1.0):
+    def __call__(self, pbox, gbox, iou_weight=1.0, loc_reweight=None):
+        del loc_reweight
         x1, y1, x2, y2 = torch.split(pbox, 1, dim=-1)
         x1g, y1g, x2g, y2g = torch.split(gbox, 1, dim=-1)
         cx = (x1 + x2) / 2
@@ -232,7 +233,8 @@ class SIoULoss(GIoULoss):
         self.theta = theta
         self.reduction = reduction
 
-    def __call__(self, pbox, gbox):
+    def __call__(self, pbox, gbox, iou_weight=1.0, loc_reweight=None):
+        del iou_weight, loc_reweight
         x1, y1, x2, y2 = torch.split(pbox, 1, dim=-1)
         x1g, y1g, x2g, y2g = torch.split(gbox, 1, dim=-1)
 
