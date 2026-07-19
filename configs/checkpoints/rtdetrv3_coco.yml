@@ -6,6 +6,10 @@ source_repository:
   license: Apache-2.0
   license_file: LICENSE
 
+distribution:
+  repository: https://github.com/yyq19990828/RT-DETRv3-PyTorch
+  release_tag: v0.1.0
+
 pretraining:
   resnet18_vd:
     status: verified
@@ -18,7 +22,8 @@ pretraining:
     converted_tensor_count: 115
     converted_artifact:
       alias: r18-backbone
-      distribution_status: unpublished
+      distribution_status: published
+      download_url: https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/ResNet18_vd_pretrained.pth
       path: pretrained_models/pytorch/ResNet18_vd_pretrained.pth
       size_bytes: 44876108
       sha256: 2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2
@@ -38,7 +43,8 @@ models:
     source_sha256: f32dbd008bd7e5311c877d522f6d8c9e349795978c889f53823588b5e5d74a5f
     converted_artifact:
       alias: r18
-      distribution_status: unpublished
+      distribution_status: published
+      download_url: https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/rtdetrv3_r18vd_6x_coco.pth
       path: pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth
       size_bytes: 92075629
       sha256: cb89c589c0a37fbe060554bc26bd662885702c72e3ef0890a54338e9746d0547
@@ -56,7 +62,8 @@ models:
     source_sha256: 29b09c64d6c372cde46d94caee1b57a23cee0aae24bd7bd3e2937cf57e581a68
     converted_artifact:
       alias: r34
-      distribution_status: unpublished
+      distribution_status: published
+      download_url: https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/rtdetrv3_r34vd_6x_coco.pth
       path: pretrained_models/pytorch/rtdetrv3_r34vd_6x_coco.pth
       size_bytes: 137170947
       sha256: e69207749b37e493596086579f435d5f08e9f058b66322452456053b78a4f272
@@ -74,7 +81,8 @@ models:
     source_sha256: e8b1d5db3208ce0f9edba5a914f23c918141b608ab4cd409db9d9204f7ed4b08
     converted_artifact:
       alias: r50
-      distribution_status: unpublished
+      distribution_status: published
+      download_url: https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/rtdetrv3_r50vd_6x_coco.pth
       path: pretrained_models/pytorch/rtdetrv3_r50vd_6x_coco.pth
       size_bytes: 182510207
       sha256: 5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7

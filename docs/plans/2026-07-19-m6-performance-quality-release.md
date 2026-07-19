@@ -53,6 +53,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 增加 manifest 驱动的 Models CLI，支持发布状态列表、本地 size/SHA-256 校验和发布后的 HTTPS 原子下载。
 - [x] 将 mapping report 的 size/SHA-256 纳入 manifest，并完成 11-asset 扁平 Release 目录、严格 checksum 清单和归档内容的回读预演。
 - [x] 增加单命令原子发布暂存：拒绝覆盖已有目录，失败清理半成品，并用真实四权重完成 11-asset 严格回读。
+- [x] 维护者确认 `v0.1.0`，四个产物在 manifest 中固定到该 tag 的精确 GitHub Release URL。
 - [ ] 由维护者确认 tag 后对外发布 wheel/sdist、三个检测权重、R18-vd backbone 初始化权重、四份 mapping report 和 `SHA256SUMS`，并从公开 URL 回读验收。
 
 ## 风险与回退
@@ -202,3 +203,5 @@ GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 发布暂存批次将原有分立的资产复制、checksum 生成和严格回读收敛到 `--stage-release-dir`。目标目录不存在时，命令只在同父目录隐藏临时目录完成全部校验后才原子更名；已有目标被拒绝，中途失败会清理半成品。使用真实四权重/四 mapping report 和临时构建的 wheel/sdist 完成 `11 release assets, 10 checksummed assets` 暂存，随后独立严格回读再次通过；`438 MiB` 临时产物已清理。定向回归为 `16 passed`，全仓 Ruff `174` 文件和 Mypy `107` source file 通过，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，覆盖率仍为 `50.98%/90.80%`。对外 tag、Release 和公开 URL 回读仍未执行，M6 继续保持进行中。
 
 GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在提交 `51847eb` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+
+`v0.1.0` 发布输入已在创建 tag 前收口：manifest 新增 distribution repository/tag，四个权重使用精确的固定 tag asset URL，发布检查对 repository、tag 和权重文件名做组合校验。Models/manifest/release 定向回归为 `27 passed`，本地 `12` 个真实文件/报告校验通过；全仓 Ruff `174` 文件、Mypy `107` source file 和隐藏 GPU 的非 Paddle `340 passed, 5 skipped, 34 deselected` 通过，覆盖率为 `50.98%/90.80%`。该证据只覆盖 tag 输入；实际归档 checksum 必须在 tag 创建后重建记录。

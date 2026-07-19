@@ -154,6 +154,7 @@ def _validate_manifest_entry(
     entry: dict[str, Any],
     *,
     config_key: str,
+    release_download_prefix: str,
     require_models: bool,
 ) -> tuple[int, str]:
     _require(entry.get("status") == "verified", f"{name} is not verified")
@@ -192,6 +193,11 @@ def _validate_manifest_entry(
         _require(
             isinstance(download_url, str) and download_url.startswith("https://"),
             f"{name} published artifact must have an HTTPS URL",
+        )
+        expected_download_url = f"{release_download_prefix}{artifact_path.name}"
+        _require(
+            download_url == expected_download_url,
+            f"{name} published artifact URL must be {expected_download_url}",
         )
     else:
         _require(download_url is None, f"{name} unpublished artifact has a URL")
@@ -254,6 +260,27 @@ def validate_repository(*, require_models: bool) -> dict[str, int]:
         "source repository license must be Apache-2.0",
     )
     _validate_revision(source_repository.get("revision"))
+    distribution = _mapping(manifest.get("distribution"), "distribution manifest")
+    distribution_repository = distribution.get("repository")
+    _require(
+        isinstance(distribution_repository, str)
+        and distribution_repository.startswith("https://github.com/")
+        and not distribution_repository.endswith("/"),
+        "distribution repository must be a canonical GitHub HTTPS URL",
+    )
+    release_tag = distribution.get("release_tag")
+    _require(
+        isinstance(release_tag, str)
+        and release_tag.startswith("v")
+        and len(release_tag[1:].split(".")) == 3
+        and all(part.isdigit() for part in release_tag[1:].split("."))
+        and "/" not in release_tag
+        and "\\" not in release_tag,
+        "distribution release tag is invalid",
+    )
+    release_download_prefix = (
+        f"{distribution_repository}/releases/download/{release_tag}/"
+    )
 
     entries: list[tuple[str, dict[str, Any], str]] = []
     pretraining = _mapping(manifest.get("pretraining"), "pretraining manifest")
@@ -273,6 +300,7 @@ def validate_repository(*, require_models: bool) -> dict[str, int]:
             name,
             entry,
             config_key=config_key,
+            release_download_prefix=release_download_prefix,
             require_models=require_models,
         )
         _require(

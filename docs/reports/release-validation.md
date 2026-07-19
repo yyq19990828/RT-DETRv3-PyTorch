@@ -1,6 +1,6 @@
 # 发布候选验证报告
 
-- 状态：`release candidate validated; artifacts not published`
+- 状态：`v0.1.0 manifest finalized; artifacts not published`
 - 验证日期：`2026-07-19`
 - 发布加固基线提交：`dc09cd8`
 
@@ -27,6 +27,7 @@
 - GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在端到端 runner 提交 `d823edf` 上继续通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`，覆盖率仍为 `50.99%/90.80%`；Ruff/Mypy、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 - 原子暂存批次增加 `--stage-release-dir`：在同一父目录的隐藏临时目录复制 10 个输入、生成 checksum 并严格校验，通过后才原子更名；目标已存在时拒绝覆盖，校验失败时清理半成品。当前工作树临时构建的 wheel/sdist 与真实四权重/四报告一次暂存为 `11 release assets, 10 checksummed assets`，随后的独立 `--verify-release-dir` 再次通过；`438 MiB` 临时目录已清理。定向回归为 `16 passed`；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，全包/直接维护范围为 `50.98%/90.80%`。
 - GitHub Actions [run 29686126647](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29686126647) 在原子暂存提交 `51847eb` 上通过全部 `6` 个 jobs：Python 3.9–3.12 均为 `340 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `50.99%/90.80%`；Ruff `174` 个文件、Mypy `107` 个 source file、wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
+- `v0.1.0` 发布元数据批次将 distribution repository/tag 与四个权重的精确 asset URL 固化到 manifest，发布检查不再只验证 HTTPS 前缀，还会拒绝 repository、tag 或文件名不一致。Models/manifest/release 定向回归为 `27 passed`，四个 manifest 条目和 `12` 个真实本地文件/报告校验通过；全仓质量门禁为 Ruff `174` 个文件、Mypy `107` 个 source file，隐藏 GPU 的非 Paddle 回归为 `340 passed, 5 skipped, 34 deselected`，覆盖率为 `50.98%/90.80%`。本段证明 tag 提交的输入元数据可用，不替代后续从 tag 重建和公开 URL 回读。
 
 下表保留发布加固基线工作树构建时的候选产物快照。归档容器可带构建时间，后续源码与文档已经变化，因此这些 SHA-256 不能用于本轮或最终发布；最终发布必须从 tag 重建并对实际上传文件重新计算。
 
@@ -59,13 +60,13 @@
 
 不建议把权重放入普通 Git、Git LFS 或 PyPI wheel：普通 Git 会增大所有用户的 clone 历史，Git LFS 会让源码 checkout 与模型下载耦合，wheel 则会让只需要代码的安装承担约 `435.5 MiB` 模型体积。GitHub Release 作为唯一权威源，Hub 只作同 checksum 镜像，可以让版本归属和用户下载路径都保持简单。
 
-`rtdetrv3-models list/verify/download` 已完成 manifest 解析、四个转换产物的本地校验、HTTPS 限制、临时文件校验后原子替换、不匹配既有文件保护和未发布显式失败。三个检测权重使用 `r18/r34/r50`，训练初始化权重使用 `r18-backbone`；alias 由 manifest 声明，并由 CLI 与发布检查共同拒绝重复或非法值。当前四个转换产物都标记 `unpublished` 且没有 URL；这是如实状态，不是下载端到端证据。
+`rtdetrv3-models list/verify/download` 已完成 manifest 解析、四个转换产物的本地校验、HTTPS 限制、临时文件校验后原子替换和不匹配既有文件保护。三个检测权重使用 `r18/r34/r50`，训练初始化权重使用 `r18-backbone`；alias 由 manifest 声明，并由 CLI 与发布检查共同拒绝重复或非法值。维护者已确认 `v0.1.0`，manifest 的四个产物已写入固定 tag URL；发布检查会要求 URL 严格等于 distribution repository、tag 和权重文件名的组合。在 GitHub Release 实际上传并回读前，这仍不是公开下载端到端证据。
 
 ## 尚未完成的发布动作
 
 2026-07-19 实际查询时，远程仓库尚无 tag 和 GitHub Release；因此本地扁平目录预演不能替代真实公开 URL 证据。
 
-- [ ] 确认 `v0.1.0` 版本号、发布说明和 asset 文件名，在 tag 所指提交中将四个产物改为 `published` 并写入该 tag 的固定 HTTPS URL。
+- [x] 确认 `v0.1.0` 版本号和 asset 文件名，在 tag 所指提交中将四个产物改为 `published` 并写入该 tag 的固定 HTTPS URL。
 - [ ] 创建签名或受保护 tag，从 tag 的干净工作树重建 wheel/sdist，用 `scripts/check_release.py --stage-release-dir` 生成并验证完整 11-asset 目录。
 - [ ] 上传 GitHub Release；如启用 Hub 镜像，同步 model card、license、config 和同一批权重。
 - [ ] 在空目录中从公开 URL 下载全部 asset，运行 `scripts/check_release.py --verify-release-dir` 与 Infer/Eval smoke，再将公开回读证据写入本报告。

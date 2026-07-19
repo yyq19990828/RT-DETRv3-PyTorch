@@ -1,9 +1,11 @@
+import re
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/rtdetrv3_coco.yml"
+PYPROJECT = ROOT / "pyproject.toml"
 
 
 def test_checkpoint_manifest_references_repository_configs():
@@ -11,6 +13,17 @@ def test_checkpoint_manifest_references_repository_configs():
 
     assert manifest["schema_version"] == 1
     assert len(manifest["source_repository"]["revision"]) == 40
+    assert manifest["distribution"] == {
+        "repository": "https://github.com/yyq19990828/RT-DETRv3-PyTorch",
+        "release_tag": "v0.1.0",
+    }
+    package_version = re.search(
+        r'^version = "([^"]+)"$',
+        PYPROJECT.read_text(encoding="utf-8"),
+        flags=re.MULTILINE,
+    )
+    assert package_version is not None
+    assert manifest["distribution"]["release_tag"] == f"v{package_version.group(1)}"
     assert set(manifest["models"]) == {
         "rtdetrv3_r18vd_6x_coco",
         "rtdetrv3_r34vd_6x_coco",
@@ -47,6 +60,12 @@ def test_verified_checkpoint_has_sha256_and_size():
         assert len(converted["mapping_sha256"]) == 64
         int(converted["mapping_sha256"], 16)
         assert converted["mapping_count"] > 0
+        assert converted["distribution_status"] == "published"
+        assert converted["download_url"] == (
+            f"{manifest['distribution']['repository']}/releases/download/"
+            f"{manifest['distribution']['release_tag']}/"
+            f"{Path(converted['path']).name}"
+        )
 
 
 def test_r18_pretraining_manifest_is_target_aware():
@@ -65,3 +84,10 @@ def test_r18_pretraining_manifest_is_target_aware():
     assert len(pretraining["converted_artifact"]["mapping_sha256"]) == 64
     int(pretraining["converted_artifact"]["mapping_sha256"], 16)
     assert pretraining["converted_artifact"]["mapping_count"] == 115
+    converted = pretraining["converted_artifact"]
+    assert converted["distribution_status"] == "published"
+    assert converted["download_url"] == (
+        f"{manifest['distribution']['repository']}/releases/download/"
+        f"{manifest['distribution']['release_tag']}/"
+        f"{Path(converted['path']).name}"
+    )

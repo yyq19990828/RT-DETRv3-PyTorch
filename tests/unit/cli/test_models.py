@@ -39,7 +39,7 @@ def _write_manifest(
     path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
 
 
-def test_default_manifest_lists_all_models_as_unpublished(capsys):
+def test_default_manifest_lists_v010_models_as_published(capsys):
     assert models_cli.main(["list", "--json"]) == 0
 
     records = json.loads(capsys.readouterr().out)
@@ -49,8 +49,14 @@ def test_default_manifest_lists_all_models_as_unpublished(capsys):
         "r50",
         "r18-backbone",
     ]
-    assert {record["distribution_status"] for record in records} == {"unpublished"}
-    assert all(record["download_url"] is None for record in records)
+    assert {record["distribution_status"] for record in records} == {"published"}
+    release_prefix = (
+        "https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/"
+    )
+    assert all(record["download_url"].startswith(release_prefix) for record in records)
+    assert all(
+        record["download_url"].endswith(Path(record["path"]).name) for record in records
+    )
     assert records[-1]["name"] == "resnet18_vd"
     assert records[-1]["config"].endswith("rtdetrv3_r18vd_6x_coco.yml")
 

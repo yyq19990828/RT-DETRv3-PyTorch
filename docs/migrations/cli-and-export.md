@@ -4,7 +4,7 @@
 
 ## 六个公开入口的共同边界
 
-**已验证（2026-07-19）**：Train/Eval/Infer/Convert/Export/Models 的 parser 都有活跃 `--help` contract，安装后的六个 console script 均可用；参数解析错误使用 argparse code 2。Train/Eval/Convert 的核心参数和 main wiring 另有定向测试，既有 M2–M4 真实转换、训练和评估证据继续作为端到端依据。Infer 与 Export 的真实 R18 证据见本页对应章节；Models 已完成四个转换产物的本地校验、未发布失败路径和统一下载合同，公开下载需等待固定 Release URL。
+**已验证（2026-07-19）**：Train/Eval/Infer/Convert/Export/Models 的 parser 都有活跃 `--help` contract，安装后的六个 console script 均可用；参数解析错误使用 argparse code 2。Train/Eval/Convert 的核心参数和 main wiring 另有定向测试，既有 M2–M4 真实转换、训练和评估证据继续作为端到端依据。Infer 与 Export 的真实 R18 证据见本页对应章节；Models 已完成四个转换产物的本地校验、未发布失败路径和统一下载合同，`v0.1.0` 固定 URL 已进入 manifest，但公开下载证据仍须以 Release 上传后的实际回读为准。
 
 | 入口 | 当前必需输入 | 已声明支持 | 显式边界 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | Infer | config + checkpoint + 单图/目录之一 | batch、阈值、可视化、JSON、EMA、device、TestReader Resize override | 不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
 | Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |
 | Export | config + checkpoint | ONNX opset 17、ONNX Runtime CPU 回归、traced TorchScript、动态 batch、固定高宽重新导出、EMA | 不声明单个产物动态高宽、GPU provider、TensorRT、C++ 或 Paddle 导出参数兼容 |
-| Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | 当前四个产物均为 `unpublished`；没有 manifest 固定 URL 时显式失败，不猜测或跟随非 HTTPS URL |
+| Models | manifest + `list/verify/download` | R18/R34/R50 检测权重与 `r18-backbone` 训练初始化权重；本地 size/SHA-256 校验；HTTPS 临时文件下载、校验后原子替换 | `v0.1.0` 只接受固定 tag 的 GitHub Release URL；公开资产尚未回读时不声称下载端到端通过 |
 
 Train/Eval/Infer 推荐连字符参数；为既有仓库命令保留的下划线别名只覆盖文档列出的参数，不等于完整复刻 Paddle ArgsParser。各入口的 override 语法仍不同，复杂结构应放进派生 YAML。
 

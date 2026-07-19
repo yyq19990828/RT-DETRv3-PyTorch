@@ -128,7 +128,7 @@ wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模�
 
 当前发布候选已通过本地和托管 CI 验证，但权重还没有对外发布。计划以 GitHub Releases 作版本绑定的主下载源，可选同步 Hugging Face Model Hub；具体限制、checksum 规则和剩余发布步骤见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
 
-`rtdetrv3-models list` 会明确显示当前 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重均为 `unpublished`；未发布时 `download` 会显式失败，不猜测 URL。`verify` 可立即用于校验本地权重的大小和 SHA-256。确定版本和 asset 文件名后，应在创建 tag 前将 manifest 改为 `published` 并写入该固定 tag 的 HTTPS URL，使 tag 构建的 wheel 与公开下载状态一致。
+`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；`download` 只有在 GitHub Release 的实际资产上传后才能完成公开回读，发布执行期间不把仅写入 URL 记为下载已验证。
 
 ```bash
 # 构建 wheel 与 sdist
