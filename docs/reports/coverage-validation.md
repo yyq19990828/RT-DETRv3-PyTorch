@@ -45,7 +45,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 用户可见边界批次新增 17 个纯 CPU 回归，覆盖 tensor layout 判定、Infer `bbox_num` 完整性、模型构建、实际图片/JSON 输出和 Export 输入 shape。回归将“元素数相同”从可自动 reshape 改为必须显式语义验证，只保留已知二维反转的 transpose 候选；Infer 现在拒绝非一维、非整数、负数或与 batch 数不一致的 `bbox_num`，避免目录推理静默漏图；Export 拒绝非整数、非三通道或非正高宽的配置。显式隐藏 GPU 的本地非 Paddle 测试为 `305 passed, 5 skipped, 34 deselected`，全包 `6,790/13,557`（`50.08%`），直接维护范围 `1,708/2,011`（`84.93%`）。`conversion/tensor_utils.py`、`cli/infer.py` 和 `cli/export.py` 分别达到 `88.24%`、`83.56%`、`67.78%`；门槛提高到 50%/84%。本段是本机证据，等待提交后的托管 CI 复验。
 
-四产物发布合同批次把 R18-vd backbone 训练初始化权重加入 manifest 驱动的 Models CLI，并新增重复 alias、路径逃逸和真实 backbone 下载合同回归。显式隐藏 GPU 的本地非 Paddle 测试为 `308 passed, 5 skipped, 34 deselected`，全包 `6,802/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`）；`cli` 合计为 `718/876`（`82.0%`），其中 `cli/models.py` 为 `156/176`（`88.64%`）。基于新增的用户下载边界证据，直接维护范围门槛从 84% 提高到 85%；本段等待提交后的托管 CI 复验。
+四产物发布合同批次把 R18-vd backbone 训练初始化权重加入 manifest 驱动的 Models CLI，并新增重复 alias、路径逃逸和真实 backbone 下载合同回归。显式隐藏 GPU 的本地非 Paddle 测试为 `308 passed, 5 skipped, 34 deselected`，全包 `6,802/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`）；`cli` 合计为 `718/876`（`82.0%`），其中 `cli/models.py` 为 `156/176`（`88.64%`）。基于新增的用户下载边界证据，直接维护范围门槛从 84% 提高到 85%。GitHub Actions [run 29683414810](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29683414810) 在提交 `aa3ccac` 上完成托管复验：Python 3.9–3.12 均为 `308 passed, 7 skipped, 17 deselected`；Python 3.12 全包 `6,803/13,567`（`50.14%`），直接维护范围 `1,720/2,021`（`85.11%`），新门槛通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表采用托管结果。
 
 ## 当前结果
 
@@ -55,14 +55,14 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 | `cli` | 876 | 718 | 82.0% |
 | `conversion` | 659 | 594 | 90.1% |
 | `core` | 401 | 327 | 81.5% |
-| `data` | 5,630 | 1,757 | 31.2% |
+| `data` | 5,630 | 1,758 | 31.2% |
 | `deploy` | 85 | 81 | 95.3% |
 | `engine` | 757 | 452 | 59.7% |
 | `metrics` | 577 | 265 | 45.9% |
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,567** | **6,802** | **50.14%** |
+| **全包** | **13,567** | **6,803** | **50.14%** |
 
 直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `2,021` 条语句，覆盖 `1,720` 条，覆盖率为 **85.11%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
