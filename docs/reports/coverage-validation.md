@@ -35,7 +35,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 
 新增 engine 的 4 个活跃回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `230 passed, 5 skipped, 34 deselected`，全包 `5,945/13,264`（`44.82%`），直接维护范围仍为 `1,202/1,797`（`66.89%`）。`engine` 新增 52 条实现语句，覆盖语句净增 63 条；全包尚未达到 45%，因此本批不提高 44% 下限。GitHub Actions [run 29674294425](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29674294425) 在提交 `7daad87` 上完成托管复验：Python 3.12 CPU job 为 `230 passed, 7 skipped, 17 deselected`，全包 `5,946/13,264`（`44.83%`），直接维护范围 `1,202/1,797`（`66.89%`），双门禁通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
-新增 modeling 的 3 个实际边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `233 passed, 5 skipped, 34 deselected`，全包 `5,990/13,296`（`45.05%`），直接维护范围仍为 `1,202/1,797`（`66.89%`）。`modeling` 实现语句净增 32 条、覆盖语句净增 45 条，因此全包回退下限从 44% 提高到 45%。本批托管复验待提交后记录；下表当前为本机结果。
+新增 modeling 的 3 个实际边界回归后，显式设置 `CUDA_VISIBLE_DEVICES=''` 的本地 `.venv` CPU 实测为 `233 passed, 5 skipped, 34 deselected`，全包 `5,990/13,296`（`45.05%`），直接维护范围仍为 `1,202/1,797`（`66.89%`）。`modeling` 实现语句净增 32 条、覆盖语句净增 45 条，因此全包回退下限从 44% 提高到 45%。GitHub Actions [run 29674832957](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29674832957) 在提交 `c309c42` 上完成托管复验：Python 3.12 CPU job 为 `233 passed, 7 skipped, 17 deselected`，全包 `5,991/13,296`（`45.06%`），直接维护范围 `1,202/1,797`（`66.89%`），新双门禁通过。托管环境仍比本地多覆盖 1 条 `data` 语句；下表已更新为托管结果。
 
 ## 当前结果
 
@@ -52,7 +52,7 @@ Mypy 扩面后的 GitHub Actions [run 29672051076](https://github.com/yyq1999082
 | `modeling` | 3,418 | 2,057 | 60.2% |
 | `optimizer` | 409 | 224 | 54.8% |
 | `utils` | 751 | 323 | 43.0% |
-| **全包** | **13,296** | **5,990** | **45.05%** |
+| **全包** | **13,296** | **5,991** | **45.06%** |
 
 直接维护范围指 M1–M5 首批质量门禁中的 `cli`、`conversion`、`core` 和 `deploy`，共 `1,797` 条语句，覆盖 `1,202` 条，覆盖率为 **66.89%**。这个子集用于屏蔽回退，不代表其他模块不维护，也不是对整个“已迁移核心”的最终定义。
 
