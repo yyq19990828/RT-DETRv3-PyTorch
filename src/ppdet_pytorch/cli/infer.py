@@ -292,6 +292,8 @@ def get_category_metadata(cfg, annotation_file=None):
         cfg.get("metric", "COCO"),
         anno_file=annotation_file,
     )
+    if clsid2catid is None:
+        raise ValueError("Keypoint category metadata is not supported by Infer CLI")
     class_names = {
         int(class_id): catid2name.get(category_id, str(category_id))
         for class_id, category_id in clsid2catid.items()

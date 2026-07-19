@@ -28,6 +28,7 @@ def test_build_commands_use_ruff_for_format_and_lint(monkeypatch):
     assert commands[1][1] == "check"
     assert commands[1][-1] == "."
     assert commands[2][0].endswith("mypy")
+    assert commands[2][-1] == "src/ppdet_pytorch"
     assert "tests/legacy" not in commands[0]
 
 

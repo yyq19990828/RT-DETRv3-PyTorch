@@ -100,14 +100,19 @@ def filter_and_process(sample_bbox, bboxes, labels, scores=None, keypoints=None)
                 new_keypoints.append(sample_keypoint)
                 new_kp_ignore.append(keypoints[1][i])
 
-    bboxes = np.array(new_bboxes)
-    labels = np.array(new_labels)
-    scores = np.array(new_scores)
+    filtered_bboxes = np.array(new_bboxes)
+    filtered_labels = np.array(new_labels)
+    filtered_scores = np.array(new_scores)
     if keypoints is not None:
-        keypoints = np.array(new_keypoints)
-        new_kp_ignore = np.array(new_kp_ignore)
-        return bboxes, labels, scores, (keypoints, new_kp_ignore)
-    return bboxes, labels, scores
+        filtered_keypoints = np.array(new_keypoints)
+        filtered_kp_ignore = np.array(new_kp_ignore)
+        return (
+            filtered_bboxes,
+            filtered_labels,
+            filtered_scores,
+            (filtered_keypoints, filtered_kp_ignore),
+        )
+    return filtered_bboxes, filtered_labels, filtered_scores
 
 
 def bbox_area_sampling(bboxes, labels, scores, target_size, min_size):

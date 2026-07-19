@@ -91,12 +91,12 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，Mypy 门禁已扩展到 84 个 source file，仅余 `data` 的 87 项；托管非 Paddle CPU 覆盖率实测为 45.06%/66.89%，45%/66% 双回退下限和全部 6 个 CI jobs 均已通过。90% 覆盖率目标、完整 CUDA、性能和发布验收仍未完成。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff 已覆盖全部活跃 Python 文件，Mypy 临时范围清单已删除，整个 `src/ppdet_pytorch` 与 3 个质量/稳定性脚本共 103 个 source file 本机门禁通过。新增 data 边界回归后，本机非 Paddle CPU 覆盖率为 47.09%/66.81%，回退下限提高到 47%/66%；当前批次的托管复验待推送后完成。90% 覆盖率目标、完整 CUDA、性能和发布验收仍未完成。
 
 - [ ] 在同一硬件、驱动、CUDA/cuDNN、batch 和精度下建立 Paddle/PyTorch 基准。
 - [ ] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
 - [ ] 目标训练吞吐不低于 Paddle 的 95%，峰值显存不超过 110%；无法达成时记录可定位瓶颈。
-- [ ] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
+- [x] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
   - [x] 首批 Ruff format/lint 覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测；Mypy 首批 6 个 source file/目录通过。
   - [x] Ruff format/lint 扩展到全部活跃 Python 文件并移除临时范围清单。
   - [x] Mypy 扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
@@ -106,9 +106,9 @@
   - [x] Mypy 扩展到完整 `core`，累计 41 个 source file 通过。
   - [x] Mypy 扩展到完整 `engine`，累计 47 个 source file 通过。
   - [x] Mypy 扩展到完整 `modeling`，累计 84 个 source file 通过。
-  - [ ] 将 Mypy 门禁扩展到其余活跃模块并清理剩余类型错误。
+  - [x] Mypy 扩展到完整 `data`，删除临时范围清单；全部 100 个 package source 与 3 个脚本通过。
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
-  - [x] 记录全包和逐模块基线，建立并将全包回退下限从 42% 逐步提高到 45%，`cli/conversion/core/deploy` 提高到 66%。
+  - [x] 记录全包和逐模块基线，建立并将全包回退下限从 42% 逐步提高到 47%，`cli/conversion/core/deploy` 提高到 66%。
   - [ ] 为用户可见的低覆盖路径补测，并用实际证据逐步提高阈值至 90% 目标。
 - [ ] 建立 Python 3.9–3.12 与 CPU/主要 CUDA 组合的 CI 矩阵。
   - [x] 增加 Python 3.9–3.12 非 Paddle CPU workflow，并在本机 UV 隔离环境验证锁文件安装和测试。

@@ -72,7 +72,7 @@ def test_main_uses_temporary_outputs_and_reports_success(monkeypatch, capsys):
             '"src/ppdet_pytorch/cli/train.py": {'
             '"summary": {"num_statements": 100, "covered_lines": 70}}, '
             '"src/ppdet_pytorch/data/dataset.py": {'
-            '"summary": {"num_statements": 100, "covered_lines": 20}}}}',
+            '"summary": {"num_statements": 100, "covered_lines": 25}}}}',
             encoding="utf-8",
         )
         return subprocess.CompletedProcess(command, returncode=0)

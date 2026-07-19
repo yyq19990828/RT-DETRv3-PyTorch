@@ -152,21 +152,26 @@ class BatchRandomResize(BaseOperator):
             cv2.INTER_LANCZOS4,
         ]
         self.interp = interp
-        assert isinstance(target_size, (int, Sequence)), (
-            "target_size must be int, list or tuple"
-        )
+        normalized_target_size: typing.Union[int, list]
+        if isinstance(target_size, int):
+            normalized_target_size = target_size
+        elif isinstance(target_size, Sequence):
+            normalized_target_size = list(target_size)
+        else:
+            raise TypeError("target_size must be int, list or tuple")
         if random_size and not isinstance(target_size, list):
             raise TypeError(
                 "Type of target_size is invalid when random_size is True. Must be List, now is {}".format(
                     type(target_size)
                 )
             )
-        self.target_size = target_size
+        self.target_size = normalized_target_size
         self.random_size = random_size
         self.random_interp = random_interp
 
     def __call__(self, samples, context=None):
         if self.random_size:
+            assert isinstance(self.target_size, list)
             index = np.random.choice(len(self.target_size))
             target_size = self.target_size[index]
         else:
@@ -587,7 +592,6 @@ class Gt2GFLTarget(BaseOperator):
 
     def __call__(self, samples, context=None):
         assert len(samples) > 0
-        batch_size = len(samples)
         # get grid cells of image
         h, w = samples[0]["image"].shape[1:3]
         multi_level_grid_cells = []
@@ -598,19 +602,12 @@ class Gt2GFLTarget(BaseOperator):
                     featmap_size, self.grid_cell_scale, stride, self.cell_offset
                 )
             )
-        mlvl_grid_cells_list = [multi_level_grid_cells for i in range(batch_size)]
         # pixel cell number of multi-level feature maps
-        num_level_cells = [
-            grid_cells.shape[0] for grid_cells in mlvl_grid_cells_list[0]
-        ]
-        num_level_cells_list = [num_level_cells] * batch_size
+        num_level_cells = [grid_cells.shape[0] for grid_cells in multi_level_grid_cells]
         # concat all level cells and to a single array
-        for i in range(batch_size):
-            mlvl_grid_cells_list[i] = np.concatenate(mlvl_grid_cells_list[i])
+        grid_cells = np.concatenate(multi_level_grid_cells)
         # target assign on all images
-        for sample, grid_cells, num_level_cells in zip(
-            samples, mlvl_grid_cells_list, num_level_cells_list
-        ):
+        for sample in samples:
             gt_bboxes = sample["gt_bbox"]
             gt_labels = sample["gt_class"].squeeze()
             if gt_labels.size == 1:
@@ -831,18 +828,18 @@ class Gt2Solov2Target(BaseOperator):
                 ).nonzero()[0]
                 num_ins = len(hit_indices)
 
-                ins_label = []
+                ins_labels = []
                 grid_order = []
                 cate_label = np.zeros([num_grid, num_grid], dtype=np.int64)
                 ins_ind_label = np.zeros([num_grid**2], dtype=np.bool_)
 
                 if num_ins == 0:
-                    ins_label = np.zeros(
+                    ins_label_array = np.zeros(
                         [1, mask_feat_size[0], mask_feat_size[1]], dtype=np.uint8
                     )
                     ins_ind_label_list.append(ins_ind_label)
                     sample["cate_label{}".format(idx)] = cate_label.flatten()
-                    sample["ins_label{}".format(idx)] = ins_label
+                    sample["ins_label{}".format(idx)] = ins_label_array
                     sample["grid_order{}".format(idx)] = np.asarray(
                         [sample_id * num_grid * num_grid + 0], dtype=np.int32
                     )
@@ -914,24 +911,24 @@ class Gt2Solov2Target(BaseOperator):
                             cur_ins_label[: seg_mask.shape[0], : seg_mask.shape[1]] = (
                                 seg_mask
                             )
-                            ins_label.append(cur_ins_label)
+                            ins_labels.append(cur_ins_label)
                             ins_ind_label[label] = True
                             grid_order.append(sample_id * num_grid * num_grid + label)
-                if ins_label == []:
-                    ins_label = np.zeros(
+                if not ins_labels:
+                    ins_label_array = np.zeros(
                         [1, mask_feat_size[0], mask_feat_size[1]], dtype=np.uint8
                     )
                     ins_ind_label_list.append(ins_ind_label)
                     sample["cate_label{}".format(idx)] = cate_label.flatten()
-                    sample["ins_label{}".format(idx)] = ins_label
+                    sample["ins_label{}".format(idx)] = ins_label_array
                     sample["grid_order{}".format(idx)] = np.asarray(
                         [sample_id * num_grid * num_grid + 0], dtype=np.int32
                     )
                 else:
-                    ins_label = np.stack(ins_label, axis=0)
+                    ins_label_array = np.stack(ins_labels, axis=0)
                     ins_ind_label_list.append(ins_ind_label)
                     sample["cate_label{}".format(idx)] = cate_label.flatten()
-                    sample["ins_label{}".format(idx)] = ins_label
+                    sample["ins_label{}".format(idx)] = ins_label_array
                     sample["grid_order{}".format(idx)] = np.asarray(
                         grid_order, dtype=np.int32
                     )
@@ -1502,9 +1499,11 @@ class Gt2CenterTrackTarget(BaseOperator):
 
                 track_ids.append(track_id)
                 if reutrn_hm:
+                    assert pre_hm is not None
                     draw_umich_gaussian(pre_hm[0], ct_int, radius, k=conf)
 
                 if np.random.rand() < self.fp_disturb and reutrn_hm:
+                    assert pre_hm is not None
                     ct2 = ct0.copy()
                     # Hard code heatmap disturb ratio, haven't tried other numbers.
                     ct2[0] = ct2[0] + np.random.randn() * 0.05 * w
@@ -1643,27 +1642,36 @@ class BatchRandomResizeForSSOD(BaseOperator):
             cv2.INTER_LANCZOS4,
         ]
         self.interp = interp
-        assert isinstance(target_size, (int, Sequence)), (
-            "target_size must be int, list or tuple"
-        )
+        normalized_target_size: typing.Union[int, list]
+        if isinstance(target_size, int):
+            normalized_target_size = target_size
+        elif isinstance(target_size, Sequence):
+            normalized_target_size = list(target_size)
+        else:
+            raise TypeError("target_size must be int, list or tuple")
         if random_size and not isinstance(target_size, list):
             raise TypeError(
                 "Type of target_size is invalid when random_size is True. Must be List, now is {}".format(
                     type(target_size)
                 )
             )
-        self.target_size = target_size
+        self.target_size = normalized_target_size
         self.random_size = random_size
         self.random_interp = random_interp
 
     def __call__(self, samples, context=None):
+        index = None
         if self.random_size:
+            assert isinstance(self.target_size, list)
             index = np.random.choice(len(self.target_size))
             target_size = self.target_size[index]
         else:
             target_size = self.target_size
         if context is not None:
-            target_size = self.target_size[context]
+            if not isinstance(self.target_size, list):
+                raise TypeError("context requires a list of target sizes")
+            index = int(context)
+            target_size = self.target_size[index]
         if self.random_interp:
             interp = np.random.choice(self.interps)
         else:

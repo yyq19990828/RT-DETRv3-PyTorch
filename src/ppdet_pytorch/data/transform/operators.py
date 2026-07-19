@@ -33,6 +33,8 @@ import random
 import threading
 import uuid
 from numbers import Integral, Number
+from pathlib import Path
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -106,12 +108,11 @@ class BaseOperator(object):
         Returns:
             result (dict): a processed sample
         """
-        if isinstance(sample, Sequence):
-            for i in range(len(sample)):
-                sample[i] = self.apply(sample[i], context)
-        else:
-            sample = self.apply(sample, context)
-        return sample
+        if isinstance(sample, list):
+            for index, item in enumerate(sample):
+                sample[index] = self.apply(item, context)
+            return sample
+        return self.apply(sample, context)
 
     def __str__(self):
         return str(self._id)
@@ -168,10 +169,6 @@ class Decode(BaseOperator):
 
 
 def _make_dirs(dirname):
-    try:
-        from pathlib import Path
-    except ImportError:
-        from pathlib2 import Path
     Path(dirname).mkdir(exist_ok=True)
 
 
@@ -584,7 +581,10 @@ class RandomDistort(BaseOperator):
                 self.apply_saturation,
                 self.apply_hue,
             ]
-            distortions = np.random.permutation(functions)[: self.count]
+            distortions = [
+                functions[index]
+                for index in np.random.permutation(len(functions))[: self.count]
+            ]
             for func in distortions:
                 img = func(img)
             img = np.asarray(img).astype(np.float32)
@@ -1145,27 +1145,37 @@ class RandomResize(BaseOperator):
             cv2.INTER_CUBIC,
             cv2.INTER_LANCZOS4,
         ]
-        assert isinstance(target_size, (Integral, Sequence)), (
-            "target_size must be Integer, List or Tuple"
-        )
-        if (random_range or random_size) and not isinstance(target_size, Sequence):
+        normalized_target_size: Union[int, list]
+        if isinstance(target_size, Integral):
+            normalized_target_size = int(target_size)
+        elif isinstance(target_size, Sequence):
+            normalized_target_size = list(target_size)
+        else:
+            raise TypeError("target_size must be Integer, List or Tuple")
+        if (random_range or random_size) and not isinstance(
+            normalized_target_size, list
+        ):
             raise TypeError(
                 "Type of target_size is invalid when random_size or random_range is True. Must be List or Tuple, now is {}".format(
                     type(target_size)
                 )
             )
-        if random_range and not len(target_size) == 2:
-            raise TypeError(
-                "target_size must be two list as [[min_short_edge, long_edge], [max_short_edge, long_edge]] when random_range is True."
-            )
-        self.target_size = target_size
+        if random_range:
+            assert isinstance(normalized_target_size, list)
+            if len(normalized_target_size) != 2:
+                raise TypeError(
+                    "target_size must be two list as [[min_short_edge, long_edge], [max_short_edge, long_edge]] when random_range is True."
+                )
+        self.target_size = normalized_target_size
         self.random_range = random_range
         self.random_size = random_size
         self.random_interp = random_interp
 
     def apply(self, sample, context=None):
         """Resize the image numpy."""
+        target_size: Union[int, list]
         if self.random_range:
+            assert isinstance(self.target_size, list)
             short_edge = np.random.randint(
                 self.target_size[0][0], self.target_size[1][0] + 1
             )
@@ -1173,6 +1183,7 @@ class RandomResize(BaseOperator):
             target_size = [short_edge, long_edge]
         else:
             if self.random_size:
+                assert isinstance(self.target_size, list)
                 target_size = random.choice(self.target_size)
             else:
                 target_size = self.target_size
@@ -1255,7 +1266,7 @@ class CropWithSampling(BaseOperator):
         self.satisfy_all = satisfy_all
         self.avoid_no_bbox = avoid_no_bbox
 
-    def apply(self, sample, context):
+    def apply(self, sample, context=None):
         """
         Crop the image and modify bounding box.
         Operators:
@@ -1354,7 +1365,7 @@ class CropWithDataAchorSampling(BaseOperator):
         self.avoid_no_bbox = avoid_no_bbox
         self.das_anchor_scales = np.array(das_anchor_scales)
 
-    def apply(self, sample, context):
+    def apply(self, sample, context=None):
         """
         Crop the image and modify bounding box.
         Operators:
@@ -1950,8 +1961,8 @@ class RandomScaledCrop(BaseOperator):
                 offset_y : offset_y + th, offset_x : offset_x + tw
             ]
             out_segms.append(canvas)
-        out_segms = np.stack(out_segms)
-        return out_segms if valid is None else out_segms[valid]
+        stacked_segms = np.stack(out_segms)
+        return stacked_segms if valid is None else stacked_segms[valid]
 
     def apply(self, sample, context=None):
         img = sample["image"]
@@ -2167,7 +2178,7 @@ class NormalizeBox(BaseOperator):
         super(NormalizeBox, self).__init__()
         self.retain_origin_box = retain_origin_box
 
-    def apply(self, sample, context):
+    def apply(self, sample, context=None):
         im = sample["image"]
         if "gt_bbox" in sample.keys():
             if self.retain_origin_box:
@@ -3646,7 +3657,9 @@ class CenterRandColor(BaseOperator):
 
         img = sample["image"]
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        distortions = np.random.permutation(functions)
+        distortions = [
+            functions[index] for index in np.random.permutation(len(functions))
+        ]
         for func in distortions:
             img = func(img, img_gray)
         sample["image"] = img
@@ -3654,7 +3667,9 @@ class CenterRandColor(BaseOperator):
         if "pre_image" in sample:
             pre_img = sample["pre_image"]
             pre_img_gray = cv2.cvtColor(pre_img, cv2.COLOR_BGR2GRAY)
-            pre_distortions = np.random.permutation(functions)
+            pre_distortions = [
+                functions[index] for index in np.random.permutation(len(functions))
+            ]
             for func in pre_distortions:
                 pre_img = func(pre_img, pre_img_gray)
             sample["pre_image"] = pre_img
@@ -4293,12 +4308,13 @@ class RandomErasing(BaseOperator):
 
     def apply(self, sample, context=None):
         if random.random() < self.prob:
+            value: Optional[list[Number]]
             if isinstance(self.value, Number):
                 value = [self.value]
             elif isinstance(self.value, str):
                 value = None
             else:
-                value = self.value
+                value = list(self.value)
             if value is not None and not (len(value) == 1 or len(value) == 3):
                 raise ValueError(
                     "Value should be a single number or a sequence with length equals to image's channel."

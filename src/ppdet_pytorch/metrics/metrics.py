@@ -136,6 +136,7 @@ class COCOMetric(Metric):
 
         if self.clsid2catid is None:
             self.clsid2catid, _ = get_categories("COCO", anno_file)
+            assert self.clsid2catid is not None
 
         self.classwise = kwargs.get("classwise", False)
         self.output_eval = kwargs.get("output_eval", None)

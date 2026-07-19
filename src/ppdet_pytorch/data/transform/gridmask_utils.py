@@ -69,9 +69,8 @@ class Gridmask(object):
                 mask[:, s:t] *= 0
 
         r = np.random.randint(self.rotate)
-        mask = Image.fromarray(np.uint8(mask))
-        mask = mask.rotate(r)
-        mask = np.asarray(mask)
+        mask_image = Image.fromarray(np.uint8(mask))
+        mask = np.asarray(mask_image.rotate(r))
         mask = mask[
             (hh - h) // 2 : (hh - h) // 2 + h, (ww - w) // 2 : (ww - w) // 2 + w
         ].astype(np.float32)

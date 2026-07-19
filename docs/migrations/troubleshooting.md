@@ -60,6 +60,18 @@ state_dict = paddle.load(str(checkpoint_path))
 uv run --no-sync python -c "from ppdet_pytorch.core.workspace import load_config; print(load_config('configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml').architecture)"
 ```
 
+## 数据加载和随机变换边界
+
+**已验证（2026-07-19）**：类型审计可以揭示 Paddle 继承数据代码中真实的运行时边界，不应仅用宽泛的 `Any` 或全局 ignore 消除报错。当前回归确认了以下规则：
+
+- `ImageFolder` 纯图片推理不需要 annotation，不应在 `do_eval=False` 时构造 `COCO(None)`；需要映射回原 COCO image id 的评估路径则必须显式提供 annotation。
+- `get_categories("keypoint")` 的 class-id 映射按 Paddle 合同可为 `None`。仅支持 detection 的 Infer/COCO metric 消费者应在边界处明确拒绝或窄化，不要直接遍历可空映射。
+- VOC XML 的 `size`、`name` 和 `bndbox` 字段属于必需输入；缺失时应报出包含字段路径和 XML 文件的 `ValueError`。所有 bbox 均无效的图片应按 empty record 处理，不能因 XML 中存在无效 `object` 而误分类。
+- 可重复迭代的 SSOD loader 应在 `__iter__` 内创建并循环两个子 iterator；批量固定尺寸 resize 没有随机选择索引，弱/强增广共享的 selection 应为 `None`，不能返回未初始化局部变量。
+- NumPy 的类型声明不接受 callable list 直接传入 `np.random.permutation`。需保留 NumPy RNG 语义时，可打乱整数索引后再回取 callable；不要为类型通过改用不同的随机数源。
+
+定向回归位于 `tests/unit/data/test_dataset_boundaries.py`。这些用例证明上述边界在当前 CPU/锁定依赖环境中可执行，不等同于所有随机数序列、多进程 DataLoader 时序或 Paddle/PyTorch 数值输出已完全对齐。
+
 ## 输出目录中的 config.yaml 只有 `{}`
 
 先检查配置对象是否是 `dict`/`Mapping` 子类。某些配置容器同时具有空 `__dict__`；如果序列化代码先判断 `hasattr(obj, '__dict__')`，会丢掉实际 mapping 项并输出空配置。转换顺序应先处理 `Mapping`，再处理普通对象属性，同时把 tuple、`Path`、`torch.device` 和 NumPy scalar 转成 YAML 可表示类型。

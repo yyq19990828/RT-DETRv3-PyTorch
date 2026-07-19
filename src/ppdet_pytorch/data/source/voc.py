@@ -22,6 +22,13 @@ from .dataset import DetDataset
 logger = logging.getLogger(__name__)
 
 
+def _required_text(element: ET.Element, path: str, xml_file: str) -> str:
+    value = element.findtext(path)
+    if value is None:
+        raise ValueError(f"Missing XML field {path!r} in {xml_file}")
+    return value
+
+
 @register
 @serializable
 class VOCDataSet(DetDataset):
@@ -50,7 +57,7 @@ class VOCDataSet(DetDataset):
         dataset_dir: Optional[str] = None,
         image_dir: Optional[str] = None,
         anno_path: Optional[str] = None,
-        data_fields: List[str] = None,
+        data_fields: Optional[List[str]] = None,
         sample_num: int = -1,
         label_list: Optional[str] = None,
         allow_empty: bool = False,
@@ -75,7 +82,7 @@ class VOCDataSet(DetDataset):
         self.empty_ratio = empty_ratio
 
         # Category mapping (populated in parse_dataset)
-        self.cname2cid = {}
+        self.cname2cid: Dict[str, int] = {}
 
     def _sample_empty(self, records: List[dict], num: int) -> List[dict]:
         """
@@ -108,6 +115,8 @@ class VOCDataSet(DetDataset):
         Anno_path should be a text file with each line containing:
             <image_path> <xml_annotation_path>
         """
+        if self.anno_path is None:
+            raise ValueError("anno_path is required for VOCDataSet")
         anno_path = os.path.join(self.dataset_dir, self.anno_path)
         image_dir = os.path.join(self.dataset_dir, self.image_dir)
 
@@ -143,6 +152,9 @@ class VOCDataSet(DetDataset):
 
                 # Parse image and XML paths
                 parts = line.strip().split()[:2]
+                if len(parts) != 2:
+                    logger.warning("Malformed VOC list entry %r, will be ignored", line)
+                    continue
                 img_file, xml_file = [os.path.join(image_dir, x) for x in parts]
 
                 # Validate image file
@@ -159,14 +171,15 @@ class VOCDataSet(DetDataset):
                 tree = ET.parse(xml_file)
 
                 # Get image ID (use counter if not in XML)
-                if tree.find("id") is None:
+                image_id_text = tree.findtext("id")
+                if image_id_text is None:
                     im_id = np.array([ct])
                 else:
-                    im_id = np.array([int(tree.find("id").text)])
+                    im_id = np.array([int(image_id_text)])
 
                 # Get image dimensions
-                im_w = float(tree.find("size").find("width").text)
-                im_h = float(tree.find("size").find("height").text)
+                im_w = float(_required_text(tree.getroot(), "size/width", xml_file))
+                im_h = float(_required_text(tree.getroot(), "size/height", xml_file))
 
                 # Validate dimensions
                 if im_w < 0 or im_h < 0:
@@ -188,17 +201,21 @@ class VOCDataSet(DetDataset):
 
                 i = 0
                 for obj in objs:
-                    cname = obj.find("name").text
+                    cname = _required_text(obj, "name", xml_file)
+                    if cname not in cname2cid:
+                        raise ValueError(
+                            f"Unknown VOC category {cname!r} in {xml_file}"
+                        )
 
                     # Parse difficult flag (user dataset may not contain it)
-                    _difficult = obj.find("difficult")
-                    _difficult = int(_difficult.text) if _difficult is not None else 0
+                    difficult_text = obj.findtext("difficult")
+                    difficult_value = int(difficult_text) if difficult_text else 0
 
                     # Parse bounding box
-                    x1 = float(obj.find("bndbox").find("xmin").text)
-                    y1 = float(obj.find("bndbox").find("ymin").text)
-                    x2 = float(obj.find("bndbox").find("xmax").text)
-                    y2 = float(obj.find("bndbox").find("ymax").text)
+                    x1 = float(_required_text(obj, "bndbox/xmin", xml_file))
+                    y1 = float(_required_text(obj, "bndbox/ymin", xml_file))
+                    x2 = float(_required_text(obj, "bndbox/xmax", xml_file))
+                    y2 = float(_required_text(obj, "bndbox/ymax", xml_file))
 
                     # Clip to image boundaries
                     x1 = max(0, x1)
@@ -211,7 +228,7 @@ class VOCDataSet(DetDataset):
                         gt_bbox[i, :] = [x1, y1, x2, y2]
                         gt_class[i, 0] = cname2cid[cname]
                         gt_score[i, 0] = 1.0
-                        difficult[i, 0] = _difficult
+                        difficult[i, 0] = difficult_value
                         i += 1
                     else:
                         logger.warning(
@@ -246,7 +263,7 @@ class VOCDataSet(DetDataset):
                         voc_rec[k] = v
 
                 # Separate empty and non-empty records
-                if len(objs) == 0:
+                if i == 0:
                     empty_records.append(voc_rec)
                 else:
                     records.append(voc_rec)
@@ -273,6 +290,10 @@ class VOCDataSet(DetDataset):
 
     def get_label_list(self) -> str:
         """Get full path to label list file."""
+        if self.label_list is None:
+            raise ValueError(
+                "label_list is not configured; Pascal VOC defaults are in use"
+            )
         return os.path.join(self.dataset_dir, self.label_list)
 
 

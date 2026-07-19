@@ -533,18 +533,20 @@ class CombineSSODLoader(object):
         self.unlabel_loader = unlabel_loader
 
     def __iter__(self):
+        label_loader_iter = iter(self.label_loader)
+        unlabel_loader_iter = iter(self.unlabel_loader)
         while True:
             try:
-                label_samples = next(self.label_loader_iter)
+                label_samples = next(label_loader_iter)
             except StopIteration:
-                self.label_loader_iter = iter(self.label_loader)
-                label_samples = next(self.label_loader_iter)
+                label_loader_iter = iter(self.label_loader)
+                label_samples = next(label_loader_iter)
 
             try:
-                unlabel_samples = next(self.unlabel_loader_iter)
+                unlabel_samples = next(unlabel_loader_iter)
             except StopIteration:
-                self.unlabel_loader_iter = iter(self.unlabel_loader)
-                unlabel_samples = next(self.unlabel_loader_iter)
+                unlabel_loader_iter = iter(self.unlabel_loader)
+                unlabel_samples = next(unlabel_loader_iter)
 
             yield (
                 label_samples[0],  # sup weak

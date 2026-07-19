@@ -53,7 +53,7 @@ class COCODataSet(DetDataset):
         dataset_dir: Optional[str] = None,
         image_dir: Optional[str] = None,
         anno_path: Optional[str] = None,
-        data_fields: List[str] = None,
+        data_fields: Optional[List[str]] = None,
         sample_num: int = -1,
         load_crowd: bool = False,
         allow_empty: bool = False,
@@ -80,8 +80,8 @@ class COCODataSet(DetDataset):
         self.empty_ratio = empty_ratio
 
         # Category mapping (populated in parse_dataset)
-        self.catid2clsid = {}
-        self.cname2cid = {}
+        self.catid2clsid: dict[int, int] = {}
+        self.cname2cid: dict[str, int] = {}
 
     def _sample_empty(self, records: List[dict], num: int) -> List[dict]:
         """
@@ -113,6 +113,8 @@ class COCODataSet(DetDataset):
         Populates self.roidbs with dataset records.
         Each record is a dict containing image path, annotations, etc.
         """
+        if self.anno_path is None:
+            raise ValueError("anno_path is required for COCODataSet")
         anno_path = os.path.join(self.dataset_dir, self.anno_path)
         image_dir = os.path.join(self.dataset_dir, self.image_dir)
 
@@ -236,7 +238,7 @@ class COCODataSet(DetDataset):
                 gt_bbox = np.zeros((num_bbox, 4), dtype=np.float32)
                 gt_class = np.zeros((num_bbox, 1), dtype=np.int32)
                 is_crowd = np.zeros((num_bbox, 1), dtype=np.int32)
-                gt_poly = [None] * num_bbox
+                gt_poly: List[Optional[List[List[float]]]] = [None] * num_bbox
                 gt_track_id = -np.ones((num_bbox, 1), dtype=np.int32)
 
                 has_segmentation = False

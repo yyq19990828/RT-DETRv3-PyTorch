@@ -49,7 +49,7 @@ class DetDataset(Dataset):
         dataset_dir: Optional[str] = None,
         image_dir: Optional[str] = None,
         anno_path: Optional[str] = None,
-        data_fields: List[str] = None,
+        data_fields: Optional[List[str]] = None,
         sample_num: int = -1,
         use_default_label: Optional[bool] = None,
         repeat: int = 1,
@@ -81,7 +81,7 @@ class DetDataset(Dataset):
         self.transform = None
 
         # Records storage (populated by parse_dataset)
-        self.roidbs = []
+        self.roidbs: List[Any] = []
 
     def __len__(self) -> int:
         return len(self.roidbs) * self.repeat
@@ -258,7 +258,7 @@ class ImageFolder(DetDataset):
             use_default_label=use_default_label,
         )
         self._imid2path = {}
-        self.roidbs = None
+        self.roidbs = []
         self.sample_num = sample_num
 
     def check_or_download_dataset(self):
@@ -292,6 +292,8 @@ class ImageFolder(DetDataset):
         return images
 
     def get_images(self):
+        if self.anno_path is None:
+            raise ValueError("anno_path is required to load images from COCO metadata")
         images_path = []
         coco = COCO(os.path.join(self.dataset_dir, self.anno_path))
         imgIds = coco.getImgIds(catIds=[])
@@ -305,7 +307,11 @@ class ImageFolder(DetDataset):
         ct = 0
         records = []
         anno_file = self.get_anno()
-        coco = COCO(anno_file)
+        coco = None
+        if do_eval:
+            if anno_file is None:
+                raise ValueError("anno_path is required when do_eval=True")
+            coco = COCO(anno_file)
         for image in images:
             assert image != "" and os.path.isfile(image), "Image {} not found".format(
                 image
@@ -313,6 +319,7 @@ class ImageFolder(DetDataset):
             if self.sample_num > 0 and ct >= self.sample_num:
                 break
             if do_eval:
+                assert coco is not None
                 image_id = self.get_image_id(image, coco)
                 ct = image_id
             rec = {"im_id": np.array([ct]), "im_file": image}
@@ -330,6 +337,7 @@ class ImageFolder(DetDataset):
                 return image_id
             else:
                 continue
+        raise ValueError(f"Image {image} is not present in the annotation file")
 
     def get_imid2path(self):
         return self._imid2path

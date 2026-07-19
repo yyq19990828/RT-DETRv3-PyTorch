@@ -56,7 +56,7 @@ class LVISDataSet(DetDataset):
         dataset_dir: Optional[str] = None,
         image_dir: Optional[str] = None,
         anno_path: Optional[str] = None,
-        data_fields: List[str] = None,
+        data_fields: Optional[List[str]] = None,
         sample_num: int = -1,
         load_crowd: bool = False,
         allow_empty: bool = False,
@@ -83,8 +83,8 @@ class LVISDataSet(DetDataset):
         self.empty_ratio = empty_ratio
 
         # Category mapping (populated in parse_dataset)
-        self.catid2clsid = {}
-        self.cname2cid = {}
+        self.catid2clsid: dict[int, int] = {}
+        self.cname2cid: dict[str, int] = {}
 
     def _sample_empty(self, records: List[dict], num: int) -> List[dict]:
         """
@@ -116,6 +116,8 @@ class LVISDataSet(DetDataset):
         Populates self.roidbs with dataset records.
         Each record is a dict containing image path, annotations, etc.
         """
+        if self.anno_path is None:
+            raise ValueError("anno_path is required for LVISDataSet")
         anno_path = os.path.join(self.dataset_dir, self.anno_path)
         image_dir = os.path.join(self.dataset_dir, self.image_dir)
 

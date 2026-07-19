@@ -1,6 +1,6 @@
 import torch
 import torch.distributed as dist
-from torch.utils.data import BatchSampler, RandomSampler, SequentialSampler
+from torch.utils.data import BatchSampler, RandomSampler, Sampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 
 
@@ -28,6 +28,7 @@ class DistributedBatchSampler(BatchSampler):
         distributed = (
             dist.is_initialized() or num_replicas is not None or rank is not None
         )
+        sampler: Sampler[int]
         if distributed:
             sampler = DistributedSampler(
                 dataset,

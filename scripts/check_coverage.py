@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FULL_PACKAGE_MINIMUM = 45.0
+FULL_PACKAGE_MINIMUM = 47.0
 DIRECT_MAINTAINED_MINIMUM = 66.0
 DIRECT_MAINTAINED_PREFIXES = (
     Path("src/ppdet_pytorch/cli"),

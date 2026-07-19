@@ -32,7 +32,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 - [x] 建立 Ruff/Mypy 统一质量命令；第一批覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测，并记录未覆盖范围。
 - [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
-- [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
+- [x] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
   - [x] 将门禁扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
   - [x] 将完整 `optimizer` 目录加入门禁，累计 22 个 source file 通过。
   - [x] 将完整 `metrics` 目录加入门禁，累计 27 个 source file 通过。
@@ -40,7 +40,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
   - [x] 将完整 `core` 目录加入门禁，累计 41 个 source file 通过。
   - [x] 将完整 `engine` 目录加入门禁，累计 47 个 source file 通过。
   - [x] 将完整 `modeling` 目录加入门禁，累计 84 个 source file 通过。
-  - [ ] 清理 `data` 剩余 87 项全包错误。
+  - [x] 清理 `data` 的 87 项错误，将整个 `src/ppdet_pytorch` 收敛为单一 Mypy 目标；含 3 个脚本共 103 个 source file 通过。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -78,6 +78,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 | 2026-07-19 | 新增 metrics 活跃测试后将全包下限提高到 43% | 新测试使隐藏 GPU 的本地全包实测达到 43.94%，应将真实新增覆盖转换为回退约束 |
 | 2026-07-19 | 新增 utils 活跃测试后将全包下限提高到 44% | 显式隐藏 GPU 的本地 CPU 实测达到 44.33%，新增覆盖应继续转成可执行回退约束 |
 | 2026-07-19 | modeling 批次后将全包下限提高到 45% | 3 个实际边界回归使隐藏 GPU 的本地 CPU 实测达到 45.05%，新增覆盖应继续转成可执行回退约束 |
+| 2026-07-19 | data 批次后完成全包 Mypy，并将覆盖率下限提高到 47% | 8 个 data 边界回归使隐藏 GPU 的本地 CPU 实测达到 47.09%；质量命令已无需逐模块范围清单 |
 | 2026-07-19 | 新增 core schema 活跃测试后将直接维护范围下限提高到 66% | 显式隐藏 GPU 的本地 CPU 实测达到 66.89%；Typeguard 4 合法值/错误值路径已成为可执行回退证据 |
 | 2026-07-19 | PyYAML stub 只进入 `quality`/`dev`，Paddle nightly 固定为已验证的 3.3.0.dev20251015 | 类型 stub 不属于核心运行时；宽松 Paddle nightly 约束曾解析到只有 aarch64 wheel 的版本，固定已验证版本并要求 Linux x86_64 可安装轮子可恢复干净 `dev` 同步 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
@@ -123,3 +124,5 @@ GitHub Actions [run 29674294425](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 Mypy 第八批清理 `modeling` 的 73 项类型错误，并修复三条实际运行边界：PyTorch `Tensor.max(dim)` 的返回元组被误作 Softmax 分数、无 neck 配置仍访问 `neck.out_shape`，以及空标注批次把缺失 denoising tensor 当作必有值。新增 3 个活跃回归覆盖 Softmax mask/实际 `bbox_num`、无 neck/aux head 构建和空标注无去噪回退；完整 `modeling` 并入后，统一门禁为 84 个 source file，建模与训练定向测试为 `60 passed, 5 skipped`，隐藏 GPU 的默认全量为 `264 passed, 8 skipped`。全包 Mypy 仅余 `data` 的 87 项。本机非 Paddle CPU 覆盖率为全包 `5,990/13,296`（`45.05%`）和直接维护范围 `1,202/1,797`（`66.89%`），因此全包回退下限从 44% 提高到 45%。
 
 GitHub Actions [run 29674832957](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29674832957) 在提交 `c309c42` 上通过全部 6 个 jobs：质量 job 为 162 个 Ruff 文件和 84 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `233 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `5,991/13,296`（`45.06%`），直接维护范围为 `1,202/1,797`（`66.89%`）；wheel smoke 为 `34 passed`。托管环境仍比本地多覆盖 1 条 `data` 语句，两个环境均通过新的 45%/66% 双门禁。
+
+Mypy 第九批清理 `data` 的 87 项类型错误，并删除逐模块临时范围清单；统一质量命令现对 100 个 package source 和 3 个质量/稳定性脚本执行 Mypy，本机实测 103 个 source file 无错误。审计同时修复了无 annotation 的 ImageFolder 错误构造 `COCO(None)`、SSOD loader 首次迭代未初始化、SSOD 固定 resize 返回未定义 `index`、VOC 必需 XML 字段缺失和 Pillow affine 新 API 等边界。8 个新回归覆盖这些数据加载/变换路径；data 与训练链定向为 `35 passed`，隐藏 GPU 的默认全量为 `272 passed, 8 skipped`。非 Paddle CPU 覆盖率为全包 `6,284/13,345`（`47.09%`）和直接维护范围 `1,202/1,799`（`66.81%`），因此全包回退下限从 45% 提高到 47%。本段为本机观测；当前批次的托管 CI 证据待推送后记录。

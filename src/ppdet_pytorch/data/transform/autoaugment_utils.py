@@ -887,14 +887,14 @@ def rotate_with_bboxes(image, bboxes, degrees, replace):
 def translate_x(image, pixels, replace):
     """Equivalent of PIL Translate in X dimension."""
     image = Image.fromarray(wrap(image))
-    image = image.transform(image.size, Image.AFFINE, (1, 0, pixels, 0, 1, 0))
+    image = image.transform(image.size, Image.Transform.AFFINE, (1, 0, pixels, 0, 1, 0))
     return unwrap(np.array(image), replace)
 
 
 def translate_y(image, pixels, replace):
     """Equivalent of PIL Translate in Y dimension."""
     image = Image.fromarray(wrap(image))
-    image = image.transform(image.size, Image.AFFINE, (1, 0, 0, 0, 1, pixels))
+    image = image.transform(image.size, Image.Transform.AFFINE, (1, 0, 0, 0, 1, pixels))
     return unwrap(np.array(image), replace)
 
 
@@ -915,23 +915,23 @@ def _shift_bbox(bbox, image_height, image_width, pixels, shift_horizontal):
     """
     pixels = int(pixels)
     # Convert bbox to integer pixel locations.
-    min_y = int(float(image_height) * bbox[0])
-    min_x = int(float(image_width) * bbox[1])
-    max_y = int(float(image_height) * bbox[2])
-    max_x = int(float(image_width) * bbox[3])
+    min_y_px = int(float(image_height) * bbox[0])
+    min_x_px = int(float(image_width) * bbox[1])
+    max_y_px = int(float(image_height) * bbox[2])
+    max_x_px = int(float(image_width) * bbox[3])
 
     if shift_horizontal:
-        min_x = np.maximum(0, min_x - pixels)
-        max_x = np.minimum(image_width, max_x - pixels)
+        min_x_px = int(np.maximum(0, min_x_px - pixels))
+        max_x_px = int(np.minimum(image_width, max_x_px - pixels))
     else:
-        min_y = np.maximum(0, min_y - pixels)
-        max_y = np.minimum(image_height, max_y - pixels)
+        min_y_px = int(np.maximum(0, min_y_px - pixels))
+        max_y_px = int(np.minimum(image_height, max_y_px - pixels))
 
     # Convert bbox back to floats.
-    min_y = float(min_y) / float(image_height)
-    min_x = float(min_x) / float(image_width)
-    max_y = float(max_y) / float(image_height)
-    max_x = float(max_x) / float(image_width)
+    min_y = float(min_y_px) / float(image_height)
+    min_x = float(min_x_px) / float(image_width)
+    max_y = float(max_y_px) / float(image_height)
+    max_x = float(max_x_px) / float(image_width)
 
     # Clip the bboxes to be sure the fall between [0, 1].
     min_y, min_x, max_y, max_x = _clip_bbox(min_y, min_x, max_y, max_x)
@@ -982,7 +982,7 @@ def shear_x(image, level, replace):
     # [1    level
     #    0    1].
     image = Image.fromarray(wrap(image))
-    image = image.transform(image.size, Image.AFFINE, (1, level, 0, 0, 1, 0))
+    image = image.transform(image.size, Image.Transform.AFFINE, (1, level, 0, 0, 1, 0))
     return unwrap(np.array(image), replace)
 
 
@@ -993,7 +993,7 @@ def shear_y(image, level, replace):
     # [1    0
     #    level    1].
     image = Image.fromarray(wrap(image))
-    image = image.transform(image.size, Image.AFFINE, (1, 0, 0, level, 1, 0))
+    image = image.transform(image.size, Image.Transform.AFFINE, (1, 0, 0, level, 1, 0))
     return unwrap(np.array(image), replace)
 
 
@@ -1142,7 +1142,7 @@ def equalize(image):
         """Scale the data in the channel to implement equalize."""
         im = im[:, :, c].astype(np.int32)
         # Compute the histogram of the image channel.
-        histo, _ = np.histogram(im, range=[0, 255], bins=256)
+        histo, _ = np.histogram(im, range=(0.0, 255.0), bins=256)
 
         # For the purposes of computing the step, filter out the nonzeros.
         nonzero = np.where(np.not_equal(histo, 0))
@@ -1625,5 +1625,5 @@ def distort_image_with_autoaugment(image, bboxes, augmentation_name):
         raise ValueError("Invalid augmentation_name: {}".format(augmentation_name))
 
     policy = available_policies[augmentation_name]()
-    augmentation_hparams = {}
+    augmentation_hparams: dict[str, float] = {}
     return build_and_apply_nas_policy(policy, image, bboxes, augmentation_hparams)

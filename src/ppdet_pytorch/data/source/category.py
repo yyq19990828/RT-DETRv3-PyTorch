@@ -33,7 +33,7 @@ __all__ = ["get_categories"]
 
 def get_categories(
     metric_type: str, anno_file: Optional[str] = None, arch: Optional[str] = None
-) -> Tuple[Dict, Dict]:
+) -> Tuple[Optional[Dict], Dict]:
     """
     Get class id to category id map and category id to category name map.
 
