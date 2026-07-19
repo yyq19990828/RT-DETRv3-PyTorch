@@ -171,6 +171,18 @@ def run(FLAGS, cfg):
             "Using base seed %s (process seed %s on rank %s)", seed, seed + rank, rank
         )
 
+    has_semi_supervised_weights = (
+        "pretrain_student_weights" in cfg
+        and "pretrain_teacher_weights" in cfg
+        and cfg.pretrain_teacher_weights
+        and cfg.pretrain_student_weights
+    )
+    if has_semi_supervised_weights:
+        raise NotImplementedError(
+            "Semi-supervised teacher/student weights are not supported by "
+            "the PyTorch trainer"
+        )
+
     # build trainer
     # ssod_method = cfg.get('ssod_method', None)
     # if ssod_method is not None:
@@ -192,15 +204,6 @@ def run(FLAGS, cfg):
     # load weights
     if FLAGS.resume is not None:
         trainer.resume_weights(FLAGS.resume)
-    elif (
-        "pretrain_student_weights" in cfg
-        and "pretrain_teacher_weights" in cfg
-        and cfg.pretrain_teacher_weights
-        and cfg.pretrain_student_weights
-    ):
-        trainer.load_semi_weights(
-            cfg.pretrain_teacher_weights, cfg.pretrain_student_weights
-        )
     elif "pretrain_weights" in cfg and cfg.pretrain_weights:
         trainer.load_weights(cfg.pretrain_weights)
 

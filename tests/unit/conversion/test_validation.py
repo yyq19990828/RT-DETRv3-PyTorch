@@ -34,6 +34,11 @@ class DummyTorchModel(torch.nn.Module):
         return {"pred_boxes": x + 1.0, "pred_logits": x * 2.0}
 
 
+class TensorPaddleModel(paddle.nn.Layer):
+    def forward(self, x):
+        return x
+
+
 class TestModelOutputValidator:
     """Test suite for ModelOutputValidator"""
 
@@ -99,6 +104,16 @@ class TestModelOutputValidator:
         assert result.passed is True
         assert "pred_boxes" in result.details
         assert "pred_logits" in result.details
+
+    def test_validate_forward_pass_rejects_incompatible_output_structures(
+        self, validator
+    ):
+        sample_input = np.random.randn(1, 3, 8, 8).astype(np.float32)
+
+        with pytest.raises(TypeError, match="incompatible output structures"):
+            validator.validate_forward_pass(
+                TensorPaddleModel(), DummyTorchModel(), sample_input
+            )
 
     def test_print_validation_report(self, validator, capsys):
         """Test validation report printing"""

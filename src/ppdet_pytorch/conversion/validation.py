@@ -124,6 +124,10 @@ class ModelOutputValidator:
         # Handle dict outputs (RT-DETRv3 returns dict with pred_boxes and pred_logits)
         if isinstance(paddle_output, dict) and isinstance(torch_output, dict):
             return self._compare_dict_outputs(paddle_output, torch_output)
+        if isinstance(paddle_output, dict) or isinstance(torch_output, dict):
+            raise TypeError(
+                "Paddle and PyTorch models returned incompatible output structures"
+            )
 
         # Handle tensor outputs
         if isinstance(paddle_output, (list, tuple)):

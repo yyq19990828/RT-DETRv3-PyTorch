@@ -8,7 +8,7 @@
 
 | 入口 | 当前必需输入 | 已声明支持 | 显式边界 |
 |---|---|---|---|
-| Train | `-c/--config` | `-o`、resume、seed、AMP、DDP；`--enable_ce` 只保留历史确定性兼容 | `--eval`、slim、TensorBoard、W&B、profiler、proposal/save-prediction 选项会在解析阶段失败，不再静默忽略；训练后评估需单独运行 Eval |
+| Train | `-c/--config` | `-o`、resume、seed、AMP、DDP；`--enable_ce` 只保留历史确定性兼容 | `--eval`、slim、TensorBoard、W&B、profiler、proposal/save-prediction 选项会在解析阶段失败；半监督 teacher/student 权重未迁移并会显式失败；训练后评估需单独运行 Eval |
 | Eval | config + checkpoint | annotation/image override、batch/worker、持久输出、EMA、device、轻量 override | batch 必须 `>=1`、worker 必须 `>=0`；只声明 COCO 当前数据 API |
 | Infer | config + checkpoint + 单图/目录之一 | batch、阈值、可视化、JSON、EMA、device、TestReader Resize override | 不提供外置 NMS、切片、多尺度或 Paddle `infer_list` 合同 |
 | Convert | Paddle checkpoint + PyTorch 输出 | 严格/宽松、目标 config 校验、批量失败隔离、mapping/summary、受控内存 | Paddle 是 dev extra；默认要求目标 config，只有显式 `--no-validate` 才跳过 shape 审核 |

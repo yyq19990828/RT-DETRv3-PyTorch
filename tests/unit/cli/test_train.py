@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from ppdet_pytorch.cli import train as train_cli
+from ppdet_pytorch.core.workspace import AttrDict
 
 
 def test_parse_args_accepts_supported_training_contract():
@@ -207,3 +208,25 @@ def test_run_keeps_enable_ce_seed_zero_compatibility(monkeypatch):
 
     assert seeds == [0]
     assert config["seed"] == 0
+
+
+def test_run_rejects_unimplemented_semi_supervised_weights(monkeypatch):
+    monkeypatch.setattr(train_cli, "init_parallel_env", lambda: None)
+    monkeypatch.setattr(
+        train_cli,
+        "Trainer",
+        lambda *args, **kwargs: pytest.fail("unsupported config constructed a trainer"),
+    )
+    flags = SimpleNamespace(
+        ddp=False,
+        enable_ce=False,
+        seed=None,
+        resume=None,
+    )
+    config = AttrDict(
+        pretrain_teacher_weights="teacher.pth",
+        pretrain_student_weights="student.pth",
+    )
+
+    with pytest.raises(NotImplementedError, match="teacher/student"):
+        train_cli.run(flags, config)

@@ -17,8 +17,8 @@ MYPY_TARGETS = (
     "scripts/check_coverage.py",
     "scripts/check_quality.py",
     "scripts/run_stability_experiment.py",
-    "src/ppdet_pytorch/conversion/models.py",
-    "src/ppdet_pytorch/conversion/tensor_utils.py",
+    "src/ppdet_pytorch/cli",
+    "src/ppdet_pytorch/conversion",
     "src/ppdet_pytorch/deploy",
 )
 

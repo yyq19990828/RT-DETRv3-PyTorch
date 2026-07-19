@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Iterable
 
 from ..conversion import __version__, configure_logging
 from ..conversion.converter import WeightConverter
@@ -178,9 +179,10 @@ For more information, see: docs/migrations/weight-conversion.md
     return parser
 
 
-def discover_input_paths(input_value: str):
+def discover_input_paths(input_value: str) -> list[Path]:
     """Discover batch inputs from a file, directory, or glob pattern."""
     input_path = Path(input_value)
+    candidates: Iterable[Path]
     if input_path.is_dir():
         candidates = input_path.glob("*.pdparams")
     elif glob.has_magic(input_value):

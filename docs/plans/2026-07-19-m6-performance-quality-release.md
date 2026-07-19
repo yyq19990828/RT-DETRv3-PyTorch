@@ -33,6 +33,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 - [x] 建立 Ruff/Mypy 统一质量命令；第一批覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测，并记录未覆盖范围。
 - [x] 将 Ruff 格式与基础 lint 扩展到全部活跃 Python 文件，删除 Ruff 临时范围清单。
 - [ ] 将 Mypy 类型门禁逐批扩展到其余活跃模块，最后删除 Mypy 临时范围清单。
+  - [x] 将门禁扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
+  - [ ] 清理其余 235 项全包错误，当前分布为 `data` 87、`modeling` 73、`engine` 26、`core` 21、`utils` 21、`metrics` 5 和 `optimizer` 2。
 - [x] 生成模块级覆盖率报告，区分全包与直接维护范围，建立可执行的初始回退阈值。
 - [x] 建立 Python 3.9–3.12 CPU CI，覆盖安装、质量、核心测试、导出和 wheel smoke。
 - [ ] 为 CUDA 增加独立受控 job 或自托管验证证据，不把 CUDA wheel 安装等同于 GPU 验证。
@@ -64,7 +66,8 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 |---|---|---|
 | 2026-07-19 | Ruff 同时负责格式化和基础 lint，移除 Black | 维护者明确指定 Ruff；单一工具减少格式规则分叉 |
 | 2026-07-19 | 第一批质量门禁只覆盖 M1–M5 直接维护面 | 全仓当前有 128 个格式文件和 293 个 lint 项，一次性机械改写不利于审计 |
-| 2026-07-19 | Mypy 与 Ruff 分工，不把类型检查并入 lint | Ruff 不替代静态类型语义；当前全包 123 项需要渐进清理 |
+| 2026-07-19 | Mypy 与 Ruff 分工，不把类型检查并入 lint | Ruff 不替代静态类型语义；初始全包 123 项快照需要通过当前重新审计和渐进清理校正 |
+| 2026-07-19 | Mypy 以完整低错误目录为最小扩展单位 | `cli` 和 `conversion` 合计只有 4 项，可在不进行大范围继承代码改写的前提下审核并入门禁 |
 | 2026-07-19 | 同时执行全包 42% 和直接维护范围 65% 的回退下限 | 干净 `test` extra 实测分别为 42.48% 和 65.56%；双范围能防止用排除低覆盖模块的方式制造虚假达标 |
 | 2026-07-19 | Python 3.9/3.10 使用兼容的 ONNX Runtime 上界 | ONNX Runtime 新版已分别停止提供 3.9/3.10 wheel；统一无上界会使干净矩阵无法安装 |
 | 2026-07-19 | CI 核心矩阵不安装 `dev` extra | `test` extra 覆盖 Pytest、ONNX 与 ONNX Runtime，但不引入 Paddle；Paddle 对齐继续使用独立环境 |
@@ -72,7 +75,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 ## 完成记录
 
-进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。Mypy 仍只对 6 个 source file/目录通过，初始全包 123 项尚未清完。
+进行中。第一批已移除 Black，锁定 Ruff `0.15.22`，增加独立 `quality` extra 和 `scripts/check_quality.py`。第二批将 Ruff format/lint 扩展到仓库根目录；排除规则仅保留只读 `third-party/`、历史 `tests/legacy/` 和生成目录，158 个活跃 Python 文件通过，默认全量测试为 `246 passed, 3 skipped, 6 warnings in 9.87s`。该批当时的 Mypy 门禁为 6 个 source file/目录，123 项全包数字为后续已校正的历史快照。
 
 同批增加不含 Paddle 的 `test` extra 和 GitHub Actions workflow。四个 UV 隔离 CPU 环境已在隐藏 GPU 后本地验证：Python 3.9/3.10/3.11/3.12 均完成锁文件安装，分别为 `211 passed, 7 skipped, 17 deselected`；Python 3.9 使用 ONNX Runtime `1.19.2`，3.10 使用 `1.20.1`，3.11/3.12 使用 `1.27.0`。wheel 重装后五个 CLI `--help` 全部通过，Infer/Eval/Export 定向 smoke 为 `34 passed`。
 
@@ -81,3 +84,5 @@ GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 2026-07-19 覆盖率阶段以 Python `3.12.11` 和不含 Paddle 的独立 `test` extra 执行活跃测试，结果为 `216 passed, 7 skipped, 17 deselected, 6 warnings in 11.68s`。全包为 `5,605/13,195` 语句（`42.48%`），`cli/conversion/core/deploy` 为 `1,169/1,783`（`65.56%`）；`scripts/check_coverage.py` 强制 42%/65% 双下限，Python 3.12 CPU job 执行该门禁，临时 coverage 产物会自动清理。已安装 `dev` extra 的本机 `.venv` 观测为 `43.11%`，不作为 CI 下限。逐模块结果和限制见 [`docs/reports/coverage-validation.md`](../reports/coverage-validation.md)。90% 提升目标、完整 Mypy、CUDA CI、性能和发布候选仍未完成。
 
 GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29671674073) 在提交 `19bcb60` 上通过全部 6 个 jobs。其中 Python 3.12 CPU coverage job 为 `216 passed, 7 skipped, 17 deselected`，全包 `5,606/13,195`（`42.49%`）和直接维护范围 `1,169/1,783`（`65.56%`）均通过门禁；其余 Python 3.9–3.11 CPU、Ruff/Mypy 质量和 wheel smoke jobs 也均通过。
+
+Mypy 第二批将完整 `cli`、`conversion` 目录并入既有 `deploy` 和脚本门禁，共 17 个 source file 通过。清理的 4 项包含两个实际边界：训练 CLI 对未实现的半监督 teacher/student 权重显式失败，转换验证器对 Paddle/PyTorch 输出结构不一致显式失败；定向测试为 `112 passed`。同日全包重新审计为 235 项、39 个文件，历史 123 项仅保留为初始快照，不代表当前待办数量。

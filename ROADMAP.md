@@ -99,6 +99,7 @@
 - [ ] 引入统一 lint/format/type-check 命令，清理当前 mypy 和 API 注解缺口。
   - [x] 首批 Ruff format/lint 覆盖 `cli`、`conversion`、`core`、`deploy`、`scripts` 及对应单测；Mypy 首批 6 个 source file/目录通过。
   - [x] Ruff format/lint 扩展到全部活跃 Python 文件并移除临时范围清单。
+  - [x] Mypy 扩展到完整 `cli`、`conversion`、`deploy` 和 3 个质量/稳定性脚本，17 个 source file 通过。
   - [ ] 将 Mypy 门禁扩展到其余活跃模块并清理剩余类型错误。
 - [ ] 生成覆盖率报告，将已迁移核心模块的有效覆盖率提升到 90% 目标。
   - [x] 记录全包和逐模块基线，建立全包 42% 与 `cli/conversion/core/deploy` 65% 的可执行回退下限。

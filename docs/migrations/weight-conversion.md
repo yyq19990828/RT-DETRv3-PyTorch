@@ -46,6 +46,8 @@
 4. **模块级**：同输入下比较 backbone/neck/transformer/head 激活。
 5. **模型级**：同一预处理后比较 boxes/logits 和 COCO 指标。
 
+模型输出比较只接受两端同为字典或同为 tensor/list/tuple；一端为字典、另一端为 tensor 会显式报输出结构不兼容，不将结构错配伪装成数值误差。
+
 当前官方 R18/R34/R50 已覆盖文件、映射、参数、eval 模块、后处理、受控训练 loss 和整体梯度方向；优化器更新、真实训练收敛和 COCO 指标仍未验证。
 
 ## 三变体官方 checkpoint 汇总（2026-07-18）

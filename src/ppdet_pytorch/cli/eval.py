@@ -5,6 +5,7 @@ import os
 import tempfile
 from contextlib import nullcontext
 from pathlib import Path
+from typing import ContextManager
 
 import torch
 from tqdm import tqdm
@@ -205,6 +206,7 @@ def main(argv=None):
     cfg.use_gpu = device.type == "cuda"
     cfg.use_ema = False
 
+    output_context: ContextManager[str]
     if args.output_dir:
         output_directory = Path(args.output_dir)
         output_directory.mkdir(parents=True, exist_ok=True)
