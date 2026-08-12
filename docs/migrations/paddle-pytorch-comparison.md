@@ -2,7 +2,7 @@
 
 > **历史快照**：本文记录 2025-10-20 时的模块对比结果，其
 > “Complete”等状态不代表当前仓库已完成端到端训练或数值验收。
-> 当前边界见[迁移局限](limitations.md)，使用方式以[根 README](../../README.md)为准。
+> 当前 RT-DETRv3 边界见[模型局限](../models/rtdetrv3/limitations.md)，使用方式以[根 README](../../README.md)为准。
 
 **Generated**: 2025-10-20
 **Purpose**: Paddle to PyTorch migration consistency verification
