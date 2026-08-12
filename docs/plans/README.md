@@ -11,19 +11,11 @@
 
 新计划可从 [`TEMPLATE.md`](TEMPLATE.md) 复制。
 
-## 当前文档
+## 当前活动计划
 
-- [M12——R34/R50 导出后端设备矩阵计划](2026-07-19-m12-variant-export-device-matrix.md)：已完成；12 条用户路径和托管矩阵通过，TorchScript/ONNX CPU 数值门槛通过，R34/R50 ONNX CUDA 的 R18 门槛外推失败作为限制保留。
-- [M11——ONNX Runtime CUDA/CPU 推理计划](2026-07-19-m11-onnx-runtime-cuda-inference.md)：已完成；保持 CPU 默认与 CPU CI，显式 CUDA provider、依赖隔离、R18 四图同设备数值证据和托管矩阵均通过。
-- [M10——TorchScript CUDA/CPU 推理计划](2026-07-19-m10-torchscript-cuda-inference.md)：已完成；拆分 ONNX provider 与 TorchScript device 合同，真实四图和托管矩阵均通过。
-- [M9——导出产物端到端推理计划](2026-07-19-m9-exported-inference.md)：已完成；Infer 可直接消费 checkpoint/ONNX/TorchScript，真实图和托管矩阵均通过。
-- [M8——R34/R50 多变体导出验收计划](2026-07-19-m8-variant-export-validation.md)：已完成；R34/R50 的 ONNX/TorchScript 已通过固定 640、动态 batch 1/4/8 和真实图的每图全候选一对一回归。
-- [M7——公开模型多变体运行时验收计划](2026-07-19-m7-variant-runtime-validation.md)：已完成；公开 R18/R34/R50 均通过 Models、真实 COCO Infer 和统一四图 Eval 运行时验收，未恢复 deferred 长训。
-- [M6——性能、质量与发布计划](2026-07-19-m6-performance-quality-release.md)：已完成；Ruff/Mypy、Python 3.9–3.12 CPU CI、本机 CUDA/COCO 性能、直接维护范围 90.80% 覆盖率、三变体可视化和 `v0.1.0` 的 11 个公开 asset 均已验收。
-- [M5——配置、CLI 与导出边界计划](2026-07-19-m5-cli-export-boundaries.md)：已完成；覆盖 workspace/config、五个 CLI 合同、官方 R18 eager 推理，以及 ONNX/TorchScript 固定高宽和动态 batch 边界。
-- [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：同权重完整 val2017 gate 已通过；本机长训于 2026-07-19 暂缓，已提供 GitHub 社区分片执行脚本。
-- [M3——训练、评估与恢复验收计划](2026-07-18-m3-training-evaluation-recovery.md)：已完成，覆盖 optimizer/LR、完整 COCO epoch/val、恢复、AMP/EMA、DDP、loss reduce 与梯度累积。
-- [M2——官方 checkpoint 转换与分层数值对齐计划](2026-07-18-m2-official-checkpoint-alignment.md)：已完成的 M2 计划，覆盖三变体官方权重、分层数值、批量失败隔离和受控内存转换。
-- [M1——R18 最小训练链迁移计划](2026-07-18-m1-minimal-training-chain.md)：已完成的 M1 计划，覆盖 config、最小 COCO batch、loss、backward、optimizer 和短训练验收证据。
-- [2026-07-18 迁移进度快照](2026-07-18-migration-status.md)：对历史 `specs/` 记录与当前代码的核验结果。
+- [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：活动但 deferred；同权重完整 val2017 gate 已通过，本机 72 epoch、多 seed 与 R34/R50 长训于 2026-07-19 暂缓。
+
+## 已完成记录
+
+- [RT-DETRv3 v0.1.0 已完成计划归档](../archive/rtdetrv3-v0.1.0/plans/README.md)：M1–M3、M5–M12 和 2026-07-18 迁移进度快照。
 - [仓库迁移路线图](../../ROADMAP.md)：未完成工作的唯一顶层大纲。

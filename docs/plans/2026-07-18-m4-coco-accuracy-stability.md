@@ -5,7 +5,7 @@
 - 最后更新：`2026-07-19`
 - 负责人：`maintainer`
 - 对应路线图：[`ROADMAP.md` Milestone 4](../../ROADMAP.md)
-- 前置计划：[`M3——训练、评估与恢复验收`](2026-07-18-m3-training-evaluation-recovery.md)
+- 前置计划：[`M3——训练、评估与恢复验收`](../archive/rtdetrv3-v0.1.0/plans/2026-07-18-m3-training-evaluation-recovery.md)
 
 ## 背景
 
@@ -34,7 +34,7 @@ R18 官方同权重完整 val2017 gate 已通过，但完整 `3 seeds × 72 epoc
 - 若同权重完整 AP 超差，先比较预测 JSON 和第一个分歧的中间激活，再修改实现；不通过放宽最终指标掩盖差异。
 - 固定 R18 的 72 epoch PyTorch 训练协议、seed、数据 checksum、命令、配置快照、日志和 checkpoint，完成至少一个 seed 后再扩展到 3 seed。
 - R18 达标后按同样证据结构验证 R34 和 R50。
-- 维护 [`docs/reports/accuracy-validation.md`](../reports/accuracy-validation.md)，明确区分官方发布参考、本机直接观察、推断、训练策略差异和未完成项。
+- 在本活动计划中记录后续长训证据，明确区分官方发布参考、本机直接观察、推断、训练策略差异和未完成项；[`v0.1.0` 准确率报告](../archive/rtdetrv3-v0.1.0/reports/accuracy-validation.md)保持冻结，计划完成后再建立新的版本化归档。
 
 ### 非目标
 
@@ -111,7 +111,7 @@ Issue 第一批只认领 R18 的 seed `0/1/2`。R34/R50 的 CLI 入口已经保�
 - [ ] R18 / seed 1
 - [ ] R18 / seed 2
 
-完成者应在评论中给出 commit、认领项、`metadata.json`、`result.json`、`train.log`、`eval.log`，并说明训练是否中断/恢复。checkpoint 只报告 `result.json` 中的 SHA-256；若需要共享大文件，应使用外部制品存储，不直接上传到 Issue。maintainer 审核证据前保持清单未完成，审核通过后再把对应结果写入准确率报告。
+完成者应在评论中给出 commit、认领项、`metadata.json`、`result.json`、`train.log`、`eval.log`，并说明训练是否中断/恢复。checkpoint 只报告 `result.json` 中的 SHA-256；若需要共享大文件，应使用外部制品存储，不直接上传到 Issue。maintainer 审核证据前保持清单未完成，审核通过后再把对应结果写入本计划的完成记录。
 
 ### 阶段 3：R18 标准 schedule 与稳定性
 
@@ -124,7 +124,7 @@ Issue 第一批只认领 R18 的 seed `0/1/2`。R34/R50 的 CLI 入口已经保�
 
 - [ ] 在 R18 门槛通过后依次运行 R34、R50 的同权重完整 val 和训练验收。（deferred）
 - [ ] 更新模型表、权重 checksum、可复现命令和局限说明。
-- [ ] 完成准确率报告并把可复用结论推广到 `docs/migrations/`。
+- [ ] 完成本计划的准确率与稳定性证据记录，把可复用结论推广到 `docs/migrations/`，并建立新的版本化归档。
 
 ## 风险与回退
 
@@ -140,7 +140,7 @@ Issue 第一批只认领 R18 的 seed `0/1/2`。R34/R50 的 CLI 入口已经保�
 - [ ] R18 72 epoch 至少 3 seed 的配置、命令、日志、checkpoint、checksum、均值和标准差完整可获取。
 - [ ] R34/R50 只在 R18 通过后验收，且每个声称支持的变体都有同结构证据。
 - [ ] 默认核心测试和 CUDA 定向测试保持通过；所有测试/探针临时产物按仓库规则清理。
-- [ ] `ROADMAP.md`、计划索引、准确率报告和迁移经验保持一致，不含工作站绝对路径。
+- [ ] `ROADMAP.md`、计划索引、本计划完成记录、后续版本归档和迁移经验保持一致，不含工作站绝对路径。
 
 ## 决策记录
 
