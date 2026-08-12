@@ -1,5 +1,7 @@
 # R34/R50 导出后端设备矩阵验证报告
 
+> 历史报告快照（2026-07-19，M12）：本文保存已完成验证记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`verified with documented ONNX CUDA tolerance deviation`
 - 验证日期：`2026-07-19`
 - 代码基线：`0067cfa`

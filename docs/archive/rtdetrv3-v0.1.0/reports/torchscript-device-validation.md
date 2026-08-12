@@ -5,7 +5,7 @@
 - 实现提交：`85b956d`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
 
-> 历史快照（2026-07-19，M10）：本文的 ONNX CPU-only 结论记录 M10 验收时状态；当前 ONNX CUDA/CPU 合同见 [M11 验证报告](onnx-runtime-device-validation.md)。
+> 历史快照（2026-07-19，M10）：本文的 ONNX CPU-only 结论记录 M10 验收时状态；当前 ONNX CUDA/CPU 合同见 [M11 验证报告](onnx-runtime-device-validation.md)。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 结论
 
