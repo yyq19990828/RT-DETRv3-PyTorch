@@ -1,8 +1,8 @@
 # Technical Report: RT-DETRv3
 
-> **归档说明**：本文是迁移过程中的历史技术分析快照，不代表当前仓库的安装方式、目录结构或验证状态。当前使用方法与迁移状态以[根 README](../../README.md)为准。
+> **归档说明**：本文是迁移过程中的历史技术分析快照，不代表当前仓库的安装方式、目录结构或验证状态。当前使用方法与迁移状态以[根 README](../../../../README.md)为准，当前模型合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
-**Paper**: [`docs/papers/2409.08475v3.pdf`](../papers/2409.08475v3.pdf) | **Date**: 2024-12-19 | **Code**: [`third-party/RT-DETRv3-paddle`](../../third-party/RT-DETRv3-paddle/)
+**Paper**: [`docs/archive/rtdetrv3-v0.1.0/papers/2409.08475v3.pdf`](../papers/2409.08475v3.pdf) | **Date**: 2024-12-19 | **Code**: [`third-party/RT-DETRv3-paddle`](../../../../third-party/RT-DETRv3-paddle/)
 
 **Note**: 本报告由 Claude Code 自动生成,分析了 RT-DETRv3 论文及其 PaddlePaddle 实现之间的对应关系。
 
@@ -938,7 +938,7 @@ python deploy/python/infer.py \
 
 - **Paper**: RT-DETRv3: Real-time End-to-End Object Detection with Hierarchical Dense Positive Supervision
   - arXiv: https://arxiv.org/abs/2409.08475v3
-  - Local: `docs/papers/2409.08475v3.pdf`
+  - Local: `docs/archive/rtdetrv3-v0.1.0/papers/2409.08475v3.pdf`
 - **Code**: PaddlePaddle Implementation
   - Local: `third-party/RT-DETRv3-paddle/`
 - **Generated**: 2025-10-14 by Claude Code

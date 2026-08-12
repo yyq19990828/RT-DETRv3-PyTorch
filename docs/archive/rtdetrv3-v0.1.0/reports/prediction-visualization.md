@@ -1,5 +1,7 @@
 # R18/R34/R50 权重转换可视化对比
 
+> 历史报告快照（2026-07-19，M6）：本文保存 `v0.1.0` 权重对比记录，不代表后续版本状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`verified`
 - 验证日期：`2026-07-19`
 - 范围：官方 Paddle R18/R34/R50 权重与对应 PyTorch 转换权重，同一张 COCO val2017 图片
@@ -93,8 +95,8 @@ OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 CUDA_VISIBLE_DEVICES="" \
   --pytorch-results "output/visual-comparison/$MODEL/pytorch/detections.json" \
   --paddle-checkpoint "pretrained_models/paddle/$CHECKPOINT.pdparams" \
   --pytorch-checkpoint "pretrained_models/pytorch/$CHECKPOINT.pth" \
-  --output-image "docs/reports/assets/$MODEL-coco-000000000139-comparison.png" \
-  --output-json "docs/reports/data/$MODEL-coco-000000000139-comparison.json"
+  --output-image "docs/archive/rtdetrv3-v0.1.0/reports/assets/$MODEL-coco-000000000139-comparison.png" \
+  --output-json "docs/archive/rtdetrv3-v0.1.0/reports/data/$MODEL-coco-000000000139-comparison.json"
 ```
 
 `--model` 必须与当前权重一致，避免图像正确但 JSON 元数据仍沿用默认 R18 名称。JSON 不记录工作站绝对路径，但记录图片、annotation、两个 checkpoint 的大小与 SHA-256，以及统一后的预测和逐项匹配误差。

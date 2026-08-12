@@ -1,5 +1,7 @@
 # 发布候选验证报告
 
+> 历史报告快照（2026-07-19，M6）：本文保存 `v0.1.0` 发布验收记录，不代表后续版本状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`v0.1.0 published; all 11 assets publicly read back`
 - 验证日期：`2026-07-19`
 - 发布加固基线提交：`dc09cd8`
@@ -60,7 +62,7 @@
 | R50 | `182,510,207` | `5e3e34ac3d3d14f57ebf6100b146b5702f8dface24fbe57cbc993f59381b67f7` |
 | R18-vd backbone 初始化权重 | `44,876,108` | `2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2` |
 
-三个检测权重合计 `411,756,783` 字节（约 `392.7 MiB`）；加上 R18-vd 训练初始化权重后，四个 Release 权重合计 `456,632,891` 字节（约 `435.5 MiB`）。来源 URL、上游 revision、源/转换权重 checksum、mapping report 的 size/checksum/映射数和 CLI alias 以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。三变体同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁目前只覆盖 R18，见[精度报告](accuracy-validation.md)。
+三个检测权重合计 `411,756,783` 字节（约 `392.7 MiB`）；加上 R18-vd 训练初始化权重后，四个 Release 权重合计 `456,632,891` 字节（约 `435.5 MiB`）。来源 URL、上游 revision、源/转换权重 checksum、mapping report 的 size/checksum/映射数和 CLI alias 以 [`configs/checkpoints/rtdetrv3_coco.yml`](../../../../configs/checkpoints/rtdetrv3_coco.yml) 为机器可读真值。三变体同图片可视化见[预测对比报告](prediction-visualization.md)，完整 val2017 数值门禁目前只覆盖 R18，见[精度报告](accuracy-validation.md)。
 
 ## 权重托管决策
 
