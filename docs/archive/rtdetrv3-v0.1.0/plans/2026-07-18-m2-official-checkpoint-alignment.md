@@ -1,10 +1,12 @@
 # M2——官方 checkpoint 转换与分层数值对齐计划
 
+> 历史计划快照（2026-07-18，M2）：本文保存已完成执行记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`completed`
 - 创建日期：`2026-07-18`
 - 最后更新：`2026-07-18`
 - 负责人：`maintainer`
-- 对应路线图：[`ROADMAP.md` Milestone 2](../../ROADMAP.md)
+- 对应路线图：[`ROADMAP.md` Milestone 2](../../../../ROADMAP.md)
 - 前置提交：`f95f4e0`（M1 最小训练链）
 
 ## 背景

@@ -1,10 +1,12 @@
 # M1——R18 最小训练链迁移计划
 
+> 历史计划快照（2026-07-18，M1）：本文保存已完成执行记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`completed`
 - 创建日期：`2026-07-18`
 - 最后更新：`2026-07-18`
 - 负责人：`maintainer`
-- 对应路线图：[`ROADMAP.md` Milestone 1](../../ROADMAP.md)
+- 对应路线图：[`ROADMAP.md` Milestone 1](../../../../ROADMAP.md)
 
 **完成状态**：M1 实现、本机验收和证据整理已完成；提交号在本计划的后续进度快照中记录。
 
@@ -149,4 +151,4 @@
 
 2026-07-18 已完成 M1 源码、测试和文档实施，并通过全量活跃测试。训练使用明确缩减的测试 override，不是原始 640 训练、Paddle 数值等价或 COCO 精度证据。空 GT、真实数据、AMP/EMA/DDP、checkpoint 恢复和 Eval/Infer 继续由 M2–M5 跟踪。
 
-可复用结论已推广至 [`training-and-validation.md`](../migrations/training-and-validation.md) 和 [`registry-and-configuration.md`](../migrations/registry-and-configuration.md)；历史用例去向记录在 [`tests/legacy/README.md`](../../tests/legacy/README.md)。
+可复用结论已推广至 [`training-and-validation.md`](../../../migrations/training-and-validation.md) 和 [`registry-and-configuration.md`](../../../migrations/registry-and-configuration.md)；历史用例去向记录在 [`tests/legacy/README.md`](../../../../tests/legacy/README.md)。
