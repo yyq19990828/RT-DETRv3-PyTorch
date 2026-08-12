@@ -952,7 +952,7 @@
     ]
   },
   "comparison_image": {
-    "path": "docs/reports/assets/r34-coco-000000000139-comparison.png",
+    "path": "docs/archive/rtdetrv3-v0.1.0/reports/assets/r34-coco-000000000139-comparison.png",
     "size_bytes": 903225,
     "sha256": "f3a715f3467ae77e6181db8c5f225335c8a62037d52761133840bc5fc0a83cac"
   }
