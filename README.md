@@ -120,9 +120,9 @@ uv run --extra export rtdetrv3-export \
   --output-dir output/export
 ```
 
-推理入口互斥接受 `--checkpoint`、`--onnx-model` 或 `--torchscript-model`，三者复用配置中的 `TestReader`、RT-DETR 后处理结果、阈值、JSON 和可视化，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；只有训练 checkpoint 可加 `--use-ema`。ONNX 默认 CPU，也可在 GPU ORT 环境中显式选择 `--device cuda[:id]`；TorchScript 与 checkpoint 在 CUDA 可用时默认使用 CUDA，也可显式 `--device cpu`，无 CUDA 时自动回退 CPU。`--imgsz` 必须与导出时的固定高宽一致。当前参数与 Paddle Infer 的差异见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。R18 设备合同见 [TorchScript](docs/reports/torchscript-device-validation.md)和[ONNX Runtime](docs/reports/onnx-runtime-device-validation.md)报告；R34/R50 的 CUDA/CPU 功能矩阵及 ONNX CUDA 严格门槛偏差见[多变体设备报告](docs/reports/variant-export-device-validation.md)。
+推理入口互斥接受 `--checkpoint`、`--onnx-model` 或 `--torchscript-model`，三者复用配置中的 `TestReader`、RT-DETR 后处理结果、阈值、JSON 和可视化，不额外执行 NMS。`--infer-dir` 支持非递归目录推理，`--batch-size` 控制实际 batch；只有训练 checkpoint 可加 `--use-ema`。ONNX 默认 CPU，也可在 GPU ORT 环境中显式选择 `--device cuda[:id]`；TorchScript 与 checkpoint 在 CUDA 可用时默认使用 CUDA，也可显式 `--device cpu`，无 CUDA 时自动回退 CPU。`--imgsz` 必须与导出时的固定高宽一致。当前参数与 Paddle Infer 的差异见 [CLI 与导出边界](docs/models/rtdetrv3/cli-and-export.md)。R18 设备合同见归档的 [TorchScript](docs/archive/rtdetrv3-v0.1.0/reports/torchscript-device-validation.md)和[ONNX Runtime](docs/archive/rtdetrv3-v0.1.0/reports/onnx-runtime-device-validation.md)报告；R34/R50 的 CUDA/CPU 功能矩阵及 ONNX CUDA 严格门槛偏差见[多变体设备报告](docs/archive/rtdetrv3-v0.1.0/reports/variant-export-device-validation.md)。
 
-导出入口使用 tensor-only 适配层，默认生成动态 batch、固定导出高宽的 ONNX opset 17，以及相同固定高宽的 traced TorchScript；空间尺寸改变时需要按新尺寸重新导出。Train/Eval/Infer/Convert/Export 只声明文档中列出的当前合同；未迁移的 Paddle Train 参数会直接报错，不会静默忽略。完整参数和部署边界同样见 [CLI 与导出迁移经验](docs/migrations/cli-and-export.md)。
+导出入口使用 tensor-only 适配层，默认生成动态 batch、固定导出高宽的 ONNX opset 17，以及相同固定高宽的 traced TorchScript；空间尺寸改变时需要按新尺寸重新导出。Train/Eval/Infer/Convert/Export 只声明文档中列出的当前合同；未迁移的 Paddle Train 参数会直接报错，不会静默忽略。完整参数和部署边界同样见 [CLI 与导出边界](docs/models/rtdetrv3/cli-and-export.md)。
 
 `tools/train.py`、`tools/eval.py`、`tools/infer.py` 和 `tools/convert_weights.py` 保留为兼容入口。Paddle 对齐和诊断脚本位于 `tools/dev/`。
 
@@ -139,7 +139,7 @@ uv run --extra dev pytest
 uv run --extra test python scripts/check_coverage.py
 ```
 
-当前覆盖率范围、排除规则和逐模块结果见 [M6 覆盖率验证报告](docs/reports/coverage-validation.md)。
+当前覆盖率范围、排除规则和逐模块结果见归档的 [M6 覆盖率验证报告](docs/archive/rtdetrv3-v0.1.0/reports/coverage-validation.md)。
 
 ## 代码质量
 
@@ -157,9 +157,9 @@ uv run --extra quality python scripts/check_quality.py --fix
 
 wheel 包含 26 个受支持 YAML 配置与 Apache-2.0/NOTICE，但不携带模型权重、数据集或 Paddle 子模块。安装 wheel 后，从仓库外仍可使用 `configs/...` 路径访问包内配置。发布候选权重的来源、大小、SHA-256 和 mapping 数记录在 [`configs/checkpoints/rtdetrv3_coco.yml`](configs/checkpoints/rtdetrv3_coco.yml)。
 
-[`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0) 已通过 GitHub Releases 对外发布，包含 wheel、sdist、四个 PyTorch 权重、四份 mapping report 和 `SHA256SUMS`，共 11 个 asset。固定 tag 的全部资产已通过匿名公开下载、严格 checksum 回读和系统 `sha256sum` 复核；具体环境、命令和限制见[release 验证报告](docs/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见[预测可视化报告](docs/reports/prediction-visualization.md)。
+[`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0) 已通过 GitHub Releases 对外发布，包含 wheel、sdist、四个 PyTorch 权重、四份 mapping report 和 `SHA256SUMS`，共 11 个 asset。固定 tag 的全部资产已通过匿名公开下载、严格 checksum 回读和系统 `sha256sum` 复核；具体环境、命令和限制见归档的 [release 验证报告](docs/archive/rtdetrv3-v0.1.0/reports/release-validation.md)。R18/R34/R50 的 Paddle 原权重与 PyTorch 转换权重 COCO 统一渲染见归档的[预测可视化报告](docs/archive/rtdetrv3-v0.1.0/reports/prediction-visualization.md)。
 
-`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；三个公开检测 asset 均已通过 Models CLI 下载校验，并使用各自配置完成 CPU 单图 Infer 和统一四图 COCO Eval 链路冒烟，详见[多变体运行时报告](docs/reports/variant-runtime-validation.md)。
+`v0.1.0` 的 manifest 已将 R18/R34/R50 检测权重和 `r18-backbone` 训练初始化权重标记为 `published`，下载地址固定到 `v0.1.0` tag 和对应 asset 文件名，不使用 `latest`。`verify` 可校验本地权重的大小和 SHA-256；三个公开检测 asset 均已通过 Models CLI 下载校验，并使用各自配置完成 CPU 单图 Infer 和统一四图 COCO Eval 链路冒烟，详见归档的[多变体运行时报告](docs/archive/rtdetrv3-v0.1.0/reports/variant-runtime-validation.md)。
 
 ```bash
 # 构建 wheel 与 sdist
@@ -205,10 +205,10 @@ uv run python scripts/check_release.py --verify-release-dir "$release_dir"
 ├── tests/                   # 单元、集成和数值对齐测试
 ├── tools/dev/               # 仅开发期使用的 Paddle 对齐工具
 ├── docs/
-│   ├── plans/             # 实施计划与阶段任务
-│   ├── migrations/        # 框架对比、迁移局限与排错经验
-│   ├── reports/           # 历史技术报告
-│   └── papers/            # 论文与参考资料
+│   ├── migrations/        # 跨模型复用的迁移经验
+│   ├── models/rtdetrv3/   # RT-DETRv3 模型专属合同
+│   ├── plans/             # 活动计划与计划模板
+│   └── archive/           # 已完成版本的计划、报告与证据
 ├── ROADMAP.md              # 未完成迁移大纲
 └── third-party/
     └── RT-DETRv3-paddle/    # 官方 Paddle Git 子模块
@@ -216,6 +216,7 @@ uv run python scripts/check_release.py --verify-release-dir "$release_dir"
 
 当前 Paddle 子模块固定在官方仓库提交 `349e7d99a5065e7b684118912e6a74178d4f4625`，与本仓库此前内置的 Paddle 源码快照内容一致。
 
-文档约定见 [`docs/plans`](docs/plans/README.md) 和
-[`docs/migrations`](docs/migrations/README.md)；未完成工作以
-[`ROADMAP.md`](ROADMAP.md) 为准。
+共享迁移经验见 [`docs/migrations`](docs/migrations/README.md)，RT-DETRv3 模型合同见
+[`docs/models/rtdetrv3`](docs/models/rtdetrv3/README.md)，活动计划见
+[`docs/plans`](docs/plans/README.md)，已完成证据见
+[`docs/archive`](docs/archive/README.md)；未完成工作以 [`ROADMAP.md`](ROADMAP.md) 为准。

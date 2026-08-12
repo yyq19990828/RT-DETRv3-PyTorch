@@ -2,8 +2,8 @@
 
 **Status**: Active
 **Last updated**: 2026-07-19
-**Current evidence snapshot**: [`docs/plans/2026-07-18-migration-status.md`](docs/plans/2026-07-18-migration-status.md)
-**Latest completed execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)
+**Current evidence snapshot**: [`docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md)
+**Latest completed execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m12-variant-export-device-matrix.md)
 **Current execution plan**: 暂无；M4 长训保持 deferred，后续工作需要重新立项
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
@@ -68,13 +68,13 @@
 - [x] 与对应 Paddle 基线比较 AP/AP50/AP75/APs/APm/APl；R18 同设备主 AP 绝对差 `1.65599e-7`，通过 `0.5 AP` 目标。
 - [ ] 在 R18 通过后依次验证 R34 和 R50，不在未定位数值差异时同时展开多变体训练。（deferred）
 - [ ] 至少使用 3 个 seed 记录均值和方差；发布验收扩展到 5 个 seed。（deferred）
-- [x] 生成 `docs/reports/accuracy-validation.md`，明确区分训练误差和框架实现缺陷。
+- [x] 生成 `docs/archive/rtdetrv3-v0.1.0/reports/accuracy-validation.md`，明确区分训练误差和框架实现缺陷。
 
 **Exit criteria**: 每个声称支持的模型变体都有可复现的精度报告和可获取的权重。
 
 ## Milestone 5 — 配置、CLI 与导出边界（P1）
 
-**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 输入验证。workspace 冲突优先级、连续配置隔离、RT-DETRv3 Paddle YAML 支持矩阵和五个公开 CLI contract 均已有活跃测试与指南。ONNX opset 17/ONNX Runtime CPU 和 traced TorchScript 已验证固定高宽、动态 batch 1/4/8；这不代表单产物动态高宽、全部 Paddle 参数、其他模型或其他 provider 已支持。
+**执行计划**：[`M5——配置、CLI 与导出边界计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m5-cli-export-boundaries.md)。Infer eager 基线复用 TestReader、batch dict、模型内置 `bbox/bbox_num` 后处理和 Eval checkpoint 加载规则；官方 R18 已完成 CPU/FP32 真实 COCO 单图、batch 4 和 608/640 输入验证。workspace 冲突优先级、连续配置隔离、RT-DETRv3 Paddle YAML 支持矩阵和五个公开 CLI contract 均已有活跃测试与指南。ONNX opset 17/ONNX Runtime CPU 和 traced TorchScript 已验证固定高宽、动态 batch 1/4/8；这不代表单产物动态高宽、全部 Paddle 参数、其他模型或其他 provider 已支持。
 
 - [x] 为 `workspace` 补充 shared/inject/from_config/显式参数冲突和全局状态隔离测试。
 - [x] 明确哪些 Paddle YAML 字段直接兼容、哪些映射、哪些不支持，补充配置迁移指南。
@@ -91,7 +91,7 @@
 
 ## Milestone 6 — 性能、质量与发布（P2）
 
-**执行计划**：[`M6——性能、质量与发布计划`](docs/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；最新托管非 Paddle CPU 覆盖率为全包 51.42%、直接维护范围 90.45%，回退下限保持 50.5%/90%，直接维护范围的 90% 目标已有托管证据。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 与真实 COCO 端到端性能证据均已通过。PyTorch 四个 model-only workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%；COCO 端到端推理吞吐为 Paddle 的 1.579×，可见 input-pipeline stall 占 29.68%，按维护者决策只记录差异而不追求完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，11 个上传资产已支持单命令原子组装、拒绝覆盖和失败清理；三个检测权重与 R18-vd backbone 初始化权重已纳入统一发布合同，R18/R34/R50 的 Paddle 原权重/PyTorch 转换权重均完成 COCO 同图统一渲染和机器可读差异报告。维护者已确认并发布 `v0.1.0`；11 个固定 tag 资产已通过匿名公开回读，公开下载的 R18 权重也已通过 CPU Infer/Eval 链路冒烟。详见[性能报告](docs/reports/performance-validation.md)、[发布报告](docs/reports/release-validation.md)和[预测可视化报告](docs/reports/prediction-visualization.md)。
+**执行计划**：[`M6——性能、质量与发布计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m6-performance-quality-release.md)。2026-07-19 初始快照为全包 45% 语句覆盖率、128 个待 Ruff 格式化文件、293 项默认 Ruff lint 和 123 项 Mypy 全包错误。当前 Ruff/Mypy 已扩展到全部活跃 Python 范围和纳入门禁的仓库脚本；最新托管非 Paddle CPU 覆盖率为全包 51.42%、直接维护范围 90.45%，回退下限保持 50.5%/90%，直接维护范围的 90% 目标已有托管证据。Python 3.9–3.12 CPU CI、本机 CUDA 运行和 R18 同机 CPU/CUDA model-only 与真实 COCO 端到端性能证据均已通过。PyTorch 四个 model-only workload 吞吐均高于 Paddle，CUDA 训练峰值 allocated 显存约高 16%；COCO 端到端推理吞吐为 Paddle 的 1.579×，可见 input-pipeline stall 占 29.68%，按维护者决策只记录差异而不追求完全对齐。发布候选的许可、清单、wheel/sdist、包外安装和模型 checksum 已验证，11 个上传资产已支持单命令原子组装、拒绝覆盖和失败清理；三个检测权重与 R18-vd backbone 初始化权重已纳入统一发布合同，R18/R34/R50 的 Paddle 原权重/PyTorch 转换权重均完成 COCO 同图统一渲染和机器可读差异报告。维护者已确认并发布 `v0.1.0`；11 个固定 tag 资产已通过匿名公开回读，公开下载的 R18 权重也已通过 CPU Infer/Eval 链路冒烟。详见[性能报告](docs/archive/rtdetrv3-v0.1.0/reports/performance-validation.md)、[发布报告](docs/archive/rtdetrv3-v0.1.0/reports/release-validation.md)和[预测可视化报告](docs/archive/rtdetrv3-v0.1.0/reports/prediction-visualization.md)。
 
 - [x] 在同一硬件、驱动、batch 和精度下建立 Paddle/PyTorch 基准；两个官方 wheel 的 CUDA/cuDNN 版本不同，已分别记录而不声称完全同运行时。
 - [x] 记录训练吞吐、推理延迟、峰值显存、DataLoader 占比和关键算子 profile。
@@ -130,7 +130,7 @@
 
 ## Milestone 7 — 公开模型多变体运行时验收（P1）
 
-**执行计划**：[`M7——公开模型多变体运行时验收计划`](docs/plans/2026-07-19-m7-variant-runtime-validation.md)。本阶段只补发布后三个检测模型的用户侧 eager 运行证据，不恢复 M4 长训，也不把小样本 Eval 指标作为正式 AP。
+**执行计划**：[`M7——公开模型多变体运行时验收计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m7-variant-runtime-validation.md)。本阶段只补发布后三个检测模型的用户侧 eager 运行证据，不恢复 M4 长训，也不把小样本 Eval 指标作为正式 AP。
 
 - [x] 使用公开 R18 asset 完成 Models CLI 下载、真实 COCO 单图 Infer 和四图 Eval 冒烟。
 - [x] 使用公开 R34 asset 完成相同 CPU/FP32 运行时验收。
@@ -139,11 +139,11 @@
 
 **Exit criteria**: 三个已发布检测权重均能从固定 tag URL 下载并通过 checksum，使用各自配置严格加载，完成真实图片 Infer 和同一 COCO 小样本 Eval；报告明确不外推为 R34/R50 完整 AP、训练收敛或导出支持。
 
-**验收记录**：2026-07-19，R34/R50 公开下载的 size/SHA-256 与 manifest 一致；同一 COCO 单图分别生成 `31/28` 条检测和可解码图片，同一四图子集 Eval 均写出 1,200 条候选。未发现变体专属实现故障；完整证据见[公开模型多变体运行时报告](docs/reports/variant-runtime-validation.md)。
+**验收记录**：2026-07-19，R34/R50 公开下载的 size/SHA-256 与 manifest 一致；同一 COCO 单图分别生成 `31/28` 条检测和可解码图片，同一四图子集 Eval 均写出 1,200 条候选。未发现变体专属实现故障；完整证据见[公开模型多变体运行时报告](docs/archive/rtdetrv3-v0.1.0/reports/variant-runtime-validation.md)。
 
 ## Milestone 8 — R34/R50 多变体导出验收（P1）
 
-**执行计划**：[`M8——R34/R50 多变体导出验收计划`](docs/plans/2026-07-19-m8-variant-export-validation.md)。复用 M5 已建立的 tensor-only 导出和严格输出合同，只扩展另两个已发布检测变体。
+**执行计划**：[`M8——R34/R50 多变体导出验收计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m8-variant-export-validation.md)。复用 M5 已建立的 tensor-only 导出和严格输出合同，只扩展另两个已发布检测变体。
 
 - [x] 导出 R34 的 ONNX opset 17 和 traced TorchScript，完成 CPU 重载与输出回归。
 - [x] 导出 R50 的 ONNX opset 17 和 traced TorchScript，完成 CPU 重载与输出回归。
@@ -152,11 +152,11 @@
 
 **Exit criteria**: R34/R50 两种格式均通过 checker/reload，并在 CPU/FP32、640×640 的 batch 1/4/8 和真实输入上满足 `bbox_num`/分组严格一致、每图全部候选按类别/score/box 一对一匹配、score `<=2e-5`、坐标 `<=0.02 px` 的合同。
 
-**验收记录**：2026-07-19，R34/R50 ONNX 最大 score/box 误差分别为 `9.4771e-6/0.011780 px` 和 `1.8962e-5/0.005615 px`；TorchScript 本次逐值为 0。ONNX 近似并列低分候选最多每图重排 2 行，但 300/300 候选均完成同图唯一匹配。详见[多变体导出验证报告](docs/reports/variant-export-validation.md)。
+**验收记录**：2026-07-19，R34/R50 ONNX 最大 score/box 误差分别为 `9.4771e-6/0.011780 px` 和 `1.8962e-5/0.005615 px`；TorchScript 本次逐值为 0。ONNX 近似并列低分候选最多每图重排 2 行，但 300/300 候选均完成同图唯一匹配。详见[多变体导出验证报告](docs/archive/rtdetrv3-v0.1.0/reports/variant-export-validation.md)。
 
 ## Milestone 9 — 导出产物端到端推理（P1）
 
-**执行计划**：[`M9——导出产物端到端推理计划`](docs/plans/2026-07-19-m9-exported-inference.md)。在不复制预处理和展示逻辑的前提下，让 Infer CLI 直接消费 M5/M8 已验证的 ONNX/TorchScript tensor 合同。
+**执行计划**：[`M9——导出产物端到端推理计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m9-exported-inference.md)。在不复制预处理和展示逻辑的前提下，让 Infer CLI 直接消费 M5/M8 已验证的 ONNX/TorchScript tensor 合同。
 
 - [x] Infer 模型源互斥接受 checkpoint、ONNX 和 TorchScript，保留原 checkpoint 用法。
 - [x] 导出后端复用同一 TestReader、batch、阈值、JSON、类别映射和可视化路径。
@@ -165,11 +165,11 @@
 
 **Exit criteria**: 安装后的 `rtdetrv3-infer` 可使用三种模型源；R18 真实图片三后端在同一预处理和阈值下满足 M8 每图全候选数值合同，并均生成可解码可视化与机器可读 JSON。
 
-**验收记录**：2026-07-19，R18 同一真实图在 checkpoint/ONNX/TorchScript 下均输出 30 条阈值后检测；ONNX 相对 eager 的最大 score/框误差为 `1.49e-6/9.16e-5 px`，TorchScript 为 0，三份渲染图字节一致。640 产物与 608 预处理的负例在执行前明确失败。提交 `545578a` 的 [GitHub Actions run 29689593612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29689593612) 六个 job 全部通过。详见[导出产物推理报告](docs/reports/exported-inference-validation.md)。
+**验收记录**：2026-07-19，R18 同一真实图在 checkpoint/ONNX/TorchScript 下均输出 30 条阈值后检测；ONNX 相对 eager 的最大 score/框误差为 `1.49e-6/9.16e-5 px`，TorchScript 为 0，三份渲染图字节一致。640 产物与 608 预处理的负例在执行前明确失败。提交 `545578a` 的 [GitHub Actions run 29689593612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29689593612) 六个 job 全部通过。详见[导出产物推理报告](docs/archive/rtdetrv3-v0.1.0/reports/exported-inference-validation.md)。
 
 ## Milestone 10 — TorchScript CUDA/CPU 推理（P1）
 
-**执行计划**：[`M10——TorchScript CUDA/CPU 推理计划`](docs/plans/2026-07-19-m10-torchscript-cuda-inference.md)。M10 当时保持 ONNX Runtime CPU provider 边界，只把 PyTorch 自身可执行的 TorchScript module 扩展到 CUDA/CPU 双设备。
+**执行计划**：[`M10——TorchScript CUDA/CPU 推理计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m10-torchscript-cuda-inference.md)。M10 当时保持 ONNX Runtime CPU provider 边界，只把 PyTorch 自身可执行的 TorchScript module 扩展到 CUDA/CPU 双设备。
 
 - [x] TorchScript 在 CUDA 可用时默认 GPU，无 CUDA时自动回退 CPU，并支持显式设备。
 - [x] ONNX 继续拒绝非 CPU provider，不把 PyTorch CUDA 可用性外推给 ONNX Runtime。
@@ -178,11 +178,11 @@
 
 **Exit criteria**: TorchScript Infer 在真实 CUDA 与 CPU fallback 上均完成四图 batch，并与 eager CUDA 满足记录的每图输出合同；M10 验收时 ONNX 的 CPU-only 限制保持显式。
 
-**验收记录**：2026-07-19，实现提交 `85b956d`。四条 eager/TorchScript × CUDA/CPU 路径均输出 `[30,1,25,2]` 条检测；TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，同设备渲染全部字节一致。跨设备两条近似候选换序单独记录，不全局放宽同设备门槛。本地非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率 `51.45%/90.46%`，Ruff/Mypy 通过。提交 `f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全绿；Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`，托管覆盖率 `51.46%/90.46%`，wheel smoke `60 passed`。详见[TorchScript 设备验证报告](docs/reports/torchscript-device-validation.md)。
+**验收记录**：2026-07-19，实现提交 `85b956d`。四条 eager/TorchScript × CUDA/CPU 路径均输出 `[30,1,25,2]` 条检测；TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`，同设备渲染全部字节一致。跨设备两条近似候选换序单独记录，不全局放宽同设备门槛。本地非 Paddle 全仓 `353 passed, 7 skipped, 34 deselected`，覆盖率 `51.45%/90.46%`，Ruff/Mypy 通过。提交 `f8b7439` 的 [GitHub Actions run 29690660612](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29690660612) 六个 job 全绿；Python 3.9–3.12 均为 `353 passed, 9 skipped, 17 deselected`，托管覆盖率 `51.46%/90.46%`，wheel smoke `60 passed`。详见[TorchScript 设备验证报告](docs/archive/rtdetrv3-v0.1.0/reports/torchscript-device-validation.md)。
 
 ## Milestone 11 — ONNX Runtime CUDA/CPU 推理（P1）
 
-**执行计划**：[`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)。保持 ONNX 默认 CPU 和托管 CPU CI，只为显式设备选择增加 CUDA provider，并隔离 CPU/GPU ORT distributions。
+**执行计划**：[`M11——ONNX Runtime CUDA/CPU 推理计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md)。保持 ONNX 默认 CPU 和托管 CPU CI，只为显式设备选择增加 CUDA provider，并隔离 CPU/GPU ORT distributions。
 
 - [x] ONNX 默认 CPU，显式 `--device cuda[:id]` 选择 `CUDAExecutionProvider` 并保留 CPU 算子回退。
 - [x] provider 缺失或 session 完全静默降级时明确失败并给出 GPU extra 安装指引。
@@ -192,11 +192,11 @@
 
 **Exit criteria**: ONNX Infer 可在显式 CUDA 和 CPU fallback 上完成真实图片 batch 推理；两个 provider 分别与同设备 eager 满足记录的每图输出合同，默认 CPU 用户和 Python 3.9–3.12 CPU CI 不回归。
 
-**验收记录**：2026-07-19，实现提交 `dc97927`。R18 四图的 ONNX CUDA/CPU 相对同设备 eager 最大 score/box 误差分别为 `6.06865e-4/0.0238647 px` 和 `6.82473e-6/0.000183105 px`，两组均无候选重排。提交 `983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[ONNX Runtime 设备验证报告](docs/reports/onnx-runtime-device-validation.md)。
+**验收记录**：2026-07-19，实现提交 `dc97927`。R18 四图的 ONNX CUDA/CPU 相对同设备 eager 最大 score/box 误差分别为 `6.06865e-4/0.0238647 px` 和 `6.82473e-6/0.000183105 px`，两组均无候选重排。提交 `983821f` 的 [GitHub Actions run 29692163999](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29692163999) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[ONNX Runtime 设备验证报告](docs/archive/rtdetrv3-v0.1.0/reports/onnx-runtime-device-validation.md)。
 
 ## Milestone 12 — R34/R50 导出后端设备矩阵（P1）
 
-**执行计划**：[`M12——R34/R50 导出后端设备矩阵计划`](docs/plans/2026-07-19-m12-variant-export-device-matrix.md)。不外推 R18 证据，分别验证两个已发布深层变体的 ONNX/TorchScript CUDA/CPU 用户侧路径。
+**执行计划**：[`M12——R34/R50 导出后端设备矩阵计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m12-variant-export-device-matrix.md)。不外推 R18 证据，分别验证两个已发布深层变体的 ONNX/TorchScript CUDA/CPU 用户侧路径。
 
 **当前结果**：12 条用户路径均完成，TorchScript CUDA/CPU 逐值一致，ONNX CPU 延续 M8 门槛。R34/R50 ONNX CUDA 功能与候选一对一匹配成立，但分别观测到 `0.00141865/0.0375671 px` 和 `0.000972390/0.0349426 px`，未通过 R18 的 `1e-3/0.03 px` 严格门槛；该偏差保留为 provider 限制，不用事后包络改写全局合同。
 
@@ -207,7 +207,7 @@
 
 **Exit criteria**: R34/R50 的两个导出后端在显式 CUDA 与 CPU 上均完成真实四图推理；每项执行计划中预注册的类别、score、box 和分组门槛，任何未通过项必须保留为限制而不能改写成对齐证据；结论不外推到动态高宽、低精度或性能。
 
-**验收记录**：2026-07-19，证据提交 `fc3a6f8`。R34/R50 的 12 条路径、8 组同设备比较和 48 张图片均完成；TorchScript CUDA/CPU 逐值一致，ONNX CPU 通过既有门槛，ONNX CUDA 的 R18 门槛外推失败已按实记录。提交 `fc3a6f8` 的 [GitHub Actions run 29693029694](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29693029694) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[多变体设备验证报告](docs/reports/variant-export-device-validation.md)。
+**验收记录**：2026-07-19，证据提交 `fc3a6f8`。R34/R50 的 12 条路径、8 组同设备比较和 48 张图片均完成；TorchScript CUDA/CPU 逐值一致，ONNX CPU 通过既有门槛，ONNX CUDA 的 R18 门槛外推失败已按实记录。提交 `fc3a6f8` 的 [GitHub Actions run 29693029694](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29693029694) 六个 job 全绿；Python 3.9–3.12 均为 `358 passed, 9 skipped, 17 deselected`，托管覆盖率为 `51.49%/90.50%`，wheel smoke `65 passed`。详见[多变体设备验证报告](docs/archive/rtdetrv3-v0.1.0/reports/variant-export-device-validation.md)。
 
 ## 依赖顺序
 
