@@ -1,5 +1,7 @@
 # M11——ONNX Runtime CUDA/CPU 推理计划
 
+> 历史计划快照（2026-07-19，M11）：本文保存已完成执行记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`

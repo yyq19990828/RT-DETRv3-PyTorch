@@ -2,11 +2,11 @@
 
 - 状态：`in-progress`
 - 快照日期：`2026-07-18`
-- 下一步大纲：[`ROADMAP.md`](../../ROADMAP.md)
+- 下一步大纲：[`ROADMAP.md`](../../../../ROADMAP.md)
 - 快照创建时的执行计划：[`M3——训练、评估与恢复验收`](2026-07-18-m3-training-evaluation-recovery.md)
-- 历史规格去向：[`spec-history.md`](../migrations/spec-history.md)
+- 历史规格去向：[`spec-history.md`](../migration/spec-history.md)
 
-> 本文是 2026-07-18 迁移过程中的历史快照，不代表当前仓库状态；当前结论以 [`ROADMAP.md`](../../ROADMAP.md) 和对应里程碑计划为准。
+> 本文是 2026-07-18 迁移过程中的历史快照，不代表当前仓库状态；当前结论以 [`ROADMAP.md`](../../../../ROADMAP.md) 和对应里程碑计划为准。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 已验证基线
 
