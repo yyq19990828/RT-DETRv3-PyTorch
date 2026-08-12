@@ -5,7 +5,7 @@
 - 最后更新：`2026-07-19`
 - 负责人：`Codex / repository maintainers`
 
-> 历史计划快照（2026-07-19，M9）：设备合同后来由 [M10](2026-07-19-m10-torchscript-cuda-inference.md) 和 [M11](2026-07-19-m11-onnx-runtime-cuda-inference.md) 扩展。
+> 历史计划快照（2026-07-19，M9）：设备合同后来由 [M10](2026-07-19-m10-torchscript-cuda-inference.md) 和 [M11](2026-07-19-m11-onnx-runtime-cuda-inference.md) 扩展。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 背景
 
