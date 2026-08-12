@@ -8,7 +8,7 @@
 - `load_config()` 每次保留已注册组件的 schema，但清除上一份 YAML 的运行时值和命名配置块；同一进程连续加载 R18 → R50 → R18 不会继承前一模型字段。
 - 需要在一份已加载配置上追加测试或命令级 override 时，先 `load_config()`，再调用 `merge_config()`；不要依赖第二次 `load_config()` 做增量合并。
 - 解析失败发生在替换当前 workspace 之前，因此格式错误的下一份 YAML 不会清空仍在使用的配置。
-- `create()` 接受注册类、注册名、全局命名配置块，或包含 `name`/`type` 的配置映射。当前优先级和注入规则见[注册与配置迁移](registry-and-configuration.md)。
+- `create()` 接受注册类、注册名、全局命名配置块，或包含 `name`/`type` 的配置映射。当前优先级和注入规则见[注册与配置迁移](../../migrations/registry-and-configuration.md)。
 
 **已验证（2026-07-19）**：同一 Python 进程连续构建 R18、R50、R18，backbone depth 为 `18/50/18`，参数量为 `22,942,893 / 45,483,573 / 22,942,893`；workspace 定向测试同时覆盖失败解析保留、shared、inject、from_config 和显式参数冲突。
 
@@ -22,7 +22,7 @@
 | `TrainReader`、`EvalReader`、`TestReader` | 变换字段基本保留，构建形式需要改写 | 每个 reader 块添加 `name`；当前 Infer 严格复用 `TestReader.sample_transforms` |
 | Decode/Resize/NormalizeImage/Permute 和当前训练增强 | 当前 RT-DETRv3 路径支持 | 插值、`keep_ratio`、归一化和 collate 语义仍需按输入验证，不能只按同名推断等价 |
 | `worker_num`、batch size、shuffle、drop_last | 支持 | `worker_num` 映射为 PyTorch DataLoader worker 数；DDP sampler 与 worker RNG 使用当前 PyTorch 合同 |
-| `epoch`、`log_iter`、`save_dir`、`snapshot_epoch` | 支持 | checkpoint 频率和 ETA 语义见[训练与数值验证](training-and-validation.md) |
+| `epoch`、`log_iter`、`save_dir`、`snapshot_epoch` | 支持 | checkpoint 频率和 ETA 语义见[训练与数值验证](../../migrations/training-and-validation.md) |
 | `find_unused_parameters`、`norm_type: sync_bn` | 支持当前 DDP 训练路径 | 只在分布式初始化后生效；CPU/单进程不能证明 SyncBN 路径通过 |
 | `use_ema`、`ema_decay`、`ema_decay_type` | 支持 PyTorch 自有训练状态 | EMA checkpoint 可由 Eval/Infer 的 `--use-ema` 选择；不导入 Paddle optimizer/EMA 状态 |
 | `pretrain_weights` 的 Paddle URL/`.pdparams` | 需要改写 | 先转换为 PyTorch `.pth`，再使用本地路径；Paddle 与转换依赖只在 `dev` extra |

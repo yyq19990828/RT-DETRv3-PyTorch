@@ -17,7 +17,7 @@
 - 当前 batch conversion 只支持一个 config/架构；跨架构需要分别运行。低内存模式会释放源 tensor 并避免常驻完整目标模型，但 Paddle 文件与最终 PyTorch state dict 仍整体驻留，不是流式格式。
 - Paddle 权重转换范围只包括模型参数，不迁移 Paddle optimizer 状态。PyTorch 训练侧已有 schema v1 保存 optimizer、scheduler、EMA、GradScaler、步数和 RNG，但它只用于恢复可信的 PyTorch 自有 checkpoint。
 
-详细规则见[权重转换经验](weight-conversion.md)和[训练与验证经验](training-and-validation.md)。
+详细规则见[权重转换经验](../../migrations/weight-conversion.md)和[训练与验证经验](../../migrations/training-and-validation.md)。
 
 ## 框架与环境
 
@@ -36,7 +36,7 @@
 - 当相对 `configs/...` 路径在当前工作目录不存在时，`load_config()` 会回退到 wheel 内配置；绝对路径、已存在的用户相对路径和不以 `configs/` 开头的自定义路径不会被改写。
 - 数据集路径使用仓库相对默认值，实际训练仍需根据本机数据位置覆盖配置。
 
-当前行为和设计约束见[注册与配置经验](registry-and-configuration.md)与[配置迁移指南](configuration-guide.md)。
+当前行为和设计约束见[注册与配置经验](../../migrations/registry-and-configuration.md)与[配置迁移指南](configuration-guide.md)。
 
 ## 导出
 

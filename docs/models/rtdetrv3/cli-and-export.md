@@ -19,7 +19,7 @@ Train/Eval/Infer 推荐连字符参数；为既有仓库命令保留的下划线
 
 Models 入口使用包内 `configs/checkpoints/rtdetrv3_coco.yml`，开发仓库中则回退到根目录同一 manifest。每个 `converted_artifact.alias` 是 CLI 的唯一用户别名；重复或非法别名会被 Models CLI 和发布检查共同拒绝。`distribution_status=unpublished` 必须没有 URL；`published` 必须有 HTTPS URL。下载先写目标同目录的 `.part` 临时文件，完成 size/SHA-256 校验后才原子替换目标；不匹配的既有文件默认保留，只有 `--force` 允许替换。
 
-**公开回读（2026-07-19）**：`v0.1.0` 的 11 个 Release asset 已从无认证固定 URL 下载，并同时通过严格目录校验和系统 checksum。Models CLI 另行下载 R18/R34/R50，size/SHA-256 均与 manifest 一致；三个文件都完成 CPU 单图 Infer 和同一四图 COCO Eval 冒烟。四图指标不代表完整 val2017 精度，实际输入和输出规模见[多变体运行时报告](../reports/variant-runtime-validation.md)。
+**公开回读（2026-07-19）**：`v0.1.0` 的 11 个 Release asset 已从无认证固定 URL 下载，并同时通过严格目录校验和系统 checksum。Models CLI 另行下载 R18/R34/R50，size/SHA-256 均与 manifest 一致；三个文件都完成 CPU 单图 Infer 和同一四图 COCO Eval 冒烟。四图指标不代表完整 val2017 精度，实际输入和输出规模见[多变体运行时报告](../../archive/rtdetrv3-v0.1.0/reports/variant-runtime-validation.md)。
 
 ## Infer 的当前数据流
 
@@ -34,17 +34,17 @@ YAML + overrides
   -> threshold / visualization / optional JSON
 ```
 
-**已验证（2026-07-19）**：官方 R18 checkpoint 在 CPU/FP32 上完成真实 COCO 单图和 batch 4 目录推理。单图阈值 `0.3` 生成 30 条 JSON 记录；batch 4 生成 4 张可视化图片。环境、checksum 和命令边界见[M5 计划](../plans/2026-07-19-m5-cli-export-boundaries.md)。这证明当前 PyTorch CLI 可运行，不新增跨框架数值等价声明。
+**已验证（2026-07-19）**：官方 R18 checkpoint 在 CPU/FP32 上完成真实 COCO 单图和 batch 4 目录推理。单图阈值 `0.3` 生成 30 条 JSON 记录；batch 4 生成 4 张可视化图片。环境、checksum 和命令边界见[M5 计划](../../archive/rtdetrv3-v0.1.0/plans/2026-07-19-m5-cli-export-boundaries.md)。这证明当前 PyTorch CLI 可运行，不新增跨框架数值等价声明。
 
-同日使用 `v0.1.0` 公开 R34/R50 checkpoint 和各自配置补齐相同 CPU/FP32 单图合同，阈值 `0.3` 分别生成 `31/28` 条 JSON 记录和可解码图片；两者还完成统一四图 Eval 链路。该项是 eager 证据，后续 M8 已另行补齐三个变体的导出 tensor 回归，详见[多变体运行时报告](../reports/variant-runtime-validation.md)和[多变体导出报告](../reports/variant-export-validation.md)。
+同日使用 `v0.1.0` 公开 R34/R50 checkpoint 和各自配置补齐相同 CPU/FP32 单图合同，阈值 `0.3` 分别生成 `31/28` 条 JSON 记录和可解码图片；两者还完成统一四图 Eval 链路。该项是 eager 证据，后续 M8 已另行补齐三个变体的导出 tensor 回归，详见[多变体运行时报告](../../archive/rtdetrv3-v0.1.0/reports/variant-runtime-validation.md)和[多变体导出报告](../../archive/rtdetrv3-v0.1.0/reports/variant-export-validation.md)。
 
-M9 进一步把导出 tensor 合同接回同一 Infer 用户链路。官方 R18、COCO `000000000139.jpg`、640×640、CPU/FP32、阈值 `0.3` 下，checkpoint/ONNX/TorchScript 均产生 30 条检测；ONNX 相对 eager 的 score/框最大绝对误差为 `1.49e-6/9.16e-5 px`，TorchScript 为 0，三份可视化文件字节一致。完整命令和限制见[导出产物推理报告](../reports/exported-inference-validation.md)。
+M9 进一步把导出 tensor 合同接回同一 Infer 用户链路。官方 R18、COCO `000000000139.jpg`、640×640、CPU/FP32、阈值 `0.3` 下，checkpoint/ONNX/TorchScript 均产生 30 条检测；ONNX 相对 eager 的 score/框最大绝对误差为 `1.49e-6/9.16e-5 px`，TorchScript 为 0，三份可视化文件字节一致。完整命令和限制见[导出产物推理报告](../../archive/rtdetrv3-v0.1.0/reports/exported-inference-validation.md)。
 
-M10 当时将 provider 与 device 合同拆开：ONNX Runtime 只走 CPU provider；TorchScript 使用 PyTorch runtime，在 CUDA 可用时默认 CUDA并接受显式 CPU。R18 四图 batch 4 的 TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`；两组同设备渲染均逐字节一致。跨 CPU/CUDA 有两条近似候选换序，因此同设备和跨设备证据必须分开记录。详见[TorchScript 设备验证报告](../reports/torchscript-device-validation.md)。
+M10 当时将 provider 与 device 合同拆开：ONNX Runtime 只走 CPU provider；TorchScript 使用 PyTorch runtime，在 CUDA 可用时默认 CUDA并接受显式 CPU。R18 四图 batch 4 的 TorchScript CUDA 相对 eager CUDA 最大 score/box 误差为 `2.79218e-4/0.00872803 px`，TorchScript CPU 相对 eager CPU 为 `1.90735e-6/9.15527e-5 px`；两组同设备渲染均逐字节一致。跨 CPU/CUDA 有两条近似候选换序，因此同设备和跨设备证据必须分开记录。详见[TorchScript 设备验证报告](../../archive/rtdetrv3-v0.1.0/reports/torchscript-device-validation.md)。
 
-M11 在不改变默认 CPU 的前提下补充显式 ONNX CUDA provider。R18 四图 batch 4 的 ONNX CUDA 相对 eager CUDA 最大 score/box 误差为 `6.06865e-4/0.0238647 px`，ONNX CPU 相对 eager CPU 为 `6.82473e-6/0.000183105 px`，两组均无候选重排。CUDA 使用独立的 `1e-3/0.03 px` 实测门槛；CPU 保持 M8 的 `2e-5/0.02 px`。完整 provider、TF32 A/B、依赖和可视化证据见[ONNX Runtime 设备验证报告](../reports/onnx-runtime-device-validation.md)。
+M11 在不改变默认 CPU 的前提下补充显式 ONNX CUDA provider。R18 四图 batch 4 的 ONNX CUDA 相对 eager CUDA 最大 score/box 误差为 `6.06865e-4/0.0238647 px`，ONNX CPU 相对 eager CPU 为 `6.82473e-6/0.000183105 px`，两组均无候选重排。CUDA 使用独立的 `1e-3/0.03 px` 实测门槛；CPU 保持 M8 的 `2e-5/0.02 px`。完整 provider、TF32 A/B、依赖和可视化证据见[ONNX Runtime 设备验证报告](../../archive/rtdetrv3-v0.1.0/reports/onnx-runtime-device-validation.md)。
 
-M12 把用户侧设备矩阵扩展到 R34/R50。两变体的 TorchScript CUDA/CPU 均与同设备 eager 逐值一致，ONNX CPU 最大误差分别为 `2.38419e-6/0.000183105 px` 和 `3.24845e-6/0.000213623 px`。ONNX CUDA 的功能、检测数和同图同类别一对一匹配成立，但 R34/R50 分别观测到 `0.00141865/0.0375671 px` 和 `0.000972390/0.0349426 px`，未通过 R18 的 `1e-3/0.03 px` 严格门槛。该失败是当前支持边界，不以 `2e-3/0.05 px` 观测包络改写全局合同。详见[多变体设备验证报告](../reports/variant-export-device-validation.md)。
+M12 把用户侧设备矩阵扩展到 R34/R50。两变体的 TorchScript CUDA/CPU 均与同设备 eager 逐值一致，ONNX CPU 最大误差分别为 `2.38419e-6/0.000183105 px` 和 `3.24845e-6/0.000213623 px`。ONNX CUDA 的功能、检测数和同图同类别一对一匹配成立，但 R34/R50 分别观测到 `0.00141865/0.0375671 px` 和 `0.000972390/0.0349426 px`，未通过 R18 的 `1e-3/0.03 px` 严格门槛。该失败是当前支持边界，不以 `2e-3/0.05 px` 观测包络改写全局合同。详见[多变体设备验证报告](../../archive/rtdetrv3-v0.1.0/reports/variant-export-device-validation.md)。
 
 ### 为什么不能保留旧推理链
 
@@ -111,7 +111,7 @@ uv run --extra export rtdetrv3-export \
 
 **已验证（2026-07-19）**：Python `3.12.11`、PyTorch `2.5.1+cu121`、ONNX `1.22.0`、ONNX Runtime `1.27.0`、CPU/FP32 下，官方 R18/R34/R50 的 640 产物完成 batch 1/4/8 和真实 COCO 图片 `000000000139.jpg` 回归；R18 的 608 ONNX/TorchScript 也通过导出时回归。验收要求 `bbox_num` 和每图候选数严格一致，每图全部候选按类别、score 和 box 一对一匹配；score 最大绝对误差 `<=2e-5`，坐标最大绝对误差 `<=0.02 px`。近似并列的低分 top-k 可以交换非语义行序，但不能丢失、跨图匹配或超过数值门槛。
 
-R34 ONNX 在全零 batch 1/4/8 上的最大 score/box 误差为 `2.37e-6/0.01178 px`，真实图为 `9.48e-6/0.00214 px`；真实图有两个低分候选重排。R50 全零输入最高为 `1.90e-5/0.00562 px`，每张图有两个低分候选重排；真实图为 `5.91e-6/0.00461 px` 且不重排。两变体 TorchScript 本次全部逐值为 0。产物摘要和诊断见[多变体导出报告](../reports/variant-export-validation.md)。
+R34 ONNX 在全零 batch 1/4/8 上的最大 score/box 误差为 `2.37e-6/0.01178 px`，真实图为 `9.48e-6/0.00214 px`；真实图有两个低分候选重排。R50 全零输入最高为 `1.90e-5/0.00562 px`，每张图有两个低分候选重排；真实图为 `5.91e-6/0.00461 px` 且不重排。两变体 TorchScript 本次全部逐值为 0。产物摘要和诊断见[多变体导出报告](../../archive/rtdetrv3-v0.1.0/reports/variant-export-validation.md)。
 
 ### 动态边界和排错限制
 
