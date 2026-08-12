@@ -5,7 +5,7 @@
 - 代码基线：`de5a805` 后的 M8 工作树；实现与本报告在同一提交固化
 - 输入权重：`v0.1.0` R34/R50 已发布 checkpoint
 
-> 历史快照（2026-07-19，M8）：本文记录 CPU 导出 tensor 合同；后续 CUDA/CPU 用户侧矩阵及 ONNX CUDA 数值偏差见 [M12 验证报告](variant-export-device-validation.md)。
+> 历史快照（2026-07-19，M8）：本文记录 CPU 导出 tensor 合同；后续 CUDA/CPU 用户侧矩阵及 ONNX CUDA 数值偏差见 [M12 验证报告](variant-export-device-validation.md)。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 结论
 

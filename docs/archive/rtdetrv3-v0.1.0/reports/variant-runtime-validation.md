@@ -5,7 +5,7 @@
 - 代码基线：`72fd9ef9844689e49d35949b9cc37ae5a4ae12f5`
 - 发布版本：[`v0.1.0`](https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/tag/v0.1.0)
 
-> 历史快照（2026-07-19，M7）：本文记录公开 checkpoint 的 eager CPU 验收；后续导出与设备矩阵见 [M8](variant-export-validation.md) 和 [M12](variant-export-device-validation.md) 报告。
+> 历史快照（2026-07-19，M7）：本文记录公开 checkpoint 的 eager CPU 验收；后续导出与设备矩阵见 [M8](variant-export-validation.md) 和 [M12](variant-export-device-validation.md) 报告。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 结论
 

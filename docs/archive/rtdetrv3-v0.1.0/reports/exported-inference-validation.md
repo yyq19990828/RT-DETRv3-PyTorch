@@ -5,7 +5,7 @@
 - 代码基线：`545578a`
 - 模型：`v0.1.0` 官方 R18 转换 checkpoint
 
-> 历史快照（2026-07-19，M9）：本文记录 M9 验收时的 CPU 导出后端；后续 R18 设备合同见 [M10](torchscript-device-validation.md)/[M11](onnx-runtime-device-validation.md)，R34/R50 矩阵见 [M12](variant-export-device-validation.md) 验证报告。
+> 历史快照（2026-07-19，M9）：本文记录 M9 验收时的 CPU 导出后端；后续 R18 设备合同见 [M10](torchscript-device-validation.md)/[M11](onnx-runtime-device-validation.md)，R34/R50 矩阵见 [M12](variant-export-device-validation.md) 验证报告。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 ## 结论
 
