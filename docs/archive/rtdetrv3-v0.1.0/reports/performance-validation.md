@@ -1,11 +1,13 @@
 # R18 Paddle/PyTorch 性能验证
 
+> 历史报告快照（2026-07-19，M6）：本文保存已完成验证记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：已验证 model-only 基准与 R18 CUDA/COCO 端到端推理数据管线
 - 日期：2026-07-19
 - model-only 证据提交：`39e12b33587d554115f10a8cd138c5d55bbc5613`
 - end-to-end 证据提交：`d823edf57b8bc7c758ed296702c6115fc9d2c4ec`
 - 托管源码验证：[GitHub Actions run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042)
-- 执行器：[`scripts/run_framework_benchmark.py`](../../scripts/run_framework_benchmark.py)
+- 执行器：[`scripts/run_framework_benchmark.py`](../../../../scripts/run_framework_benchmark.py)
 
 ## 证据边界
 

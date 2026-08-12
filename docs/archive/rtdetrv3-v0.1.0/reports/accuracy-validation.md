@@ -1,8 +1,10 @@
 # COCO 准确率与稳定性验证报告
 
+> 历史报告快照（2026-07-19，M4）：本文保存当时验证记录；未完成长训仍以活动 M4 计划为准。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`in-progress`
 - 创建日期：`2026-07-18`
-- 执行计划：[`M4——COCO 精度与稳定性对齐计划`](../plans/2026-07-18-m4-coco-accuracy-stability.md)
+- 执行计划：[`M4——COCO 精度与稳定性对齐计划`](../../../plans/2026-07-18-m4-coco-accuracy-stability.md)
 
 ## 证据口径
 
@@ -164,7 +166,7 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
 
 **已验证（2026-07-19 02:44 CST）**：3-epoch probe 完成 `21987` 个数据 batch，其中 `21972` 次 optimizer/scheduler/EMA update 成功、15 次由 AMP GradScaler 跳过。`epoch_3.pth` 为 `368376901` 字节，SHA-256 `08d4977d9fa0ac963dce8c364895070e3a961aaadf0d7ac0ea5da7a97372116c`；记录 `epoch=3`、`global_step=21972`、`sampler_epoch=3`、scaler `scale=512`、2 个 optimizer parameter group 和 2 份不同的 per-rank RNG state。648 个 model tensor、1260 个 optimizer tensor、648 个 EMA tensor 全部有限，scheduler/EMA step 都等于 `21972`。checkpoint 保存后由监视器主动向 torchrun 发送 SIGINT，未进入第 4 epoch 的日志；退出码不代表训练故障。该 checkpoint 未跑最终 val2017，也不进入上表 AP 或三 seed 统计。
 
-**社区执行入口（2026-07-19）**：[`scripts/run_stability_experiment.py`](../../scripts/run_stability_experiment.py) 可把一个 `model + seed` 作为独立任务运行，自动保存环境、协议、输入 checksum、日志、最终 checkpoint checksum 和 EMA COCO 指标。完整长训仍是 deferred 状态；GitHub Issue 回传结果只有在 commit、输入和训练协议一致时才可填入上表。
+**社区执行入口（2026-07-19）**：[`scripts/run_stability_experiment.py`](../../../../scripts/run_stability_experiment.py) 可把一个 `model + seed` 作为独立任务运行，自动保存环境、协议、输入 checksum、日志、最终 checkpoint checksum 和 EMA COCO 指标。完整长训仍是 deferred 状态；GitHub Issue 回传结果只有在 commit、输入和训练协议一致时才可填入上表。
 
 ## 当前结论与局限
 

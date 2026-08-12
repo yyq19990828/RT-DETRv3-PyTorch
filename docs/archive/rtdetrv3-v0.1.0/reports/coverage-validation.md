@@ -1,5 +1,7 @@
 # M6 覆盖率验证报告
 
+> 历史报告快照（2026-07-19，M6）：本文保存已完成验证记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - **状态**：当前已验证
 - **验证日期**：2026-07-19
 - **范围**：纯 `test` extra 中的非 Paddle 活跃测试对 `src/ppdet_pytorch/` 的语句覆盖率
