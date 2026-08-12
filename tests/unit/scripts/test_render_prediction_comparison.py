@@ -84,6 +84,10 @@ def test_render_and_summarize_predictions(tmp_path, monkeypatch):
     assert summary["comparison"]["unmatched_paddle_indices"] == []
     assert summary["comparison"]["unmatched_pytorch_indices"] == []
     assert summary["comparison"]["max_box_linf_px"] == pytest.approx(0.1)
+    assert (
+        summary["comparison_image"]["path"]
+        == "docs/archive/rtdetrv3-v0.1.0/reports/assets/comparison.png"
+    )
     assert summary["comparison_image"]["size_bytes"] > 0
     assert len(summary["comparison_image"]["sha256"]) == 64
     rendered = cv2.imread(str(output_image))
