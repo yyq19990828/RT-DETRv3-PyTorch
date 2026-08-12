@@ -1,6 +1,6 @@
 # PyTorch vs PaddlePaddle Implementation Consistency Check
 
-> **归档说明**：本文是迁移过程中的历史一致性检查快照，不代表当前仓库的安装方式、目录结构或验证状态。当前使用方法与迁移状态以[根 README](../../README.md)为准。
+> **归档说明**：本文是迁移过程中的历史一致性检查快照，不代表当前仓库的安装方式、目录结构或验证状态。当前使用方法与迁移状态以[根 README](../../../../README.md)为准，当前模型合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
 
 **Date**: 2025-10-15
 **Purpose**: 严格检查PyTorch和PaddlePaddle实现之间的一致性

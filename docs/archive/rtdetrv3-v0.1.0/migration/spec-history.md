@@ -1,5 +1,7 @@
 # 历史规格整合记录
 
+> 历史快照（2026-07-18）：本文保存旧规格整合记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 **整合日期**：2026-07-18
 **原始范围**：仓库根目录原 `specs/001`–`specs/005`
 
@@ -9,11 +11,11 @@
 
 | 原记录 | 历史勾选 | 有效信息 | 当前去向 |
 |---|---:|---|---|
-| `001-i-want-to` | 46 完成 / 28 未完成 | 初始迁移目标、分层验证、训练/导出/性能风险 | [`ROADMAP.md`](../../ROADMAP.md)、[`training-and-validation.md`](training-and-validation.md) |
-| `002-specify-scripts-bash` | 无真实任务 | 未填写的通用模板，不含项目经验 | 不保留；新计划使用 [`docs/plans/TEMPLATE.md`](../plans/TEMPLATE.md) |
-| `003-paddle-pytorch-conversion` | 58 完成 / 20 未完成 | 权重映射、张量转换、严格/宽松模式、分层校验 | [`weight-conversion.md`](weight-conversion.md)、[`ROADMAP.md`](../../ROADMAP.md) |
-| `004-paddle-pytorch-migration` | `tasks.md` 称 87/91；另一状态文档仅称 30/90 | Registry、依赖注入、YAML 配置和导入时注册的经验 | [`registry-and-configuration.md`](registry-and-configuration.md) |
-| `005-paddle-pytorch-migration` | 71 完成 / 37 未完成 | 包结构、数据/引擎迁移、工具、端到端验证大纲 | [`2026-07-18-migration-status.md`](../plans/2026-07-18-migration-status.md)、[`ROADMAP.md`](../../ROADMAP.md) |
+| `001-i-want-to` | 46 完成 / 28 未完成 | 初始迁移目标、分层验证、训练/导出/性能风险 | [`ROADMAP.md`](../../../../ROADMAP.md)、[`training-and-validation.md`](../../../migrations/training-and-validation.md) |
+| `002-specify-scripts-bash` | 无真实任务 | 未填写的通用模板，不含项目经验 | 不保留；新计划使用 [`docs/plans/TEMPLATE.md`](../../../plans/TEMPLATE.md) |
+| `003-paddle-pytorch-conversion` | 58 完成 / 20 未完成 | 权重映射、张量转换、严格/宽松模式、分层校验 | [`weight-conversion.md`](../../../migrations/weight-conversion.md)、[`ROADMAP.md`](../../../../ROADMAP.md) |
+| `004-paddle-pytorch-migration` | `tasks.md` 称 87/91；另一状态文档仅称 30/90 | Registry、依赖注入、YAML 配置和导入时注册的经验 | [`registry-and-configuration.md`](../../../migrations/registry-and-configuration.md) |
+| `005-paddle-pytorch-migration` | 71 完成 / 37 未完成 | 包结构、数据/引擎迁移、工具、端到端验证大纲 | [`2026-07-18-migration-status.md`](../plans/2026-07-18-migration-status.md)、[`ROADMAP.md`](../../../../ROADMAP.md) |
 
 > 上表的数字只是原任务文件中的勾选数，不是当前完成率。
 
