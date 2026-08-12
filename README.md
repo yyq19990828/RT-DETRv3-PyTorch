@@ -1,3 +1,6 @@
+
+</think>
+
 # RT-DETRv3 PyTorch
 
 RT-DETRv3 的 PyTorch 迁移实现。仓库当前仍处于迁移与数值对齐阶段；Paddle 官方实现作为只读参考子模块保留，PyTorch 包使用独立的 `src-layout`。
@@ -24,7 +27,7 @@ uv sync --extra export
 # 仅增加 ONNX 导出和 CUDA/CPU provider 依赖
 uv sync --extra export-gpu
 
-# 不安装 Paddle 的核心测试与导出回归依赖
+# 仅安装核心测试与导出回归依赖（不含 Paddle）
 uv sync --extra test
 
 # 仅增加 Ruff/Mypy 质量工具
