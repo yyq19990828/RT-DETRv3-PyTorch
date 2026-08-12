@@ -1,5 +1,7 @@
 # M6——性能、质量与发布计划
 
+> 历史计划快照（2026-07-19，M6）：本文保存已完成执行记录，不代表当前仓库状态。当前合同见 [`docs/models/rtdetrv3`](../../../models/rtdetrv3/README.md)。
+
 - 状态：`completed`
 - 创建日期：`2026-07-19`
 - 最后更新：`2026-07-19`
@@ -122,7 +124,7 @@ M1–M5 已完成当前 RT-DETRv3 PyTorch 训练、转换、评估、恢复、In
 
 GitHub Actions [run 29670978523](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29670978523) 在提交 `b2ffcff` 上完成托管验收：Python 3.9/3.10/3.11/3.12 四个 CPU jobs 均为 `211 passed, 7 skipped, 17 deselected`；质量 job 为 158 个 Ruff 文件和 6 个 Mypy source 通过；wheel job 成功构建并完成 `34 passed` smoke。首次 run 在测试前因 UV 0.7/0.11 锁文件修订差异失败，统一 `required-version` 并用 UV `0.11.29` 重建锁文件后关闭。该次 run 尚未包含后续的覆盖率门禁。
 
-2026-07-19 覆盖率阶段以 Python `3.12.11` 和不含 Paddle 的独立 `test` extra 执行活跃测试，结果为 `216 passed, 7 skipped, 17 deselected, 6 warnings in 11.68s`。全包为 `5,605/13,195` 语句（`42.48%`），`cli/conversion/core/deploy` 为 `1,169/1,783`（`65.56%`）；`scripts/check_coverage.py` 强制 42%/65% 双下限，Python 3.12 CPU job 执行该门禁，临时 coverage 产物会自动清理。已安装 `dev` extra 的本机 `.venv` 观测为 `43.11%`，不作为 CI 下限。逐模块结果和限制见 [`docs/reports/coverage-validation.md`](../reports/coverage-validation.md)。90% 提升目标、完整 Mypy、CUDA CI、性能和发布候选仍未完成。
+2026-07-19 覆盖率阶段以 Python `3.12.11` 和不含 Paddle 的独立 `test` extra 执行活跃测试，结果为 `216 passed, 7 skipped, 17 deselected, 6 warnings in 11.68s`。全包为 `5,605/13,195` 语句（`42.48%`），`cli/conversion/core/deploy` 为 `1,169/1,783`（`65.56%`）；`scripts/check_coverage.py` 强制 42%/65% 双下限，Python 3.12 CPU job 执行该门禁，临时 coverage 产物会自动清理。已安装 `dev` extra 的本机 `.venv` 观测为 `43.11%`，不作为 CI 下限。逐模块结果和限制见 [`coverage-validation.md`](../reports/coverage-validation.md)。90% 提升目标、完整 Mypy、CUDA CI、性能和发布候选仍未完成。
 
 GitHub Actions [run 29671674073](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29671674073) 在提交 `19bcb60` 上通过全部 6 个 jobs。其中 Python 3.12 CPU coverage job 为 `216 passed, 7 skipped, 17 deselected`，全包 `5,606/13,195`（`42.49%`）和直接维护范围 `1,169/1,783`（`65.56%`）均通过门禁；其余 Python 3.9–3.11 CPU、Ruff/Mypy 质量和 wheel smoke jobs 也均通过。
 
@@ -158,13 +160,13 @@ Mypy 第九批清理 `data` 的 87 项类型错误，并删除逐模块临时范
 
 GitHub Actions [run 29675617264](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29675617264) 在提交 `28ec38d` 上通过全部 6 个 jobs：质量 job 为 163 个 Ruff 文件和 103 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `241 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `6,285/13,345`（`47.10%`），直接维护范围为 `1,202/1,799`（`66.81%`）；wheel smoke 为 `34 passed`。托管环境比本地多覆盖 1 条 `data` 语句，两个环境均通过 47%/66% 双门禁。
 
-M6 性能阶段在干净提交 `39e12b3` 上增加隔离框架进程的 JSON benchmark runner，统一质量命令现对 104 个 source file 执行 Mypy，Ruff 覆盖 165 个活跃 Python 文件。Paddle GPU 3.3.0/cu118 在同一 `.venv` 中通过 CUDA 与 CPU R18 前向；Paddle 标记测试为 `31 passed, 3 skipped`，安装 `dev` extra 的默认全量为 `286 passed, 3 skipped`。同一 RTX 3090/CPU 上的 R18 model-only 短采样表明，PyTorch 的 CPU/CUDA 推理吞吐分别为 Paddle 的 `2.061×`/`1.904×`，CPU/CUDA 训练 step 为 `1.528×`/`1.195×`；CUDA 训练 allocated 峰值显存约为 Paddle 的 `116%`，已定位到训练专属路径但不为完全对齐开启专项优化。完整协议、原始 JSON 和局限见 [`docs/reports/performance-validation.md`](../reports/performance-validation.md)。end-to-end DataLoader/profile、90% 覆盖率和发布验收仍未完成。
+M6 性能阶段在干净提交 `39e12b3` 上增加隔离框架进程的 JSON benchmark runner，统一质量命令现对 104 个 source file 执行 Mypy，Ruff 覆盖 165 个活跃 Python 文件。Paddle GPU 3.3.0/cu118 在同一 `.venv` 中通过 CUDA 与 CPU R18 前向；Paddle 标记测试为 `31 passed, 3 skipped`，安装 `dev` extra 的默认全量为 `286 passed, 3 skipped`。同一 RTX 3090/CPU 上的 R18 model-only 短采样表明，PyTorch 的 CPU/CUDA 推理吞吐分别为 Paddle 的 `2.061×`/`1.904×`，CPU/CUDA 训练 step 为 `1.528×`/`1.195×`；CUDA 训练 allocated 峰值显存约为 Paddle 的 `116%`，已定位到训练专属路径但不为完全对齐开启专项优化。完整协议、原始 JSON 和局限见 [`performance-validation.md`](../reports/performance-validation.md)。end-to-end DataLoader/profile、90% 覆盖率和发布验收仍未完成。
 
 GitHub Actions [run 29676369588](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29676369588) 在提交 `39e12b3` 上通过全部 6 个 jobs：质量 job 为 165 个 Ruff 文件和 104 个 Mypy source file 通过；Python 3.9–3.12 CPU jobs 均为 `250 passed, 7 skipped, 17 deselected`，其中 Python 3.12 全包覆盖率为 `6,285/13,345`（`47.10%`），直接维护范围为 `1,202/1,799`（`66.81%`）；wheel smoke 为 `34 passed`。
 
-发布加固阶段在提交 `dc09cd8` 增加 Apache-2.0/NOTICE、完整 checkpoint 产物清单、包内 config fallback 和 `scripts/check_release.py`。本地 `--require-models` 对 4 个 manifest 条目的 12 个文件/报告完成大小、SHA-256 和 mapping 数检查；干净 wheel 在仓库外安装后五个 CLI、包内 R18 config 和 `22,942,893` 参数模型构建通过。GitHub Actions [run 29678063506](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678063506) 全部 6 个 jobs 通过：Ruff 167 文件、Mypy 105 source file、Python 3.9–3.12 均为 `254 passed, 7 skipped, 17 deselected`、Python 3.12 覆盖率 `47.14%/67.00%`，wheel smoke `34 passed`。详细证据见[`docs/reports/release-validation.md`](../reports/release-validation.md)。
+发布加固阶段在提交 `dc09cd8` 增加 Apache-2.0/NOTICE、完整 checkpoint 产物清单、包内 config fallback 和 `scripts/check_release.py`。本地 `--require-models` 对 4 个 manifest 条目的 12 个文件/报告完成大小、SHA-256 和 mapping 数检查；干净 wheel 在仓库外安装后五个 CLI、包内 R18 config 和 `22,942,893` 参数模型构建通过。GitHub Actions [run 29678063506](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678063506) 全部 6 个 jobs 通过：Ruff 167 文件、Mypy 105 source file、Python 3.9–3.12 均为 `254 passed, 7 skipped, 17 deselected`、Python 3.12 覆盖率 `47.14%/67.00%`，wheel smoke `34 passed`。详细证据见[`release-validation.md`](../reports/release-validation.md)。
 
-可视化阶段先用官方 Paddle R18 权重、转换后 PyTorch R18 权重和 COCO `000000000139.jpg` 在 CPU/FP32 下分别生成原始预测，再使用同一脚本渲染；`score >= 0.3` 的两侧 30 个预测全部匹配，最大 score/框差为 `1.37e-6`/`9.16e-5 px`。随后按相同协议补齐 R34/R50，分别为 `31/31`、`28/28` 匹配，最大 score 差为 `3.78e-6`、`3.10e-6`，最大框差均为 `1.22e-4 px`。这些单图证据不替代完整 val2017 AP；只有 R18 已完成完整 val2017 门禁。详见[`docs/reports/prediction-visualization.md`](../reports/prediction-visualization.md)。对外 tag、Release assets 和公开 URL 回读尚未执行，因此 M6 仍为进行中。
+可视化阶段先用官方 Paddle R18 权重、转换后 PyTorch R18 权重和 COCO `000000000139.jpg` 在 CPU/FP32 下分别生成原始预测，再使用同一脚本渲染；`score >= 0.3` 的两侧 30 个预测全部匹配，最大 score/框差为 `1.37e-6`/`9.16e-5 px`。随后按相同协议补齐 R34/R50，分别为 `31/31`、`28/28` 匹配，最大 score 差为 `3.78e-6`、`3.10e-6`，最大框差均为 `1.22e-4 px`。这些单图证据不替代完整 val2017 AP；只有 R18 已完成完整 val2017 门禁。详见[`prediction-visualization.md`](../reports/prediction-visualization.md)。对外 tag、Release assets 和公开 URL 回读尚未执行，因此 M6 仍为进行中。
 
 GitHub Actions [run 29678700952](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29678700952) 在可视化提交 `118fd43` 上通过全部 6 个 jobs：质量 job 为 169 个 Ruff 文件和 106 个 Mypy source file；Python 3.9–3.12 均为 `255 passed, 7 skipped, 17 deselected`；Python 3.12 覆盖率为 `47.14%/67.00%`；发布归档检查和 wheel smoke `34 passed`。
 
@@ -200,7 +202,7 @@ GitHub Actions [run 29684281347](https://github.com/yyq19990828/RT-DETRv3-PyTorc
 
 GitHub Actions [run 29684794341](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29684794341) 在提交 `48cc134` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `328 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`），新门禁通过。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 
-端到端性能批次在提交 `d823edf` 上使用同一 COCO val2017 annotation、R18 官方 Paddle/转换 PyTorch checkpoint、CUDA/FP32、batch 1、`640×640`、4 workers、10 warmup 和 50 measured batches。两边 annotation SHA-256、5,000 条数据规模和 50 个 measured image ID 完全一致，采样记录 `git_dirty=false`。PyTorch/Paddle 总体吞吐为 `48.349/30.616 image/s`（`1.579×`）；PyTorch 模型前向均值 `14.544 ms`，但可见 input-pipeline stall 均值 `6.139 ms`、占总体 `29.68%`，因此数据管线是已记录的次级瓶颈。定时后额外一次 profile 显示两边首要热点均为卷积；不同 profiler taxonomy 不作逐项时长对比。机器可读结果见[`docs/reports/data/r18-cuda-e2e-inference.json`](../reports/data/r18-cuda-e2e-inference.json)。
+端到端性能批次在提交 `d823edf` 上使用同一 COCO val2017 annotation、R18 官方 Paddle/转换 PyTorch checkpoint、CUDA/FP32、batch 1、`640×640`、4 workers、10 warmup 和 50 measured batches。两边 annotation SHA-256、5,000 条数据规模和 50 个 measured image ID 完全一致，采样记录 `git_dirty=false`。PyTorch/Paddle 总体吞吐为 `48.349/30.616 image/s`（`1.579×`）；PyTorch 模型前向均值 `14.544 ms`，但可见 input-pipeline stall 均值 `6.139 ms`、占总体 `29.68%`，因此数据管线是已记录的次级瓶颈。定时后额外一次 profile 显示两边首要热点均为卷积；不同 profiler taxonomy 不作逐项时长对比。机器可读结果见[`r18-cuda-e2e-inference.json`](../reports/data/r18-cuda-e2e-inference.json)。
 
 GitHub Actions [run 29685452042](https://github.com/yyq19990828/RT-DETRv3-PyTorch/actions/runs/29685452042) 在提交 `d823edf` 上通过全部 6 个 jobs。Python 3.9–3.12 均为 `336 passed, 7 skipped, 17 deselected`；Python 3.12 全包/直接维护覆盖率仍为 `6,918/13,567`（`50.99%`）和 `1,835/2,021`（`90.80%`）。质量 job 为 Ruff `174` 个文件、Mypy `107` 个 source file；wheel/sdist 发布检查和 `49 passed` wheel smoke 全部通过。
 
