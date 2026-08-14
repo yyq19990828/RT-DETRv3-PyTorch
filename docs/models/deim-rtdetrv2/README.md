@@ -4,11 +4,11 @@
 
 - [验证报告](validation-report.md)：受限切片、训练初始化、恢复、推理和部署结论。
 - [指标记录](metrics.md)：五变体 detector/pretrained、COCO 与部署数值。
-- [证据索引](evidence-index.md)：Task 8、14-15、17、21-23 与最终门映射。
+- [证据索引](evidence-index.md)：依赖切片、训练协议、模型矩阵和最终审计映射。
 
 ## 当前状态
 
-截至 2026-08-14，S/M/M*/L/X 已完成 Task 8、14-15、17、21-23 验收并通过 F1-F4 最终门；官方权重仍未由本项目发布。
+截至 2026-08-14，S/M/M*/L/X 已完成依赖切片、训练协议、模型矩阵、Models CLI、打包和文档验收，并通过全部最终审计；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | val2017 bbox AP | checkpoint tensors |
 |---|---|---:|---:|

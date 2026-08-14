@@ -56,6 +56,7 @@ ABSOLUTE_PATH_PATTERN = re.compile(
     r"(?:^|[\s`(])(?:/home/[^\s`)]+|/Users/[^\s`)]+|[A-Za-z]:\\[^\s`)]+)",
     re.MULTILINE,
 )
+INTERNAL_WORKFLOW_PATTERN = re.compile(r"\b(?:task|todo|F[1-4])\b", re.IGNORECASE)
 
 
 def _require(condition: bool, message: str) -> None:
@@ -76,6 +77,14 @@ def require_model_report_layout(models_root: Path) -> None:
                 (family_root / filename).is_file(),
                 f"missing model report: {family}/{filename}",
             )
+
+
+def reject_internal_workflow_terms(documents: Mapping[str, str]) -> None:
+    for path, content in documents.items():
+        _require(
+            INTERNAL_WORKFLOW_PATTERN.search(content) is None,
+            f"internal workflow term in model documentation: {path}",
+        )
 
 
 def require_attributions(text: str) -> None:
@@ -185,6 +194,13 @@ def validate_repository(plan: Path, evidence_dir: Path) -> dict[str, int]:
     }
     documents["NOTICE"] = notice
     reject_absolute_paths(documents)
+    reject_internal_workflow_terms(
+        {
+            path: content
+            for path, content in documents.items()
+            if path.startswith("docs/models/")
+        }
+    )
 
     graph_evidence = json.loads(
         (evidence_dir / "task-20-rtdetrv4-merge.json").read_text(encoding="utf-8")

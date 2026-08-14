@@ -18,7 +18,7 @@ Stage companion 的 basename/SHA、family、stage、配置和完整组件状态�
 - CPU/FP32、固定 640 下 stem、backbone、encoder 和 raw outputs 通过 `rtol=1e-5, atol=1e-6`。
 - 五个完整 val2017 AP 与上游三位小数值最大误差 `0.000424`。
 - ONNX 固定 640、动态 batch 1/4，全族最大 score/box 误差 `1.18613e-5 / 0.0149012 px`；TorchScript 为零。
-- F3 在独立 Python 3.11 CPU wheel 中复验最小变体 N 的 verify/train-resume/eval/infer/export。
+- 安装包用户验收在独立 Python 3.11 CPU wheel 中复验最小变体 N 的 verify/train-resume/eval/infer/export。
 
 ## 负例与限制
 

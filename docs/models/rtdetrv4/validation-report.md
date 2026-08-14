@@ -4,7 +4,7 @@
 
 ## 结论
 
-RT-DETRv4 S/M/L/X 已通过官方 solver checkpoint 的 `ema.module` 严格加载、固定输入和四张真实图上游对齐、完整 COCO val2017、student-only eager/ONNX/TorchScript，以及真实 DINOv3 teacher 的 reduced update、DSI/GAM 和 epoch-boundary resume。Task 18-23 与 F1-F4 均为 `APPROVE`。
+RT-DETRv4 S/M/L/X 已通过官方 solver checkpoint 的 `ema.module` 严格加载、固定输入和四张真实图上游对齐、完整 COCO val2017、student-only eager/ONNX/TorchScript，以及真实 DINOv3 teacher 的 reduced update、DSI/GAM 和 epoch-boundary resume。Teacher、训练协议、模型矩阵、用户接口、打包、文档和最终审计均为 `APPROVE`。
 
 COCO AP 来自官方 EMA checkpoint。Reduced training 只证明有限更新、协议状态和确定性恢复，不证明本仓库从头运行完整 schedule 后收敛到这些 AP。
 
@@ -14,7 +14,7 @@ COCO AP 来自官方 EMA checkpoint。Reduced training 只证明有限更新、�
 - Checkpoint parity：CPU/FP32、固定 seed、单 torch thread。
 - 完整 COCO：RTX 4090、CUDA/FP32、5000 张 val2017 图片。
 - GAM DDP：CPU/FP32、双进程 Gloo。
-- F3 wheel：Python `3.11.15`、PyTorch `2.5.1+cpu`、ONNX `1.22.0`、ONNX Runtime `1.28.0`。
+- 安装包用户验收：Python `3.11.15`、PyTorch `2.5.1+cpu`、ONNX `1.22.0`、ONNX Runtime `1.28.0`。
 
 ## Student 验证
 

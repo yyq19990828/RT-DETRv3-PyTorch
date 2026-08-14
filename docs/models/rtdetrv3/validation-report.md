@@ -4,13 +4,13 @@
 
 ## 结论
 
-RT-DETRv3 R18/R34/R50 是已发布模型。三变体的官方 Paddle checkpoint 已完成目标感知转换、公开资产校验、eager 推理及 ONNX opset 17/TorchScript 导出验证；R18 另完成同权重 Paddle/PyTorch CPU/FP32 完整 COCO val2017 对齐、受控训练 loss 和梯度对齐。本轮新模型族集成的 F2/F4 最终门均为 `APPROVE`，确认共享运行时改动未使既有 v3 合同失效。
+RT-DETRv3 R18/R34/R50 是已发布模型。三变体的官方 Paddle checkpoint 已完成目标感知转换、公开资产校验、eager 推理及 ONNX opset 17/TorchScript 导出验证；R18 另完成同权重 Paddle/PyTorch CPU/FP32 完整 COCO val2017 对齐、受控训练 loss 和梯度对齐。最终质量与兼容性审计均为 `APPROVE`，确认共享运行时改动未使既有 v3 合同失效。
 
-F4 的 eager、ONNX、TorchScript 状态是对 Task 1 和 `v0.1.0` 已批准基线的身份继承，不是本轮重新生成的逐 tensor 数值矩阵。具体数值仍以[归档报告](../../archive/rtdetrv3-v0.1.0/reports/README.md)为准。
+本轮 eager、ONNX、TorchScript 兼容性状态继承 `v0.1.0` 已批准基线，不是重新生成的逐 tensor 数值矩阵。具体数值仍以[归档报告](../../archive/rtdetrv3-v0.1.0/reports/README.md)为准。
 
 ## 验证环境
 
-Task 1 使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy `1.26.4`；GPU 探针为 RTX 4090，官方数值对齐本身在 CPU/FP32 下执行。F4 完整非 Paddle 回归为 `761 passed, 92 skipped, 34 deselected`，官方 R18 数值测试为 `1 passed`；R34/R50 的可选 Paddle 数值用例因该命令未提供资产变量而为 `2 skipped`，不覆盖或撤销其既有归档证据。
+基础数值验证使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy `1.26.4`；GPU 探针为 RTX 4090，官方数值对齐本身在 CPU/FP32 下执行。最终完整非 Paddle 回归为 `761 passed, 92 skipped, 34 deselected`，官方 R18 数值测试为 `1 passed`；R34/R50 的可选 Paddle 数值用例因该命令未提供资产变量而为 `2 skipped`，不覆盖或撤销其既有归档证据。
 
 ## 已验证范围
 
@@ -18,8 +18,8 @@ Task 1 使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy 
 - R18 的 backbone、neck、transformer、head、后处理、全部受控 loss key 和 `384` 个参数梯度方向通过 Paddle/PyTorch 对齐。
 - R18 同权重完整 val2017 的 Paddle/PyTorch CPU 主 AP 差为 `1.65599e-7`。
 - 三变体公开 checkpoint 的 eager CPU 用户路径可运行；ONNX/TorchScript 固定 640、动态 batch 1/4/8 已验证，R18 另覆盖固定 608。
-- F2 通过 Ruff、Mypy `123 source files`、覆盖率、`761` 项 unit/integration、`21` 项上游 numerical 和图审计。
-- F4 通过完整非 Paddle回归、R18 官方数值门、子模块范围审计及受控 baseline mismatch 负例。
+- 最终质量审计通过 Ruff、Mypy `123 source files`、覆盖率、`761` 项 unit/integration、`21` 项上游 numerical 和图审计。
+- 最终兼容性审计通过完整非 Paddle 回归、R18 官方数值门、子模块范围审计及受控 baseline mismatch 负例。
 
 ## 负面与限制
 
@@ -35,7 +35,7 @@ Task 1 使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy 
 uv run --extra dev pytest tests/numerical/test_r18_official_checkpoint.py
 uv run --extra test pytest -m "not paddle"
 uv run python tools/dev/compare_upstream_pytorch.py \
-  --baseline <task-1-receipt.json> \
+  --baseline <approved-baseline.json> \
   --family rtdetrv3 \
   --surfaces eager,onnx,torchscript \
   --output <scope-receipt.json>

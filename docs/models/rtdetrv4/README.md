@@ -4,11 +4,11 @@
 
 - [验证报告](validation-report.md)：checkpoint、真实 teacher、DSI/GAM、训练恢复、推理和部署结论。
 - [指标记录](metrics.md)：四变体 checkpoint、COCO、四图 parity、部署和 DINOv3 身份数值。
-- [证据索引](evidence-index.md)：Task 18-23 与 F1-F4 的结论映射及复现入口。
+- [证据索引](evidence-index.md)：teacher、训练协议、模型矩阵、用户接口和最终审计映射。
 
 ## 当前状态
 
-截至 2026-08-14，RT-DETRv4 S/M/L/X 已完成 Task 18-23 的模型、Models CLI、打包和文档验收，并通过 F1-F4 最终门；官方权重仍未由本项目发布。
+截至 2026-08-14，RT-DETRv4 S/M/L/X 已完成 teacher、训练协议、模型矩阵、Models CLI、打包和文档验收，并通过全部最终审计；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | 参数量 | val2017 bbox AP |
 |---|---|---:|---:|
@@ -25,7 +25,7 @@
 - 官方 solver checkpoint 的评估 state 位于 `ema.module`，使用 PyTorch 原生 layout 和 identity key mapping 严格加载；S/M/L/X 分别覆盖 `796/1055/1255/1573` 个 tensor。
 - CPU/FP32、固定 640 输入下，stem、backbone、encoder 和 raw logits/boxes 对固定上游 revision 通过 `rtol=1e-5, atol=1e-6`；四张真实 COCO 图也全部通过。
 - S/M/L/X 均使用授权 DINOv3 ViT-B/16 权重完成真实 teacher reduced update；stage/GAM epoch-boundary resume、缺失 teacher preflight 和 stale GAM state 拒绝路径通过。Reduced run 不构成完整训练 schedule 收敛声明。
-- 四个变体均通过官方 EMA eager、deploy、ONNX opset 17 与 TorchScript 验收；导出产物固定 640 空间尺寸并支持动态 batch 1/4，不包含 teacher、distillation 或 DSI projector residue。student-only 图声明由 Task 20 证据中四变体 `training_residue=false` 与图审计共同约束。
+- 四个变体均通过官方 EMA eager、deploy、ONNX opset 17 与 TorchScript 验收；导出产物固定 640 空间尺寸并支持动态 batch 1/4，不包含 teacher、distillation 或 DSI projector residue。student-only 图声明由四变体 `training_residue=false` 的模型矩阵证据与图审计共同约束。
 - student checkpoint 的 eval、infer 和 export 不构造 DINOv3，也不访问 teacher checkout 或授权权重。
 
 ## 配置与资产

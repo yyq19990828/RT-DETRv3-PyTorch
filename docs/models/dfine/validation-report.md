@@ -4,7 +4,7 @@
 
 ## 结论
 
-D-FINE N/S/M/L/X 已通过官方 checkpoint 严格加载、固定输入和四张真实图上游对齐、完整 COCO val2017、reduced 两阶段训练/epoch-boundary resume、eager 推理、ONNX opset 17 和 TorchScript。Task 2-13、21-23 与 F1-F4 均为 `APPROVE`。
+D-FINE N/S/M/L/X 已通过官方 checkpoint 严格加载、固定输入和四张真实图上游对齐、完整 COCO val2017、reduced 两阶段训练/epoch-boundary resume、eager 推理、ONNX opset 17 和 TorchScript。组件、模型、用户接口、打包、文档和最终审计均为 `APPROVE`。
 
 上游固定 `Peterande/D-FINE@267a6da6d04c8ad52e54120692896515b9e55981`。所有数值对齐均针对该原生 PyTorch 上游，不是 Paddle parity。
 
@@ -12,7 +12,7 @@ D-FINE N/S/M/L/X 已通过官方 checkpoint 严格加载、固定输入和四张
 
 - 主模型验收：Python `3.12.13`、PyTorch `2.5.1+cu121`、CPU/FP32、固定 640。
 - 完整 val2017：5000 图、PIL bilinear、每变体 `1,500,000` 条 top-300 prediction。
-- F3 wheel：Python `3.11.15`、PyTorch `2.5.1+cpu`，从 site-packages 复验最小变体 N。
+- 安装包用户验收：Python `3.11.15`、PyTorch `2.5.1+cpu`，从 site-packages 复验最小变体 N。
 - HGNetv2 B0/B2/B4/B5 的 stage-1 state、stem 和四个 stage activation 均对齐。
 - D-FINE primitives、FDR/LQE、matcher、DN、criterion 的 loss key/数值/梯度与上游对齐。
 

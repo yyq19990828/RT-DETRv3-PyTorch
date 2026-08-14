@@ -4,16 +4,16 @@
 
 | 证据 | 状态 | 结论 |
 |---|---|---|
-| Task 18，`task-18-rtdetrv4-merge.json` | APPROVE | DINOv3 身份、授权权重、feature boundary、frozen/detached teacher |
-| Task 19，`task-19-rtdetrv4-merge.json` | APPROVE | DSI、GAM、AMP/accumulation/DDP/resume |
-| Task 20，`task-20-rtdetrv4-merge.json` | APPROVE | 四变体 checkpoint、parity、COCO、训练、推理和部署 |
-| Task 21-23 | APPROVE | Models CLI、打包、许可、文档与 19 变体支持矩阵 |
-| F2 | APPROVE | 质量、覆盖率、unit/integration、上游 numerical 和图审计 |
-| F3 | APPROVE | 独立 Python 3.11 CPU wheel 的 S 变体全用户链与 teacher 负例 |
-| F4 | APPROVE | RT-DETRv3 范围和兼容基线未回归 |
-| F1 | APPROVE | Task 1-23 与 F2-F4 的计划身份和状态完整 |
+| Teacher 验证 | APPROVE | DINOv3 身份、授权权重、feature boundary、frozen/detached teacher |
+| 训练协议验证 | APPROVE | DSI、GAM、AMP/accumulation/DDP/resume |
+| 模型矩阵验证 | APPROVE | 四变体 checkpoint、parity、COCO、训练、推理和部署 |
+| 用户接口与发布检查 | APPROVE | Models CLI、打包、许可、文档与 19 变体支持矩阵 |
+| 最终质量审计 | APPROVE | 质量、覆盖率、unit/integration、上游 numerical 和图审计 |
+| 安装包用户验收 | APPROVE | 独立 Python 3.11 CPU wheel 的 S 变体全用户链与 teacher 负例 |
+| 最终兼容性审计 | APPROVE | RT-DETRv3 范围和兼容基线未回归 |
+| 最终计划合规审计 | APPROVE | 全部实现与最终验证记录的身份和状态完整 |
 
-F3 后临时 venv、wheel 和 `dist/` 已清理；不把已删除 wheel 的 hash 当作当前发布资产。
+验收后临时 venv、wheel 和 `dist/` 已清理；不把已删除 wheel 的 hash 当作当前发布资产。
 
 ## 可执行入口
 

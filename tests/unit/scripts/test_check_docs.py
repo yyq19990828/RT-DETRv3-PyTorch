@@ -32,6 +32,12 @@ def test_rejects_absolute_path():
         check_docs.reject_absolute_paths({"README.md": "asset: /home/user/model.pth"})
 
 
+@pytest.mark.parametrize("term", ("Task 12", "F3", "TODO"))
+def test_rejects_internal_workflow_term(term):
+    with pytest.raises(ValueError, match="internal workflow term"):
+        check_docs.reject_internal_workflow_terms({"docs/models/dfine/README.md": term})
+
+
 def test_rejects_teacher_graph_contradiction():
     evidence = {
         "variants": [

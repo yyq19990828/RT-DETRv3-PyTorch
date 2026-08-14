@@ -2,15 +2,15 @@
 
 | 证据 | 状态 | 结论 |
 |---|---|---|
-| Task 2 | APPROVE | HGNetv2 B0/B2/B4/B5 stage-1 state 与逐 stage activation |
-| Task 3-10 | APPROVE | Primitives、matcher/DN、数据策略、scheduler、checkpoint、architecture、criterion 和配置 |
-| Task 11 | APPROVE | 五个官方 checkpoint、state、固定输入 activation/raw output |
-| Task 12 | APPROVE | 五变体 train-resume、四图 eager/parity、完整 COCO |
-| Task 13 | APPROVE | 五变体 deploy eager、ONNX、TorchScript 和导出负例 |
-| Task 21-23 | APPROVE | Models CLI、打包、许可和文档 |
-| F2/F3/F4/F1 | APPROVE | 最终质量、wheel N 用户链、v3 无回归和计划合规 |
+| HGNetv2 验证 | APPROVE | B0/B2/B4/B5 stage-1 state 与逐 stage activation |
+| 组件与配置验证 | APPROVE | Primitives、matcher/DN、数据策略、scheduler、checkpoint、architecture 和 criterion |
+| 官方权重验证 | APPROVE | 五个 checkpoint、state、固定输入 activation/raw output |
+| 训练与精度验证 | APPROVE | 五变体 train-resume、四图 eager/parity、完整 COCO |
+| 部署验证 | APPROVE | 五变体 deploy eager、ONNX、TorchScript 和导出负例 |
+| 用户接口与发布检查 | APPROVE | Models CLI、打包、许可和文档 |
+| 最终审计 | APPROVE | 质量、安装包 N 用户链、v3 无回归和计划合规 |
 
-原始 receipt 使用 `task-<n>-rtdetrv4-merge.json` 命名，位于本地执行证据目录；本页只保留结论映射，不依赖临时日志和渲染图。
+原始机器收据位于本地执行证据目录；本页只保留按能力域组织的结论，不依赖临时日志和渲染图。
 
 ## 可执行入口
 

@@ -4,11 +4,11 @@
 
 - [验证报告](validation-report.md)：上游对齐、训练恢复、推理、部署与限制。
 - [指标记录](metrics.md)：五变体 checkpoint、COCO、四图和导出数值。
-- [证据索引](evidence-index.md)：Task 2-13、21-23 与 F1-F4 的结论映射。
+- [证据索引](evidence-index.md)：组件、模型、用户接口和最终审计的结论映射。
 
 ## 当前状态
 
-截至 2026-08-14，D-FINE N/S/M/L/X 已完成 Task 2-13、21-23 验收并通过 F1-F4 最终门；官方权重仍未由本项目发布。
+截至 2026-08-14，D-FINE N/S/M/L/X 已完成组件、模型、Models CLI、打包和文档验收，并通过全部最终审计；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | 参数量 | val2017 bbox AP |
 |---|---|---:|---:|
