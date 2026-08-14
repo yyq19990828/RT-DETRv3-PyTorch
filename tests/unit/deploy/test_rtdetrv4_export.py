@@ -2,8 +2,8 @@ from pathlib import Path
 
 import torch
 
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.deploy import (
+from detrs.core.workspace import create, load_config
+from detrs.deploy import (
     DetectionExportAdapter,
     export_onnx,
     export_torchscript,

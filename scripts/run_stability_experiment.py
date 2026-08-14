@@ -145,7 +145,7 @@ def validate_inputs(args, config: Path, pretrain: Optional[Path]) -> None:
             "docs/migrations/weight-conversion.md or pass --pretrain."
         )
 
-    for executable in ("torchrun", "rtdetrv3-train", "rtdetrv3-eval"):
+    for executable in ("torchrun", "detrs"):
         path = REPO_ROOT / ".venv" / "bin" / executable
         if not path.is_file():
             raise FileNotFoundError(
@@ -164,7 +164,8 @@ def build_train_command(args, config: Path, pretrain: Optional[Path], run_dir: P
         str(REPO_ROOT / ".venv/bin/torchrun"),
         "--standalone",
         f"--nproc_per_node={len(gpu_ids)}",
-        str(REPO_ROOT / ".venv/bin/rtdetrv3-train"),
+        str(REPO_ROOT / ".venv/bin/detrs"),
+        "train",
         "--ddp",
         "--amp",
         "--seed",
@@ -196,7 +197,8 @@ def build_train_command(args, config: Path, pretrain: Optional[Path], run_dir: P
 
 def build_eval_command(args, config: Path, run_dir: Path):
     return [
-        str(REPO_ROOT / ".venv/bin/rtdetrv3-eval"),
+        str(REPO_ROOT / ".venv/bin/detrs"),
+        "eval",
         "-c",
         str(config),
         "--checkpoint",

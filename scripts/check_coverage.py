@@ -18,10 +18,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FULL_PACKAGE_MINIMUM = 50.5
 DIRECT_MAINTAINED_MINIMUM = 90.0
 DIRECT_MAINTAINED_PREFIXES = (
-    Path("src/ppdet_pytorch/cli"),
-    Path("src/ppdet_pytorch/conversion"),
-    Path("src/ppdet_pytorch/core"),
-    Path("src/ppdet_pytorch/deploy"),
+    Path("src/detrs/cli"),
+    Path("src/detrs/conversion"),
+    Path("src/detrs/core"),
+    Path("src/detrs/deploy"),
 )
 
 
@@ -61,7 +61,7 @@ def build_command(report_path: Path) -> list[str]:
         "-q",
         "-m",
         "not paddle",
-        "--cov=ppdet_pytorch",
+        "--cov=detrs",
         "--cov-report=term",
         f"--cov-report=json:{report_path}",
     ]
@@ -144,7 +144,7 @@ def threshold_failures(full: CoverageSummary, direct: CoverageSummary) -> list[s
 
 
 def main() -> int:
-    with tempfile.TemporaryDirectory(prefix="rtdetrv3-coverage-") as temp_directory:
+    with tempfile.TemporaryDirectory(prefix="detrs-coverage-") as temp_directory:
         temp_path = Path(temp_directory)
         report_path = temp_path / "coverage.json"
         command = build_command(report_path)

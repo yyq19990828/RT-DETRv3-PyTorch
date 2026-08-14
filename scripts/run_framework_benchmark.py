@@ -470,8 +470,8 @@ def _summarize_paddle_trace(trace_path: Path, top_k: int) -> dict[str, Any]:
 def _load_torch_model(config_path: Path, checkpoint_path: Path, device: str) -> Any:
     import torch
 
-    from ppdet_pytorch import modeling as _modeling  # noqa: F401
-    from ppdet_pytorch.core.workspace import create, load_config
+    from detrs import modeling as _modeling  # noqa: F401
+    from detrs.core.workspace import create, load_config
 
     cfg = load_config(str(config_path))
     model = create(cfg.architecture)
@@ -584,8 +584,8 @@ def _run_pytorch_e2e(
     import torch
     from torch.utils.data import BatchSampler, SequentialSampler
 
-    from ppdet_pytorch import data as _data  # noqa: F401
-    from ppdet_pytorch.core.workspace import create, load_config
+    from detrs import data as _data  # noqa: F401
+    from detrs.core.workspace import create, load_config
 
     dataset_root = _resolve_path(args.dataset_root)
     model = _load_torch_model(config_path, checkpoint_path, args.device)
@@ -839,7 +839,7 @@ def _profile_paddle_forward(
     targets = [paddle.profiler.ProfilerTarget.CPU]
     if device == "cuda":
         targets.append(paddle.profiler.ProfilerTarget.GPU)
-    with tempfile.TemporaryDirectory(prefix="rtdetrv3-paddle-profile-") as directory:
+    with tempfile.TemporaryDirectory(prefix="detrs-paddle-profile-") as directory:
         trace_path = Path(directory) / "trace.json"
 
         def export_trace(profiler: Any) -> None:
@@ -1314,7 +1314,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     frameworks = ["paddle", "pytorch"] if args.framework == "both" else [args.framework]
     host = collect_host_metadata()
     results: dict[str, dict[str, Any]] = {}
-    with tempfile.TemporaryDirectory(prefix="rtdetrv3-benchmark-") as temp_directory:
+    with tempfile.TemporaryDirectory(prefix="detrs-benchmark-") as temp_directory:
         temp_path = Path(temp_directory)
         for framework in frameworks:
             results[framework] = run_isolated_worker(

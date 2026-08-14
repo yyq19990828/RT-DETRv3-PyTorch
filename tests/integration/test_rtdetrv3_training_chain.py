@@ -4,15 +4,15 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import create, load_config, merge_config
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
-from ppdet_pytorch.modeling.backbones.resnet import ResNet
-from ppdet_pytorch.modeling.heads.detr_head import DINOv3Head
-from ppdet_pytorch.modeling.heads.ppyoloe_head import PPYOLOEHead
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.hybrid_encoder import HybridEncoder
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
+from detrs.core.workspace import create, load_config, merge_config
+from detrs.engine.trainer import Trainer
+from detrs.modeling.architectures.rtdetrv3 import RTDETRV3
+from detrs.modeling.backbones.resnet import ResNet
+from detrs.modeling.heads.detr_head import DINOv3Head
+from detrs.modeling.heads.ppyoloe_head import PPYOLOEHead
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.hybrid_encoder import HybridEncoder
+from detrs.modeling.transformers.rtdetr_transformerv3 import (
     RTDETRTransformerv3,
 )
 

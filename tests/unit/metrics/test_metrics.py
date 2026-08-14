@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.metrics import map_utils
-from ppdet_pytorch.metrics.map_utils import DetectionMAP, compute_ap, prune_zero_padding
-from ppdet_pytorch.metrics.metrics import COCOMetric
+from detrs.metrics import map_utils
+from detrs.metrics.map_utils import DetectionMAP, compute_ap, prune_zero_padding
+from detrs.metrics.metrics import COCOMetric
 
 
 def test_compute_ap_integrates_precision_envelope():

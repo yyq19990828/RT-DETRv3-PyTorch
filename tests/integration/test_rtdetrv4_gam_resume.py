@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.engine.training_protocol import TwoStageDetectionProtocol
+from detrs.engine.trainer import Trainer
+from detrs.engine.training_protocol import TwoStageDetectionProtocol
 
 
 class _Criterion:

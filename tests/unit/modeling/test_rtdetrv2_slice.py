@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import get_registered_modules
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv2 import (
+from detrs.core.workspace import get_registered_modules
+from detrs.modeling.transformers.rtdetr_transformerv2 import (
     RTDETRTransformerv2,
 )
 

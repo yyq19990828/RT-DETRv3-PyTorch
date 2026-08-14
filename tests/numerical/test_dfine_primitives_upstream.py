@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.transformers.dfine_decoder import (
+from detrs.modeling.transformers.dfine_decoder import (
     LQE,
     Integral,
     TransformerDecoder,
     TransformerDecoderLayer,
 )
-from ppdet_pytorch.modeling.transformers.dfine_hybrid_encoder import DFINEHybridEncoder
-from ppdet_pytorch.modeling.transformers.dfine_utils import (
+from detrs.modeling.transformers.dfine_hybrid_encoder import DFINEHybridEncoder
+from detrs.modeling.transformers.dfine_utils import (
     bbox2distance,
     distance2bbox,
     weighting_function,

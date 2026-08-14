@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.engine.training_protocol import TrainingProtocol
+from detrs.engine.trainer import Trainer
+from detrs.engine.training_protocol import TrainingProtocol
 
 
 class _LossModel(nn.Module):

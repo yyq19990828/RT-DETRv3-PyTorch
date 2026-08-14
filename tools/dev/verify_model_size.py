@@ -48,7 +48,7 @@ def build_pytorch_model(config_path: str):
 
     # Import PyTorch workspace
     try:
-        from ppdet_pytorch.core.workspace import create, load_config
+        from detrs.core.workspace import create, load_config
     except ImportError as e:
         logger.error(f"Failed to import PyTorch components: {e}")
         logger.error("Install the project or add its src directory to PYTHONPATH")

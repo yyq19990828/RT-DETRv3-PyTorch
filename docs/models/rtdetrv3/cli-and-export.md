@@ -58,7 +58,7 @@ M12 把用户侧设备矩阵扩展到 R34/R50。两变体的 TorchScript CUDA/CP
 推荐使用连字符参数；`--infer_img`、`--infer_dir`、`--output_dir`、`--save_results` 和 `--batch_size` 暂作为等价别名保留。
 
 ```bash
-uv run rtdetrv3-infer \
+uv run detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint <R18_CHECKPOINT> \
   --infer-img <COCO_ROOT>/val2017/000000000139.jpg \
@@ -92,7 +92,7 @@ ONNX checker 与 CPU ONNX Runtime 属于 `export` 附加依赖；`test` 使用�
 uv sync --extra export
 # 或在 CUDA 12/cuDNN 9 环境安装 GPU provider
 uv sync --extra export-gpu
-uv run --extra export rtdetrv3-export \
+uv run --extra export detrs export \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/rtdetrv3_r18vd_6x_coco.pth \
   --format both \

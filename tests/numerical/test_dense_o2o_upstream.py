@@ -15,7 +15,7 @@ import torch
 from PIL import Image
 from torchvision import tv_tensors
 
-from ppdet_pytorch.data.transform.operators import DEIMDenseO2OMosaic
+from detrs.data.transform.operators import DEIMDenseO2OMosaic
 
 UPSTREAM_SHA = "09d35d53d39ee3145a1e61e3a989b28b9468d1dd"
 

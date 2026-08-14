@@ -3,8 +3,8 @@
 import torch
 import torch.nn as nn
 
-from ppdet_pytorch.modeling.backbones.resnet import ConvNormLayer
-from ppdet_pytorch.modeling.batch_norm import ContiguousGradBatchNorm2d
+from detrs.modeling.backbones.resnet import ConvNormLayer
+from detrs.modeling.batch_norm import ContiguousGradBatchNorm2d
 
 
 def test_batch_norm_backward_matches_contiguous_reference():

@@ -6,8 +6,8 @@ import pytest
 import torch
 import yaml
 
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.utils.checkpoint import load_pretrain_weight
+from detrs.core.workspace import create, load_config
+from detrs.utils.checkpoint import load_pretrain_weight
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/deim_rtdetrv2_coco.yml"

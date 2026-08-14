@@ -23,7 +23,7 @@ import torch
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root / "src"))
 
-from ppdet_pytorch.conversion.validation import ModelOutputValidator
+from detrs.conversion.validation import ModelOutputValidator
 
 logger = logging.getLogger(__name__)
 
@@ -126,19 +126,19 @@ def build_pytorch_model(config_path: str):
 
     # Import PyTorch model builder and config loader using workspace
     try:
-        from ppdet_pytorch.core.workspace import create, load_config
+        from detrs.core.workspace import create, load_config
 
-        importlib.import_module("ppdet_pytorch.modeling.architectures.rtdetrv3")
+        importlib.import_module("detrs.modeling.architectures.rtdetrv3")
     except ImportError as e:
         logger.error(f"Failed to import PyTorch components: {e}")
-        logger.error("Make sure ppdet_pytorch is in Python path")
+        logger.error("Make sure detrs is in Python path")
         return None
 
     # Load config
     logger.info(f"Loading config from: {config_path}")
     cfg = load_config(str(config_path))
 
-    # Create model using ppdet_pytorch's create() function
+    # Create model using detrs's create() function
     # This uses the unified registration system (PaddlePaddle-compatible)
     logger.info("Creating RT-DETRv3 model...")
     model = create(cfg.architecture)

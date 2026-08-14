@@ -2,7 +2,7 @@
 
 DETR-series 是 DETR 系列实时目标检测模型的 PyTorch 实现合集。六个模型族共 **30 个 COCO 变体**运行在同一个训练、评估、推理、checkpoint 与部署运行时上:写一份配置,即可用同一组 CLI 训练、评估、导出任意族。
 
-仓库起源于 RT-DETRv3 的 Paddle-to-PyTorch 迁移,因此当前 Python 包和六个公开命令仍保留 `ppdet_pytorch` 与 `rtdetrv3-*` 名称以维持兼容性。Paddle 官方实现仅作为只读参考子模块保留;核心 PyTorch 运行时不导入 Paddle。
+仓库起源于 RT-DETRv3 的 Paddle-to-PyTorch 迁移,Python 包与 PyPI 项目名统一为 `detrs`,全部工作流由单一 `detrs` 命令的子命令(`train`/`eval`/`infer`/`export`/`convert`/`models`)提供。Paddle 官方实现仅作为只读参考子模块保留;核心 PyTorch 运行时不导入 Paddle。
 
 **核心特性**
 
@@ -46,10 +46,10 @@ cd DETR-series
 uv sync
 
 # 查看模型与权重状态
-uv run rtdetrv3-models list
+uv run detrs models list
 
 # 使用已准备的 checkpoint 推理
-uv run rtdetrv3-infer \
+uv run detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth \
   --infer-img path/to/image.jpg \
@@ -63,24 +63,24 @@ uv run rtdetrv3-infer \
 
 ```bash
 # 训练
-uv run rtdetrv3-train \
+uv run detrs train \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --seed 0
 
 # 评估
-uv run rtdetrv3-eval \
+uv run detrs eval \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth
 
 # 导出 ONNX 与 TorchScript
-uv run --extra export rtdetrv3-export \
+uv run --extra export detrs export \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth \
   --format both \
   --output-dir output/export
 ```
 
-六个 `rtdetrv3-*` 命令继续作为统一入口。模型推理不额外执行 NMS;ONNX/TorchScript 使用动态 batch、固定导出高宽,改变空间尺寸时需要重新导出。详细参数和部署边界见[使用指南](docs/guides/README.md)与 [RT-DETRv3 CLI 合同](docs/models/rtdetrv3/cli-and-export.md)。
+全部工作流统一由 `detrs` 单命令入口提供,子命令为 `train`/`eval`/`infer`/`export`/`convert`/`models`。模型推理不额外执行 NMS;ONNX/TorchScript 使用动态 batch、固定导出高宽,改变空间尺寸时需要重新导出。详细参数和部署边界见[使用指南](docs/guides/README.md)与 [RT-DETRv3 CLI 合同](docs/models/rtdetrv3/cli-and-export.md)。
 
 ## 安装模式
 
@@ -206,7 +206,7 @@ DEIMv2 骨干依赖的 [DINOv3](https://github.com/facebookresearch/dinov3) 前�
 
 ```text
 .
-├── src/ppdet_pytorch/       # 可安装的 PyTorch 包
+├── src/detrs/       # 可安装的 PyTorch 包
 ├── configs/                 # 模型与 checkpoint 配置
 ├── tests/                   # 单元、集成和数值测试
 ├── tools/dev/               # 开发期数值对齐与验证工具

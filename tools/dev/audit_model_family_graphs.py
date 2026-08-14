@@ -131,7 +131,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.fixture:
         fixture = json.loads(args.fixture.read_text(encoding="utf-8"))
     else:
-        source_root = Path(__file__).resolve().parents[2] / "src" / "ppdet_pytorch"
+        source_root = Path(__file__).resolve().parents[2] / "src" / "detrs"
         fixture = {"paddle_imports": _top_level_paddle_imports(source_root)}
     checks = audit_fixture(fixture)
     status = APPROVE if all(item["status"] == APPROVE for item in checks) else FAIL

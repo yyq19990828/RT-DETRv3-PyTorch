@@ -11,9 +11,9 @@ import torch
 import yaml
 from dfine_checkpoint_parity import _compare, _flatten, sha256_file
 
-from ppdet_pytorch.cli.eval import load_evaluation_weights
-from ppdet_pytorch.cli.infer import create_preprocessors, prepare_image_batch
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs.cli.eval import load_evaluation_weights
+from detrs.cli.infer import create_preprocessors, prepare_image_batch
+from detrs.core.workspace import create, load_config
 
 PINNED_SHA = "55fefaaed7efe2a5f72d0a18fd4e05965e35c292"
 ROOT = Path(__file__).resolve().parents[2]

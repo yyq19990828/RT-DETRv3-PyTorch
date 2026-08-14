@@ -6,7 +6,7 @@ import pytest
 import torch
 import yaml
 
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs.core.workspace import create, load_config
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/deim_dfine_coco.yml"

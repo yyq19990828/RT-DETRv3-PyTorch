@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.core.workspace import global_config
-from ppdet_pytorch.modeling.transformers import DFINETransformer
+from detrs.core.workspace import global_config
+from detrs.modeling.transformers import DFINETransformer
 
 
 def _model(**kwargs):

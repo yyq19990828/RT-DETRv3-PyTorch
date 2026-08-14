@@ -84,7 +84,7 @@ state_dict = paddle.load(str(checkpoint_path))
 可先做最小配置加载检查：
 
 ```bash
-uv run --no-sync python -c "from ppdet_pytorch.core.workspace import load_config; print(load_config('configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml').architecture)"
+uv run --no-sync python -c "from detrs.core.workspace import load_config; print(load_config('configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml').architecture)"
 ```
 
 ## 数据加载和随机变换边界

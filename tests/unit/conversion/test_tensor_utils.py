@@ -1,13 +1,13 @@
 """Unit tests for tensor conversion utilities
 
-Tests for ppdet_pytorch.conversion.tensor_utils.
+Tests for detrs.conversion.tensor_utils.
 """
 
 import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.conversion.tensor_utils import (
+from detrs.conversion.tensor_utils import (
     check_shape_compatibility,
     convert_paddle_to_torch_tensor,
     detect_dtype,

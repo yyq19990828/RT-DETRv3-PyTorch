@@ -7,7 +7,7 @@ from typing import Optional
 import pytest
 import yaml
 
-from ppdet_pytorch.cli import models as models_cli
+from detrs.cli import models as models_cli
 
 ROOT = Path(__file__).resolve().parents[3]
 

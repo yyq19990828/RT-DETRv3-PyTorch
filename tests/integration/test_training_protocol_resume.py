@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from ppdet_pytorch.engine.training_protocol import TrainingProtocol
-from ppdet_pytorch.utils.checkpoint import load_checkpoint, save_checkpoint
+from detrs.engine.training_protocol import TrainingProtocol
+from detrs.utils.checkpoint import load_checkpoint, save_checkpoint
 
 
 class _CounterProtocol(TrainingProtocol):

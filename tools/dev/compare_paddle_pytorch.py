@@ -110,11 +110,11 @@ def compare_datasets():
     print("=" * 70)
 
     datasets_to_compare = [
-        ("COCODataSet", "ppdet.data.source.coco", "ppdet_pytorch.data.source.coco"),
+        ("COCODataSet", "ppdet.data.source.coco", "detrs.data.source.coco"),
         (
             "DetDataset",
             "ppdet.data.source.dataset",
-            "ppdet_pytorch.data.source.dataset",
+            "detrs.data.source.dataset",
         ),
     ]
 
@@ -139,8 +139,8 @@ def compare_engines():
     print("=" * 70)
 
     engines_to_compare = [
-        ("Trainer", "ppdet.engine.trainer", "ppdet_pytorch.engine.trainer"),
-        ("Checkpointer", "ppdet.engine.callbacks", "ppdet_pytorch.engine.callbacks"),
+        ("Trainer", "ppdet.engine.trainer", "detrs.engine.trainer"),
+        ("Checkpointer", "ppdet.engine.callbacks", "detrs.engine.callbacks"),
     ]
 
     results = []
@@ -164,7 +164,7 @@ def compare_metrics():
     print("=" * 70)
 
     metrics_to_compare = [
-        ("COCOMetric", "ppdet.metrics.coco_utils", "ppdet_pytorch.metrics.coco_utils"),
+        ("COCOMetric", "ppdet.metrics.coco_utils", "detrs.metrics.coco_utils"),
     ]
 
     results = []

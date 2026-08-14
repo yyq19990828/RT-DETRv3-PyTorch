@@ -1,18 +1,18 @@
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.assigners.atss_assigner import ATSSAssigner
-from ppdet_pytorch.modeling.assigners.task_aligned_assigner import (
+from detrs.modeling.assigners.atss_assigner import ATSSAssigner
+from detrs.modeling.assigners.task_aligned_assigner import (
     TaskAlignedAssigner,
 )
-from ppdet_pytorch.modeling.assigners.utils import (
+from detrs.modeling.assigners.utils import (
     generate_anchors_for_grid_cell,
     pad_gt,
 )
-from ppdet_pytorch.modeling.heads.ppyoloe_head import PPYOLOEHead
-from ppdet_pytorch.modeling.losses.detr_loss import DETRLoss
-from ppdet_pytorch.modeling.transformers.matchers import HungarianMatcher
-from ppdet_pytorch.modeling.transformers.utils import (
+from detrs.modeling.heads.ppyoloe_head import PPYOLOEHead
+from detrs.modeling.losses.detr_loss import DETRLoss
+from detrs.modeling.transformers.matchers import HungarianMatcher
+from detrs.modeling.transformers.utils import (
     varifocal_loss_with_logits,
 )
 

@@ -1,8 +1,8 @@
 import pytest
 import yaml
 
-from ppdet_pytorch.core.config.schema import extract_schema
-from ppdet_pytorch.core.workspace import (
+from detrs.core.config.schema import extract_schema
+from detrs.core.workspace import (
     create,
     global_config,
     load_config,

@@ -20,7 +20,7 @@ MYPY_TARGETS = (
     "scripts/render_prediction_comparison.py",
     "scripts/run_framework_benchmark.py",
     "scripts/run_stability_experiment.py",
-    "src/ppdet_pytorch",
+    "src/detrs",
 )
 
 

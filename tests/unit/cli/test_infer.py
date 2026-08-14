@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.cli import infer as infer_cli
-from ppdet_pytorch.core.workspace import AttrDict
-from ppdet_pytorch.data.utils import default_collate_fn
-from ppdet_pytorch.deploy import TORCHSCRIPT_METADATA_FILE
+from detrs.cli import infer as infer_cli
+from detrs.core.workspace import AttrDict
+from detrs.data.utils import default_collate_fn
+from detrs.deploy import TORCHSCRIPT_METADATA_FILE
 
 
 def _config_with_test_reader():

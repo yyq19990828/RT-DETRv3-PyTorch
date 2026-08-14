@@ -6,14 +6,14 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.engine.callbacks import Checkpointer, LogPrinter
-from ppdet_pytorch.engine.trainer import Trainer
+from detrs.engine.callbacks import Checkpointer, LogPrinter
+from detrs.engine.trainer import Trainer
 
 
 def test_trainer_import_registers_data_components_in_clean_process():
     code = (
-        "from ppdet_pytorch.core.workspace import global_config; "
-        "from ppdet_pytorch.engine.trainer import Trainer; "
+        "from detrs.core.workspace import global_config; "
+        "from detrs.engine.trainer import Trainer; "
         "assert {'COCODataSet', 'TrainReader', 'EvalReader'} <= set(global_config)"
     )
 
@@ -113,7 +113,7 @@ def test_log_printer_uses_global_average_batch_time_for_eta(monkeypatch):
     )()
     messages = []
     monkeypatch.setattr(
-        "ppdet_pytorch.engine.callbacks.logger.info",
+        "detrs.engine.callbacks.logger.info",
         messages.append,
     )
     log_printer = LogPrinter(trainer)
@@ -196,11 +196,11 @@ def test_build_model_logs_python_parameter_count(monkeypatch):
     )
     messages = []
     monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.create",
+        "detrs.engine.trainer.create",
         lambda config: model,
     )
     monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.logger.info",
+        "detrs.engine.trainer.logger.info",
         messages.append,
     )
     trainer = Trainer.__new__(Trainer)
@@ -346,7 +346,7 @@ def test_gradient_accumulation_uses_no_sync_only_before_update_boundary(
     monkeypatch,
 ):
     events = []
-    monkeypatch.setattr("ppdet_pytorch.engine.trainer.DDP", _NoSyncModel)
+    monkeypatch.setattr("detrs.engine.trainer.DDP", _NoSyncModel)
     trainer = Trainer.__new__(Trainer)
     trainer.model = _NoSyncModel(events)
     trainer.optimizer = _RecordingSGD(trainer.model.parameters(), events)
@@ -410,18 +410,14 @@ def test_gradient_accumulation_uses_no_sync_only_before_update_boundary(
 
 
 def test_distributed_reported_loss_is_world_size_mean(monkeypatch):
-    monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.dist.is_initialized", lambda: True
-    )
-    monkeypatch.setattr("ppdet_pytorch.engine.trainer.dist.get_world_size", lambda: 2)
+    monkeypatch.setattr("detrs.engine.trainer.dist.is_initialized", lambda: True)
+    monkeypatch.setattr("detrs.engine.trainer.dist.get_world_size", lambda: 2)
 
     def add_remote_rank_loss(value, op):
         assert op == torch.distributed.ReduceOp.SUM
         value.add_(3.0)
 
-    monkeypatch.setattr(
-        "ppdet_pytorch.engine.trainer.dist.all_reduce", add_remote_rank_loss
-    )
+    monkeypatch.setattr("detrs.engine.trainer.dist.all_reduce", add_remote_rank_loss)
 
     local_loss = torch.tensor(1.0, requires_grad=True)
     reported_loss = Trainer._reduce_loss_for_logging(local_loss)

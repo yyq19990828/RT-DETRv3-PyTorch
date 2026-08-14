@@ -56,7 +56,7 @@ uv run --extra quality python scripts/check_quality.py
 uv run --extra quality python scripts/check_quality.py --fix
 ```
 
-Ruff 排除只读子模块、历史测试和生成目录；Mypy 覆盖 `src/ppdet_pytorch` 及纳入门禁的脚本。不要顺手格式化或修改不属于当前任务的文件。
+Ruff 排除只读子模块、历史测试和生成目录；Mypy 覆盖 `src/detrs` 及纳入门禁的脚本。不要顺手格式化或修改不属于当前任务的文件。
 
 ## 文档维护
 

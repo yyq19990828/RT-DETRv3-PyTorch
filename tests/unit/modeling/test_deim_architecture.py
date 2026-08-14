@@ -4,10 +4,10 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.core.workspace import get_registered_modules
-from ppdet_pytorch.modeling.architectures import DEIM, DFINE
-from ppdet_pytorch.modeling.architectures import dfine as dfine_module
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
+from detrs.core.workspace import get_registered_modules
+from detrs.modeling.architectures import DEIM, DFINE
+from detrs.modeling.architectures import dfine as dfine_module
+from detrs.modeling.post_process import DETRPostProcess
 
 
 class _Backbone(nn.Module):

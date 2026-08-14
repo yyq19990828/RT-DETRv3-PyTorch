@@ -14,8 +14,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.conversion.converter import WeightConverter
-from ppdet_pytorch.conversion.models import ConversionConfig, ConversionStatus
+from detrs.conversion.converter import WeightConverter
+from detrs.conversion.models import ConversionConfig, ConversionStatus
 
 pytestmark = pytest.mark.paddle
 paddle = pytest.importorskip(

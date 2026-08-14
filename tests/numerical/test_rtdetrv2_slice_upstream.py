@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv2 import (
+from detrs.modeling.transformers.rtdetr_transformerv2 import (
     RTDETRTransformerv2,
 )
 

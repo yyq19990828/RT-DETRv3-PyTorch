@@ -1,8 +1,8 @@
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.losses.dfine_loss import DFINECriterion
-from ppdet_pytorch.modeling.transformers.dfine_support import DFINEHungarianMatcher
+from detrs.modeling.losses.dfine_loss import DFINECriterion
+from detrs.modeling.transformers.dfine_support import DFINEHungarianMatcher
 
 
 def _criterion():

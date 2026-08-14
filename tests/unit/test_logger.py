@@ -1,6 +1,6 @@
 import logging
 
-from ppdet_pytorch.utils import logger as logger_module
+from detrs.utils import logger as logger_module
 
 
 def test_setup_logger_honors_torchrun_rank_before_process_group(monkeypatch):

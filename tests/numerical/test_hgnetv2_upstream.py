@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.backbones.hgnetv2 import HGNetv2
+from detrs.modeling.backbones.hgnetv2 import HGNetv2
 
 UPSTREAM_SHA = "267a6da6d04c8ad52e54120692896515b9e55981"
 CASES = [

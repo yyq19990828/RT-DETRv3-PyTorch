@@ -1,6 +1,6 @@
 """Unit tests for weight converter
 
-Tests for WeightConverter class in ppdet_pytorch.conversion.converter.
+Tests for WeightConverter class in detrs.conversion.converter.
 """
 
 from pathlib import Path
@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.conversion.converter import WeightConverter
-from ppdet_pytorch.conversion.models import (
+from detrs.conversion.converter import WeightConverter
+from detrs.conversion.models import (
     CheckpointFormat,
     ConversionConfig,
     Framework,
@@ -235,7 +235,7 @@ class TestWeightConverter:
         paddle_state, _ = converter.load_paddle_checkpoint(sample_checkpoint_path)
 
         # Generate mappings
-        from ppdet_pytorch.conversion.name_mapping import NameMapper
+        from detrs.conversion.name_mapping import NameMapper
 
         mapper = NameMapper()
         mappings = mapper.apply_naming_rules(list(paddle_state.keys()))

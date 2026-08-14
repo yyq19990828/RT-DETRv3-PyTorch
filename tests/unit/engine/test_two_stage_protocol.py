@@ -2,8 +2,8 @@ from copy import deepcopy
 
 import pytest
 
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.engine.training_protocol import TwoStageDetectionProtocol
+from detrs.engine.trainer import Trainer
+from detrs.engine.training_protocol import TwoStageDetectionProtocol
 
 
 @pytest.mark.parametrize("family", ["dfine", "deim", "rtdetrv4"])

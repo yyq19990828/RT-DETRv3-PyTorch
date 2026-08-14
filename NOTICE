@@ -22,7 +22,7 @@ checksums, and hosting boundaries are recorded in configs/checkpoints/.
 
 The DEIMv2 backbone adapters vendor the DINOv3 vision-transformer forward
 code (trimmed) from facebookresearch/DINOv3 via DEIMv2 under
-src/ppdet_pytorch/modeling/backbones/dinov3/. That code retains the Meta
+src/detrs/modeling/backbones/dinov3/. That code retains the Meta
 DINOv3 License headers and follows the DINOv3 License at
 https://github.com/facebookresearch/dinov3/blob/346f38fee679c56a6888f91c51670fae61d364e0/LICENSE.md;
 it must not be treated as Apache-2.0. No DINOv3 or DEIMv2 backbone

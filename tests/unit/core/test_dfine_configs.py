@@ -3,10 +3,10 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch import data  # noqa: F401
-from ppdet_pytorch import optimizer as optimizer_module  # noqa: F401
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.modeling import DFINE
+from detrs import data  # noqa: F401
+from detrs import optimizer as optimizer_module  # noqa: F401
+from detrs.core.workspace import create, load_config
+from detrs.modeling import DFINE
 
 CONFIG_ROOT = Path(__file__).parents[3] / "configs" / "dfine"
 

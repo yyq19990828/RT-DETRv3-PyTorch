@@ -4,14 +4,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from ppdet_pytorch.cli.convert import (
+from detrs.cli.convert import (
     build_target_state_dict,
     create_argument_parser,
     discover_input_paths,
     main,
     validate_arguments,
 )
-from ppdet_pytorch.conversion.models import (
+from detrs.conversion.models import (
     BatchConversionResult,
     BatchConversionSummary,
     ConversionStatus,
@@ -282,14 +282,12 @@ def test_single_cli_wires_target_aware_conversion(monkeypatch, tmp_path):
 
     log_levels = []
     monkeypatch.setenv("PADDLE_CONV_LOG_LEVEL", "WARNING")
+    monkeypatch.setattr("detrs.cli.convert.configure_logging", log_levels.append)
     monkeypatch.setattr(
-        "ppdet_pytorch.cli.convert.configure_logging", log_levels.append
-    )
-    monkeypatch.setattr(
-        "ppdet_pytorch.cli.convert.build_target_state_dict",
+        "detrs.cli.convert.build_target_state_dict",
         lambda path: ({"linear.weight": (2, 2)}, "FakeModel", {"linear.weight"}),
     )
-    monkeypatch.setattr("ppdet_pytorch.cli.convert.WeightConverter", FakeConverter)
+    monkeypatch.setattr("detrs.cli.convert.WeightConverter", FakeConverter)
 
     with pytest.raises(SystemExit) as error:
         main(
@@ -353,7 +351,7 @@ def test_single_cli_maps_conversion_failures_to_exit_codes(
         def convert(self, **kwargs):
             raise conversion_error
 
-    monkeypatch.setattr("ppdet_pytorch.cli.convert.WeightConverter", FailingConverter)
+    monkeypatch.setattr("detrs.cli.convert.WeightConverter", FailingConverter)
 
     with pytest.raises(SystemExit) as error:
         main(
@@ -385,7 +383,7 @@ def test_batch_cli_writes_summary(monkeypatch, tmp_path):
     )
     summary.finish()
     monkeypatch.setattr(
-        "ppdet_pytorch.cli.convert.WeightConverter.convert_batch",
+        "detrs.cli.convert.WeightConverter.convert_batch",
         lambda *args, **kwargs: summary,
     )
     argv = [

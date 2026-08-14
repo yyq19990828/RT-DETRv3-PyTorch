@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from ppdet_pytorch.cli import export as export_cli
-from ppdet_pytorch.core.workspace import AttrDict
+from detrs.cli import export as export_cli
+from detrs.core.workspace import AttrDict
 
 
 def test_parse_args_validates_export_boundaries(capsys):

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from ppdet_pytorch.cli import models as models_cli
+from detrs.cli import models as models_cli
 
 
 def _write_manifest(
@@ -59,6 +59,20 @@ def test_schema_v1_default_manifest_lists_v010_models_as_published(capsys):
     )
     assert records[-1]["name"] == "resnet18_vd"
     assert records[-1]["config"].endswith("rtdetrv3_r18vd_6x_coco.yml")
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--family", "dfine", "list"],
+        ["list", "--family", "dfine"],
+    ],
+)
+def test_family_option_is_accepted_before_and_after_subcommand(argv):
+    args = models_cli.create_argument_parser().parse_args(argv)
+
+    assert args.command == "list"
+    assert args.family == "dfine"
 
 
 def test_verify_checks_size_and_sha256(tmp_path):

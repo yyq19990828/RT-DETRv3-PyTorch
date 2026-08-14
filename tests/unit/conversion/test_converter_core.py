@@ -8,9 +8,9 @@ from types import ModuleType
 import pytest
 import torch
 
-from ppdet_pytorch.conversion import converter as converter_module
-from ppdet_pytorch.conversion.converter import WeightConverter
-from ppdet_pytorch.conversion.models import (
+from detrs.conversion import converter as converter_module
+from detrs.conversion.converter import WeightConverter
+from detrs.conversion.models import (
     CheckpointFile,
     CheckpointFormat,
     ConversionConfig,

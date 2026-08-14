@@ -45,34 +45,34 @@ git submodule update --init --recursive
 Models CLI 默认使用 RT-DETRv3 manifest；`--family` 选择其他模型族，显式 `--manifest` 的优先级最高。
 
 ```bash
-uv run rtdetrv3-models list
-uv run rtdetrv3-models --family dfine list
-uv run rtdetrv3-models --family deim-dfine list --json
-uv run rtdetrv3-models --family rtdetrv4 verify \
+uv run detrs models list
+uv run detrs models --family dfine list
+uv run detrs models --family deim-dfine list --json
+uv run detrs models --family rtdetrv4 verify \
   rtdetrv4-s path/to/RTv4-S-hgnet.pth
 ```
 
 D-FINE 的固定 GitHub Release asset 可以由 CLI 原子下载。Google Drive 托管的 DEIM 与 RT-DETRv4 权重只支持 list 和本地 verify；download 会返回 manifest 中的官方来源地址。RT-DETRv3 `v0.1.0` 发布权重可以直接下载并校验：
 
 ```bash
-uv run rtdetrv3-models download r18
-uv run rtdetrv3-models verify r18 \
+uv run detrs models download r18
+uv run detrs models verify r18 \
   pretrained_models/pytorch/rtdetrv3_r18vd_6x_coco.pth
 ```
 
 ## 训练与评估
 
 ```bash
-uv run rtdetrv3-train \
+uv run detrs train \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --seed 0
 
-uv run rtdetrv3-eval \
+uv run detrs eval \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth
 
 # 评估训练 checkpoint 中的 EMA，并保存 COCO prediction JSON
-uv run rtdetrv3-eval \
+uv run detrs eval \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth \
   --use-ema \
@@ -86,7 +86,7 @@ RT-DETRv4 的 DINOv3 teacher 只在训练构造。训练者需要自行准备固
 ## Eager 推理
 
 ```bash
-uv run rtdetrv3-infer \
+uv run detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth \
   --infer-img path/to/image.jpg \
@@ -100,7 +100,7 @@ uv run rtdetrv3-infer \
 
 ```bash
 # ONNX CPU
-uv run --extra export rtdetrv3-infer \
+uv run --extra export detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --onnx-model output/export/model.onnx \
   --infer-img path/to/image.jpg \
@@ -109,7 +109,7 @@ uv run --extra export rtdetrv3-infer \
   --output-dir output/infer-onnx
 
 # ONNX CUDA
-uv run --extra export-gpu rtdetrv3-infer \
+uv run --extra export-gpu detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --onnx-model output/export/model.onnx \
   --infer-img path/to/image.jpg \
@@ -118,7 +118,7 @@ uv run --extra export-gpu rtdetrv3-infer \
   --output-dir output/infer-onnx-cuda
 
 # TorchScript
-uv run rtdetrv3-infer \
+uv run detrs infer \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --torchscript-model output/export/model.torchscript.pt \
   --infer-img path/to/image.jpg \
@@ -134,7 +134,7 @@ uv run rtdetrv3-infer \
 Paddle 权重转换需要 `dev` extra：
 
 ```bash
-uv run --extra dev rtdetrv3-convert \
+uv run --extra dev detrs convert \
   --input path/to/model.pdparams \
   --output path/to/model.pth
 ```
@@ -142,7 +142,7 @@ uv run --extra dev rtdetrv3-convert \
 导出需要 `export`、`export-gpu` 或 `dev` extra：
 
 ```bash
-uv run --extra export rtdetrv3-export \
+uv run --extra export detrs export \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint path/to/model.pth \
   --format both \
@@ -153,6 +153,6 @@ uv run --extra export rtdetrv3-export \
 
 ## CLI 与配置边界
 
-公开入口为 `rtdetrv3-train`、`rtdetrv3-eval`、`rtdetrv3-infer`、`rtdetrv3-convert`、`rtdetrv3-export` 和 `rtdetrv3-models`。`tools/train.py`、`tools/eval.py`、`tools/infer.py` 和 `tools/convert_weights.py` 只作为兼容入口保留。
+公开入口为单一 `detrs` 命令,子命令为 `train`、`eval`、`infer`、`convert`、`export` 和 `models`(亦可用 `python -m detrs`)。历史上的 `rtdetrv3-*` 命令与 `tools/*.py` 兼容包装器已随包名重命名为 `detrs` 移除。
 
 未迁移的 Paddle CLI 参数会明确报错，不会静默忽略。RT-DETRv3 的配置覆盖与详细 CLI 合同见[配置迁移指南](../models/rtdetrv3/configuration-guide.md)和 [CLI 与导出边界](../models/rtdetrv3/cli-and-export.md)。

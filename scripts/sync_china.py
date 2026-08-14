@@ -117,7 +117,7 @@ def download_verified(url: str, destination: Path, expected_sha256: str) -> None
     temporary_path = Path(temporary_name)
     try:
         request = urllib.request.Request(
-            url, headers={"User-Agent": "rtdetrv3-pytorch-mirror-sync/0.1"}
+            url, headers={"User-Agent": "detrs-mirror-sync/0.1"}
         )
         print("downloading {}".format(url), flush=True)
         with (
@@ -159,9 +159,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     temporary_directory = None
     if args.download_dir is None:
-        temporary_directory = tempfile.TemporaryDirectory(
-            prefix="rtdetrv3-pytorch-wheels-"
-        )
+        temporary_directory = tempfile.TemporaryDirectory(prefix="detrs-wheels-")
         download_dir = Path(temporary_directory.name)
     else:
         download_dir = args.download_dir.expanduser().resolve()

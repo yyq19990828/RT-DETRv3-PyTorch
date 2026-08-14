@@ -3,8 +3,8 @@ import random
 import numpy as np
 import torch
 
-from ppdet_pytorch.data.reader import BaseDataLoader
-from ppdet_pytorch.data.sampler import DistributedBatchSampler
+from detrs.data.reader import BaseDataLoader
+from detrs.data.sampler import DistributedBatchSampler
 
 
 class _IndexDataset:

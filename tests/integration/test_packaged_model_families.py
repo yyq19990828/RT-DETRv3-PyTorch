@@ -9,7 +9,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from ppdet_pytorch.cli import export as export_cli
+from detrs.cli import export as export_cli
 
 ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / "dist"
@@ -24,7 +24,10 @@ NEW_FAMILY_CONFIGS = (
     "configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml",
     *(f"configs/rtdetrv4/rtdetrv4_hgnetv2_{variant}_coco.yml" for variant in "smlx"),
     *(f"configs/deimv2/deimv2_dinov3_{variant}_coco.yml" for variant in "smlx"),
-    *(f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml" for variant in ("n", "pico", "femto", "atto")),
+    *(
+        f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml"
+        for variant in ("n", "pico", "femto", "atto")
+    ),
 )
 MANIFESTS = (
     "rtdetrv3_coco.yml",
@@ -87,8 +90,8 @@ def test_installed_wheel_lists_and_loads_all_model_families(tmp_path):
     with ZipFile(wheel) as archive:
         names = archive.namelist()
     required = {
-        *(f"ppdet_pytorch/{path}" for path in NEW_FAMILY_CONFIGS),
-        *(f"ppdet_pytorch/configs/checkpoints/{name}" for name in MANIFESTS),
+        *(f"detrs/{path}" for path in NEW_FAMILY_CONFIGS),
+        *(f"detrs/configs/checkpoints/{name}" for name in MANIFESTS),
     }
     _require_files(names, required)
 
@@ -104,12 +107,12 @@ def guarded_import(name, *args, **kwargs):
     return real_import(name, *args, **kwargs)
 builtins.__import__ = guarded_import
 
-import ppdet_pytorch
-from ppdet_pytorch.cli.models import default_manifest_path, load_artifacts
-from ppdet_pytorch.core.workspace import load_config
+import detrs
+from detrs.cli.models import default_manifest_path, load_artifacts
+from detrs.core.workspace import load_config
 
 target = Path({target!r}).resolve()
-assert str(Path(ppdet_pytorch.__file__).resolve()).startswith(str(target))
+assert str(Path(detrs.__file__).resolve()).startswith(str(target))
 families = {families!r}
 configs = {configs!r}
 result = {{family: list(load_artifacts(default_manifest_path(family))) for family in families}}
@@ -138,7 +141,7 @@ print(json.dumps(result, sort_keys=True))
 
 def test_rejects_missing_config():
     with pytest.raises(ValueError, match="missing"):
-        _require_files({"ppdet_pytorch/configs/present.yml"}, {"missing.yml"})
+        _require_files({"detrs/configs/present.yml"}, {"missing.yml"})
 
 
 def test_rejects_paddle_core_import():

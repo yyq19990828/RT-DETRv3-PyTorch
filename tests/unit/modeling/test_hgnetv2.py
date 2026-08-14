@@ -3,8 +3,8 @@ from collections import OrderedDict
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import create
-from ppdet_pytorch.modeling.backbones.hgnetv2 import FrozenBatchNorm2d, HGNetv2
+from detrs.core.workspace import create
+from detrs.modeling.backbones.hgnetv2 import FrozenBatchNorm2d, HGNetv2
 
 
 @pytest.mark.parametrize(

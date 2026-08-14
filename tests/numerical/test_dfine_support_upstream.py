@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.dfine_support import (
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.dfine_support import (
     DFINEHungarianMatcher,
     get_contrastive_denoising_training_group,
 )

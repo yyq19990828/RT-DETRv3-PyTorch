@@ -1,15 +1,15 @@
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import register
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.dfine_support import (
+from detrs.core.workspace import register
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.dfine_support import (
     DFINEHungarianMatcher,
     box_cxcywh_to_xyxy,
     get_contrastive_denoising_training_group,
     repository_batch_to_dfine_targets,
 )
-from ppdet_pytorch.modeling.transformers.matchers import HungarianMatcher
+from detrs.modeling.transformers.matchers import HungarianMatcher
 
 
 def _targets():

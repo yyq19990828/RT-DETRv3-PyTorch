@@ -55,8 +55,8 @@
 | X | `configs/deim/dfine/deim_hgnetv2_x_coco.yml` | `deim-dfine-x` |
 
 - 配置：[`configs/deim/dfine`](../../../configs/deim/dfine/)
-- 架构：[`DEIM`](../../../src/ppdet_pytorch/modeling/architectures/deim.py)
-- Criterion：[`DEIMCriterion`](../../../src/ppdet_pytorch/modeling/losses/deim_loss.py)
+- 架构：[`DEIM`](../../../src/detrs/modeling/architectures/deim.py)
+- Criterion：[`DEIMCriterion`](../../../src/detrs/modeling/losses/deim_loss.py)
 
 ## DEIM-RT-DETRv2
 
@@ -98,8 +98,8 @@ TorchScript 在固定 640、CPU/FP32、batch 1/4 下逐值一致。ONNX 使用�
 | X | `configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml` | `deim-rtv2-x` |
 
 - 配置：[`configs/deim/rtdetrv2`](../../../configs/deim/rtdetrv2/)
-- Backbone：[`PResNet`](../../../src/ppdet_pytorch/modeling/backbones/presnet.py)
-- Decoder：[`RTDETRTransformerv2`](../../../src/ppdet_pytorch/modeling/transformers/rtdetr_transformerv2.py)
+- Backbone：[`PResNet`](../../../src/detrs/modeling/backbones/presnet.py)
+- Decoder：[`RTDETRTransformerv2`](../../../src/detrs/modeling/transformers/rtdetr_transformerv2.py)
 
 ## 共同边界
 

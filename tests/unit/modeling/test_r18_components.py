@@ -3,16 +3,16 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.architectures import rtdetrv3 as rtdetrv3_module
-from ppdet_pytorch.modeling.architectures.rtdetrv3 import RTDETRV3
-from ppdet_pytorch.modeling.backbones.resnet import ResNet
-from ppdet_pytorch.modeling.heads.detr_head import DINOv3Head
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.hybrid_encoder import (
+from detrs.modeling.architectures import rtdetrv3 as rtdetrv3_module
+from detrs.modeling.architectures.rtdetrv3 import RTDETRV3
+from detrs.modeling.backbones.resnet import ResNet
+from detrs.modeling.heads.detr_head import DINOv3Head
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.hybrid_encoder import (
     HybridEncoder,
     TransformerLayer,
 )
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
+from detrs.modeling.transformers.rtdetr_transformerv3 import (
     RTDETRTransformerv3,
 )
 

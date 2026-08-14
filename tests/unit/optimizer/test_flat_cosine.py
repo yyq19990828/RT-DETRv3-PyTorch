@@ -3,12 +3,12 @@ import math
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import create
-from ppdet_pytorch.optimizer.optimizer import (
+from detrs.core.workspace import create
+from detrs.optimizer.optimizer import (
     FlatCosineLRScheduler,
     LearningRate,
 )
-from ppdet_pytorch.utils.checkpoint import load_checkpoint, save_checkpoint
+from detrs.utils.checkpoint import load_checkpoint, save_checkpoint
 
 
 def _make_scheduler(**overrides):

@@ -8,9 +8,9 @@ import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.data.transform.batch_operators import DEIMDenseO2OCollate
-from ppdet_pytorch.modeling.losses.deimv2_loss import DEIMv2Criterion
-from ppdet_pytorch.modeling.transformers.dfine_support import (
+from detrs.data.transform.batch_operators import DEIMDenseO2OCollate
+from detrs.modeling.losses.deimv2_loss import DEIMv2Criterion
+from detrs.modeling.transformers.dfine_support import (
     DEIMv2HungarianMatcher,
     DFINEHungarianMatcher,
 )
@@ -138,9 +138,7 @@ def _collate_samples(height=16, width=16, count=3):
     return [
         {
             "image": np.full((height, width, 3), 16 * (index + 1), dtype=np.float32),
-            "gt_bbox": np.array(
-                [[2, 2, width - 2, height - 2]], dtype=np.float32
-            ),
+            "gt_bbox": np.array([[2, 2, width - 2, height - 2]], dtype=np.float32),
             "gt_class": np.array([[index % 80]], dtype=np.int64),
             "gt_score": np.array([[1.0]], dtype=np.float32),
             "curr_epoch": 1,

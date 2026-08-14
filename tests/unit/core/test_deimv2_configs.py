@@ -2,13 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from ppdet_pytorch import data, engine  # noqa: F401
-from ppdet_pytorch import optimizer as optimizer_module  # noqa: F401
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.modeling import DEIMV2
-from ppdet_pytorch.modeling.losses import DEIMv2Criterion
-from ppdet_pytorch.modeling.transformers.deimv2_decoder import RMSNorm
-from ppdet_pytorch.modeling.transformers.dfine_support import (
+from detrs import data, engine  # noqa: F401
+from detrs import optimizer as optimizer_module  # noqa: F401
+from detrs.core.workspace import create, load_config
+from detrs.modeling import DEIMV2
+from detrs.modeling.losses import DEIMv2Criterion
+from detrs.modeling.transformers.deimv2_decoder import RMSNorm
+from detrs.modeling.transformers.dfine_support import (
     DEIMv2HungarianMatcher,
 )
 
@@ -127,9 +127,7 @@ def _path(variant):
 
 
 @pytest.mark.parametrize("variant", VARIANTS)
-def test_deimv2_variant_builds_official_training_contract(
-    variant, isolated_workspace
-):
+def test_deimv2_variant_builds_official_training_contract(variant, isolated_workspace):
     expected = VARIANTS[variant]
     config = load_config(_path(variant))
     model = create(config.architecture)
@@ -146,10 +144,7 @@ def test_deimv2_variant_builds_official_training_contract(
     assert isinstance(model.criterion.matcher, DEIMv2HungarianMatcher)
     assert model.criterion.matcher.change_matcher is True
     assert model.criterion.matcher.iou_order_alpha == 4.0
-    assert (
-        model.criterion.matcher.matcher_change_epoch
-        == expected["matcher_epoch"]
-    )
+    assert model.criterion.matcher.matcher_change_epoch == expected["matcher_epoch"]
     assert type(model.backbone).__name__ == expected["backbone"]
     assert type(model.encoder).__name__ == expected["encoder"]
     assert len(model.decoder.decoder.layers) == expected["num_layers"]
@@ -173,9 +168,7 @@ def test_deimv2_dinov3_branch_uses_imagenet_normalization(isolated_workspace):
         normalize = reader["batch_transforms"][0]["NormalizeImage"]
         assert normalize["mean"] == [0.485, 0.456, 0.406]
         assert normalize["std"] == [0.229, 0.224, 0.225]
-        eval_normalize = config.EvalReader["sample_transforms"][2][
-            "NormalizeImage"
-        ]
+        eval_normalize = config.EvalReader["sample_transforms"][2]["NormalizeImage"]
         assert eval_normalize["mean"] == [0.485, 0.456, 0.406]
 
 
@@ -218,4 +211,3 @@ def test_deimv2_deploy_prunes_eval_index_layers(isolated_workspace):
     assert total_layers == 3
     assert total_lqe == 3
     assert not any("teacher" in name for name in model.state_dict())
-

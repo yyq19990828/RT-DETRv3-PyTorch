@@ -2,15 +2,15 @@
 Automated testing for all operators using registered_ops
 
 This test uses the registered_ops list to automatically discover and test
-all operator classes from ppdet_pytorch.data.transform.operators.
+all operator classes from detrs.data.transform.operators.
 """
 
 import cv2
 import numpy as np
 import pytest
 
-import ppdet_pytorch.data.transform.operators as ops_module
-from ppdet_pytorch.data.transform.operators import registered_ops
+import detrs.data.transform.operators as ops_module
+from detrs.data.transform.operators import registered_ops
 
 
 # Test data generators for different operator categories

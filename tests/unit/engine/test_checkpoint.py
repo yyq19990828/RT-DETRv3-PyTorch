@@ -6,18 +6,18 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.engine.callbacks import Checkpointer
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.engine.training_protocol import TrainingProtocol
-from ppdet_pytorch.optimizer.ema import ModelEMA
-from ppdet_pytorch.optimizer.optimizer import (
+from detrs.engine.callbacks import Checkpointer
+from detrs.engine.trainer import Trainer
+from detrs.engine.training_protocol import TrainingProtocol
+from detrs.optimizer.ema import ModelEMA
+from detrs.optimizer.optimizer import (
     LearningRate,
     LinearWarmup,
     OptimizerBuilder,
     PiecewiseDecay,
 )
-from ppdet_pytorch.utils import checkpoint as checkpoint_utils
-from ppdet_pytorch.utils.checkpoint import (
+from detrs.utils import checkpoint as checkpoint_utils
+from detrs.utils.checkpoint import (
     capture_rng_state,
     convert_to_dict,
     load_checkpoint,

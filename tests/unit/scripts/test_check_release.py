@@ -23,7 +23,7 @@ def create_release_directory(script, monkeypatch, tmp_path):
     contents = {
         "model.pth": b"model",
         "model.mapping.json": b"mapping",
-        "rtdetrv3_pytorch-0.1.0-py3-none-any.whl": b"wheel",
+        "detrs-0.1.0-py3-none-any.whl": b"wheel",
         "rtdetrv3_pytorch-0.1.0.tar.gz": b"sdist",
     }
     for filename, content in contents.items():
@@ -60,7 +60,7 @@ def create_staging_sources(script, monkeypatch, tmp_path):
     contents = {
         "model.pth": b"model",
         "model.mapping.json": b"mapping",
-        "rtdetrv3_pytorch-0.1.0-py3-none-any.whl": b"wheel",
+        "detrs-0.1.0-py3-none-any.whl": b"wheel",
         "rtdetrv3_pytorch-0.1.0.tar.gz": b"sdist",
     }
     for filename, content in contents.items():
@@ -85,7 +85,7 @@ def create_staging_sources(script, monkeypatch, tmp_path):
     monkeypatch.setattr(script, "validate_wheel", lambda path: None)
     monkeypatch.setattr(script, "validate_sdist", lambda path: None)
     return (
-        source_directory / "rtdetrv3_pytorch-0.1.0-py3-none-any.whl",
+        source_directory / "detrs-0.1.0-py3-none-any.whl",
         source_directory / "rtdetrv3_pytorch-0.1.0.tar.gz",
     )
 

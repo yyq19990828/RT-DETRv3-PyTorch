@@ -7,9 +7,9 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.utils.checkpoint import save_checkpoint
+from detrs.core.workspace import create, load_config
+from detrs.engine.trainer import Trainer
+from detrs.utils.checkpoint import save_checkpoint
 
 from .test_deim_dfine_runtime import _assert_nested_equal, _fixture, _state
 

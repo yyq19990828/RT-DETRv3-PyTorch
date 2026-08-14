@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.transformers.dfine_decoder import DFINETransformer
-from ppdet_pytorch.modeling.transformers.dfine_support import (
+from detrs.modeling.transformers.dfine_decoder import DFINETransformer
+from detrs.modeling.transformers.dfine_support import (
     get_contrastive_denoising_training_group,
 )
 

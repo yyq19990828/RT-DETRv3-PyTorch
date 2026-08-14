@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from ppdet_pytorch.cli import train as train_cli
-from ppdet_pytorch.core.workspace import AttrDict
+from detrs.cli import train as train_cli
+from detrs.core.workspace import AttrDict
 
 
 def test_parse_args_accepts_supported_training_contract():

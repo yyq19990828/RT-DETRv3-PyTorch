@@ -1,6 +1,6 @@
 # 注册与配置迁移
 
-当前实现使用 `ppdet_pytorch.core.workspace` 的统一注册表，保留 PaddleDetection 的 `@register`、`global_config`、`__inject__`、`__shared__`、`from_config()` 和 `_BASE_` YAML 继承概念。
+当前实现使用 `detrs.core.workspace` 的统一注册表，保留 PaddleDetection 的 `@register`、`global_config`、`__inject__`、`__shared__`、`from_config()` 和 `_BASE_` YAML 继承概念。
 
 ## 已采用的方向
 
@@ -40,7 +40,7 @@
 - `get_registered_modules()` 包含该组件。
 - 从 YAML 合并后可通过 `create(name)` 构建。
 
-**已验证（2026-07-19）**：`Trainer` 必须显式导入 `ppdet_pytorch.data` 以触发 DataSet、Reader 和 transform 注册，不能依赖测试收集或其他入口的偶然导入。干净 Python 子进程现在只导入 `Trainer` 即可观察到 `COCODataSet`、`TrainReader` 和 `EvalReader` 已注册；训练集成测试文件也可独立连续运行。
+**已验证（2026-07-19）**：`Trainer` 必须显式导入 `detrs.data` 以触发 DataSet、Reader 和 transform 注册，不能依赖测试收集或其他入口的偶然导入。干净 Python 子进程现在只导入 `Trainer` 即可观察到 `COCODataSet`、`TrainReader` 和 `EvalReader` 已注册；训练集成测试文件也可独立连续运行。
 
 ## 全局配置状态
 

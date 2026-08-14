@@ -9,7 +9,7 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.modeling.losses.deim_loss import DEIMCriterion
+from detrs.modeling.losses.deim_loss import DEIMCriterion
 
 PINNED_SHA = "09d35d53d39ee3145a1e61e3a989b28b9468d1dd"
 
@@ -292,7 +292,7 @@ def _clone_float_leaves(value, leaves):
 
 @pytest.mark.numerical
 def test_dfine_graph_full_forward_local_and_cdn_match_upstream(upstream_criterion):
-    from ppdet_pytorch.modeling.transformers.dfine_support import (
+    from detrs.modeling.transformers.dfine_support import (
         DFINEHungarianMatcher,
     )
 

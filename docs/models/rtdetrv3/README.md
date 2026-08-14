@@ -19,4 +19,4 @@ RT-DETRv3 `v0.1.0` 的已完成计划、技术报告、论文、图片和机器�
 
 - 配置：[`configs/rtdetrv3`](../../../configs/rtdetrv3/)
 - 权重清单：[`configs/checkpoints/rtdetrv3_coco.yml`](../../../configs/checkpoints/rtdetrv3_coco.yml)
-- 架构实现：[`src/ppdet_pytorch/modeling/architectures/rtdetrv3.py`](../../../src/ppdet_pytorch/modeling/architectures/rtdetrv3.py)
+- 架构实现：[`src/detrs/modeling/architectures/rtdetrv3.py`](../../../src/detrs/modeling/architectures/rtdetrv3.py)

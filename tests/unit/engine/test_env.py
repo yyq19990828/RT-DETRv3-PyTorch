@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torch
 
-from ppdet_pytorch.engine.env import set_random_seed
+from detrs.engine.env import set_random_seed
 
 
 def test_set_random_seed_covers_python_numpy_and_torch(monkeypatch):

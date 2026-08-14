@@ -1,13 +1,13 @@
 """Unit tests for model output validation
 
-Tests for ppdet_pytorch.conversion.validation.
+Tests for detrs.conversion.validation.
 """
 
 import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.conversion.validation import (
+from detrs.conversion.validation import (
     ForwardPassResult,
     ModelOutputValidator,
 )

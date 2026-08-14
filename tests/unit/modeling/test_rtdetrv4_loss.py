@@ -2,8 +2,8 @@ import pytest
 import torch
 import torch.nn.functional as F
 
-from ppdet_pytorch.modeling.losses.rtdetrv4_loss import RTDETRV4Criterion
-from ppdet_pytorch.modeling.transformers.dfine_support import DFINEHungarianMatcher
+from detrs.modeling.losses.rtdetrv4_loss import RTDETRV4Criterion
+from detrs.modeling.transformers.dfine_support import DFINEHungarianMatcher
 
 
 def _criterion(weight=5.0):

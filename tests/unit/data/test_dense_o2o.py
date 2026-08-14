@@ -5,8 +5,8 @@ import pytest
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from ppdet_pytorch.data.reader import TrainReader
-from ppdet_pytorch.data.transform.operators import DEIMDenseO2OMosaic
+from detrs.data.reader import TrainReader
+from detrs.data.transform.operators import DEIMDenseO2OMosaic
 
 
 def _sample(value=32):

@@ -26,7 +26,7 @@ def test_build_command_runs_non_paddle_package_coverage(monkeypatch, tmp_path):
 
     assert command[0].endswith("pytest")
     assert command[command.index("-m") + 1] == "not paddle"
-    assert "--cov=ppdet_pytorch" in command
+    assert "--cov=detrs" in command
     assert f"--cov-report=json:{report_path}" in command
     assert "no:cacheprovider" in command
 
@@ -34,10 +34,10 @@ def test_build_command_runs_non_paddle_package_coverage(monkeypatch, tmp_path):
 def test_summarize_files_keeps_full_and_direct_scopes_separate(monkeypatch):
     script = load_script(monkeypatch)
     files = {
-        "src/ppdet_pytorch/cli/train.py": {
+        "src/detrs/cli/train.py": {
             "summary": {"num_statements": 80, "covered_lines": 60}
         },
-        "src/ppdet_pytorch/data/dataset.py": {
+        "src/detrs/data/dataset.py": {
             "summary": {"num_statements": 120, "covered_lines": 20}
         },
     }
@@ -69,9 +69,9 @@ def test_main_uses_temporary_outputs_and_reports_success(monkeypatch, capsys):
         report_path = Path(report_argument.split(":", maxsplit=1)[1])
         report_path.write_text(
             '{"files": {'
-            '"src/ppdet_pytorch/cli/train.py": {'
+            '"src/detrs/cli/train.py": {'
             '"summary": {"num_statements": 100, "covered_lines": 90}}, '
-            '"src/ppdet_pytorch/data/dataset.py": {'
+            '"src/detrs/data/dataset.py": {'
             '"summary": {"num_statements": 100, "covered_lines": 30}}}}',
             encoding="utf-8",
         )

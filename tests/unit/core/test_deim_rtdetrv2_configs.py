@@ -3,14 +3,14 @@ from pathlib import Path
 import pytest
 from torch import nn
 
-from ppdet_pytorch import (
+from detrs import (
     data,  # noqa: F401
     engine,  # noqa: F401
 )
-from ppdet_pytorch import optimizer as optimizer_module  # noqa: F401
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.modeling import DEIM
-from ppdet_pytorch.modeling.losses import DEIMCriterion
+from detrs import optimizer as optimizer_module  # noqa: F401
+from detrs.core.workspace import create, load_config
+from detrs.modeling import DEIM
+from detrs.modeling.losses import DEIMCriterion
 
 CONFIG_ROOT = Path(__file__).parents[3] / "configs" / "deim" / "rtdetrv2"
 

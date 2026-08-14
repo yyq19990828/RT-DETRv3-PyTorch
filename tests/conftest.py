@@ -4,8 +4,8 @@ from copy import deepcopy
 import pytest
 from PIL import Image
 
-from ppdet_pytorch.core.config.schema import SchemaDict
-from ppdet_pytorch.core.workspace import global_config
+from detrs.core.config.schema import SchemaDict
+from detrs.core.workspace import global_config
 
 
 def _clone_workspace_entry(value):

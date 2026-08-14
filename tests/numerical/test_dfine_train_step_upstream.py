@@ -10,11 +10,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from ppdet_pytorch.modeling.architectures.dfine import DFINE
-from ppdet_pytorch.modeling.losses.dfine_loss import DFINECriterion
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.dfine_decoder import DFINETransformer
-from ppdet_pytorch.modeling.transformers.dfine_support import DFINEHungarianMatcher
+from detrs.modeling.architectures.dfine import DFINE
+from detrs.modeling.losses.dfine_loss import DFINECriterion
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.dfine_decoder import DFINETransformer
+from detrs.modeling.transformers.dfine_support import DFINEHungarianMatcher
 
 PINNED_SHA = "267a6da6d04c8ad52e54120692896515b9e55981"
 
@@ -60,7 +60,7 @@ def upstream_modules():
     dist_utils.is_dist_available_and_initialized = lambda: False
     sys.modules[dist_utils.__name__] = dist_utils
     denoising = types.ModuleType(f"{package}.zoo.dfine.denoising")
-    from ppdet_pytorch.modeling.transformers.dfine_support import (
+    from detrs.modeling.transformers.dfine_support import (
         get_contrastive_denoising_training_group,
     )
 

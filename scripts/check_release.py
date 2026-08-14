@@ -22,12 +22,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = REPO_ROOT / "configs/checkpoints/rtdetrv3_coco.yml"
 EXPECTED_CONSOLE_SCRIPTS = {
-    "rtdetrv3-convert",
-    "rtdetrv3-eval",
-    "rtdetrv3-export",
-    "rtdetrv3-infer",
-    "rtdetrv3-models",
-    "rtdetrv3-train",
+    "detrs",
 }
 
 
@@ -548,7 +543,7 @@ def _validate_archive_names(names: Sequence[str], label: str) -> None:
 def _expected_packaged_configs() -> set[str]:
     config_root = REPO_ROOT / "configs"
     return {
-        f"ppdet_pytorch/configs/{path.relative_to(config_root).as_posix()}"
+        f"detrs/configs/{path.relative_to(config_root).as_posix()}"
         for path in config_root.rglob("*")
         if path.is_file()
     }
@@ -582,7 +577,7 @@ def validate_wheel(path: Path) -> None:
         metadata = BytesParser(policy=policy.default).parsebytes(
             archive.read(metadata_names[0])
         )
-        _require(metadata.get("Name") == "rtdetrv3-pytorch", "unexpected package name")
+        _require(metadata.get("Name") == "detrs", "unexpected package name")
         _require(metadata.get("License-Expression") == "Apache-2.0", "license metadata")
         license_files = set(metadata.get_all("License-File", []))
         _require({"LICENSE", "NOTICE"} <= license_files, "license files metadata")
@@ -637,7 +632,7 @@ def validate_sdist(path: Path) -> None:
             required <= name_set, f"sdist files are missing: {required - name_set}"
         )
         _require(
-            any(name.startswith(f"{root}/src/ppdet_pytorch/") for name in names),
+            any(name.startswith(f"{root}/src/detrs/") for name in names),
             "sdist package source is missing",
         )
         forbidden = (f"{root}/third-party/", f"{root}/pretrained_models/")

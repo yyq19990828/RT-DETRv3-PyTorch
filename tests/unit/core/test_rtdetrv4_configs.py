@@ -3,11 +3,11 @@ from pathlib import Path
 import pytest
 from torch import nn
 
-from ppdet_pytorch import data, engine  # noqa: F401
-from ppdet_pytorch import optimizer as optimizer_module  # noqa: F401
-from ppdet_pytorch.core.workspace import create, load_config
-from ppdet_pytorch.modeling import RTDETRV4
-from ppdet_pytorch.modeling.losses import RTDETRV4Criterion
+from detrs import data, engine  # noqa: F401
+from detrs import optimizer as optimizer_module  # noqa: F401
+from detrs.core.workspace import create, load_config
+from detrs.modeling import RTDETRV4
+from detrs.modeling.losses import RTDETRV4Criterion
 
 CONFIG_ROOT = Path(__file__).parents[3] / "configs" / "rtdetrv4"
 

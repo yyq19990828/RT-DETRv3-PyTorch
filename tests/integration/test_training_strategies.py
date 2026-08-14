@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 import yaml
 
-from ppdet_pytorch.optimizer.ema import ModelEMA
+from detrs.optimizer.ema import ModelEMA
 
 
 def test_ema_integration():

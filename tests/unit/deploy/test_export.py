@@ -3,7 +3,7 @@ import json
 import pytest
 import torch
 
-from ppdet_pytorch.deploy import (
+from detrs.deploy import (
     TORCHSCRIPT_METADATA_FILE,
     DetectionExportAdapter,
     export_onnx,

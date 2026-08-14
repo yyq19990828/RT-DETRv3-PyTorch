@@ -37,7 +37,7 @@ def load_paddle_model():
 
 def load_pytorch_model():
     """Load PyTorch model"""
-    from ppdet_pytorch.core.workspace import create, load_config
+    from detrs.core.workspace import create, load_config
 
     cfg = load_config(str(project_root / "configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml"))
     model = create(cfg.architecture)

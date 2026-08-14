@@ -1,6 +1,6 @@
 # 权重转换经验
 
-本文整合历史权重转换规格与当前 `ppdet_pytorch.conversion` 实现。
+本文整合历史权重转换规格与当前 `detrs.conversion` 实现。
 
 ## 当前可验证能力
 
@@ -95,7 +95,7 @@ R18/R34/R50 已按该协议在 COCO `000000000139.jpg` 上验证：`score >= 0.3
 - 源 checkpoint 为 `44,850,756` 字节、115 个 key，SHA-256 `68d7632cb67ad2c658fe67ab5837d8eb65466a7bc1574badc74860059ef5e7f0`。
 - 使用完整 R18 目标 config 做严格转换，得到 115/115 个 `backbone.*` tensor，0 未映射源 key、0 unexpected key、0 缺失 backbone key；其余 533 个目标 key 属于检测 neck/head/transformer，保持模型初始化值是预期行为。
 - 本次转换输出 SHA-256 为 `2483b5b00ed2b84192540bbd1bd1768e3e4422c2f8fa1598ae96e0c2d6f64db2`。输出 metadata 含 timestamp/session ID，所以它是本次证据，不是跨次稳定 hash。
-- 该训练初始化权重与三个检测权重使用同一发布合同，用户别名为 `r18-backbone`；发布前可用 `rtdetrv3-models verify r18-backbone` 校验本地文件，发布后使用固定 tag 的 HTTPS URL 下载。
+- 该训练初始化权重与三个检测权重使用同一发布合同，用户别名为 `r18-backbone`；发布前可用 `detrs models verify r18-backbone` 校验本地文件，发布后使用固定 tag 的 HTTPS URL 下载。
 
 ```bash
 curl --fail --location \
@@ -103,7 +103,7 @@ curl --fail --location \
   https://paddledet.bj.bcebos.com/models/pretrained/ResNet18_vd_pretrained.pdparams
 sha256sum pretrained_models/paddle/ResNet18_vd_pretrained.pdparams
 
-uv run rtdetrv3-convert --strict \
+uv run detrs convert --strict \
   --input pretrained_models/paddle/ResNet18_vd_pretrained.pdparams \
   --output pretrained_models/pytorch/ResNet18_vd_pretrained.pth \
   --config configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
@@ -150,7 +150,7 @@ RTDETRV3_R50_PADDLE_CHECKPOINT=pretrained_models/paddle/rtdetrv3_r50vd_6x_coco.p
 批量模式适合同一模型架构的多个训练 checkpoint；一个命令只接受一个目标 config，不根据文件名猜测架构：
 
 ```bash
-uv run rtdetrv3-convert \
+uv run detrs convert \
   --batch \
   --input 'pretrained_models/paddle/r18-runs/*.pdparams' \
   --output pretrained_models/pytorch/r18-runs \

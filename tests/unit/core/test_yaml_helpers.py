@@ -3,7 +3,7 @@ from collections import OrderedDict
 import pytest
 import yaml
 
-from ppdet_pytorch.core.config.yaml_helpers import Callable, setup_orderdict
+from detrs.core.config.yaml_helpers import Callable, setup_orderdict
 
 
 def test_callable_defaults_are_isolated_between_config_objects():

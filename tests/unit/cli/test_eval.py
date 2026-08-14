@@ -2,7 +2,7 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.cli import eval as eval_cli
+from detrs.cli import eval as eval_cli
 
 
 class _AuxHead(nn.Module):

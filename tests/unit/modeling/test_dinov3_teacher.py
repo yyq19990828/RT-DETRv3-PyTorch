@@ -8,9 +8,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-import ppdet_pytorch.modeling.teachers.dinov3 as dinov3_module
-from ppdet_pytorch.engine.trainer import Trainer
-from ppdet_pytorch.modeling.teachers.dinov3 import DINOv3TeacherModel
+import detrs.modeling.teachers.dinov3 as dinov3_module
+from detrs.engine.trainer import Trainer
+from detrs.modeling.teachers.dinov3 import DINOv3TeacherModel
 
 HUBCONF = """
 import torch

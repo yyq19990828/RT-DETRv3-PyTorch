@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 
-from ppdet_pytorch.data.reader import BatchCompose, Compose, TrainReader
+from detrs.data.reader import BatchCompose, Compose, TrainReader
 
 
 class _Recorder:

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 import torch
 
-from ppdet_pytorch.conversion.validation import (
+from detrs.conversion.validation import (
     ForwardPassResult,
     ModelOutputValidator,
 )

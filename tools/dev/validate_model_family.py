@@ -183,12 +183,10 @@ def _validate_installed_prefix(prefix: Path) -> None:
     if not candidates:
         raise ValueError("installed prefix has no site-packages: {}".format(prefix))
     spec = importlib.machinery.PathFinder.find_spec(
-        "ppdet_pytorch", [str(path) for path in candidates]
+        "detrs", [str(path) for path in candidates]
     )
     if spec is None or spec.origin is None:
-        raise ValueError(
-            "installed prefix does not contain ppdet_pytorch: {}".format(prefix)
-        )
+        raise ValueError("installed prefix does not contain detrs: {}".format(prefix))
     origin = Path(spec.origin).resolve()
     if not any(
         origin == path.resolve() or path.resolve() in origin.parents
@@ -486,8 +484,8 @@ def _run_rtdetrv4_train_resume(args):
 def _run_deim_eval(variant, checkpoint, family="deim-dfine"):
     import torch
 
-    from ppdet_pytorch.cli.infer import build_model
-    from ppdet_pytorch.core.workspace import load_config
+    from detrs.cli.infer import build_model
+    from detrs.core.workspace import load_config
 
     config_path = _family_config(family, variant)
     config = load_config(config_path)
@@ -558,7 +556,7 @@ def _run_dfine_infer(
     command = [
         sys.executable,
         "-m",
-        "ppdet_pytorch.cli.infer",
+        "detrs.cli.infer",
         "-c",
         _family_config(family, variant),
         "--checkpoint",
@@ -654,7 +652,7 @@ def _run_dfine_coco(
     command = [
         sys.executable,
         "-m",
-        "ppdet_pytorch.cli.eval",
+        "detrs.cli.eval",
         "-c",
         _family_config(family, variant),
         "--checkpoint",
@@ -720,9 +718,9 @@ def _run_dfine_export(variant, checkpoint, evidence_dir, *, family="dfine"):
     import onnx
     import torch
 
-    from ppdet_pytorch.cli.infer import build_model
-    from ppdet_pytorch.core.workspace import load_config
-    from ppdet_pytorch.deploy import (
+    from detrs.cli.infer import build_model
+    from detrs.core.workspace import load_config
+    from detrs.deploy import (
         DetectionExportAdapter,
         export_onnx,
         export_torchscript,
@@ -739,8 +737,10 @@ def _run_dfine_export(variant, checkpoint, evidence_dir, *, family="dfine"):
     config_path = _family_config(family, variant)
     cfg = load_config(config_path)
     # DEIMv2 tiny variants export at their own fixed input sizes.
-    export_size = (320, 320) if family == "deimv2" and variant == "atto" else (
-        (416, 416) if family == "deimv2" and variant == "femto" else (640, 640)
+    export_size = (
+        (320, 320)
+        if family == "deimv2" and variant == "atto"
+        else ((416, 416) if family == "deimv2" and variant == "femto" else (640, 640))
     )
     cfg.eval_size = list(export_size)
     cfg.eval_spatial_size = list(export_size)
@@ -892,7 +892,7 @@ def _run_dfine_export(variant, checkpoint, evidence_dir, *, family="dfine"):
 def _run_dinov3_teacher_preflight(args):
     import torch
 
-    from ppdet_pytorch.modeling.teachers.dinov3 import DINOv3TeacherModel
+    from detrs.modeling.teachers.dinov3 import DINOv3TeacherModel
 
     weights = args.dinov3_weights.resolve()
     teacher = DINOv3TeacherModel(

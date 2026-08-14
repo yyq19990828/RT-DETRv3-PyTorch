@@ -104,8 +104,9 @@ jobs:
           scratch_dir="$(mktemp -d)"
           trap 'rm -rf "$scratch_dir"' EXIT
           cd "$scratch_dir"
-          for command in rtdetrv3-train rtdetrv3-eval rtdetrv3-infer rtdetrv3-export rtdetrv3-convert rtdetrv3-models; do
-            "$GITHUB_WORKSPACE/.venv/bin/$command" --help
+          "$GITHUB_WORKSPACE/.venv/bin/detrs" --help
+          for command in train eval infer export convert models; do
+            "$GITHUB_WORKSPACE/.venv/bin/detrs" "$command" --help
           done
 
       - name: Verify packaged config outside checkout
@@ -114,7 +115,7 @@ jobs:
           scratch_dir="$(mktemp -d)"
           trap 'rm -rf "$scratch_dir"' EXIT
           cd "$scratch_dir"
-          "$venv_python" -c "from ppdet_pytorch import modeling; from ppdet_pytorch.core.workspace import load_config; paths = ['configs/dfine/dfine_hgnetv2_n_coco.yml', 'configs/deim/dfine/deim_hgnetv2_n_coco.yml', 'configs/deim/rtdetrv2/deim_r18vd_120e_coco.yml', 'configs/rtdetrv4/rtdetrv4_hgnetv2_s_coco.yml']; assert all(load_config(path).architecture for path in paths)"
+          "$venv_python" -c "from detrs import modeling; from detrs.core.workspace import load_config; paths = ['configs/dfine/dfine_hgnetv2_n_coco.yml', 'configs/deim/dfine/deim_hgnetv2_n_coco.yml', 'configs/deim/rtdetrv2/deim_r18vd_120e_coco.yml', 'configs/rtdetrv4/rtdetrv4_hgnetv2_s_coco.yml']; assert all(load_config(path).architecture for path in paths)"
 
       - name: Run wheel CLI and export smoke tests
         run: >-

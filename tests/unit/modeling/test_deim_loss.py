@@ -1,10 +1,10 @@
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.losses.deim_loss import DEIMCriterion
-from ppdet_pytorch.modeling.transformers.dfine_decoder import DFINETransformer
-from ppdet_pytorch.modeling.transformers.dfine_support import DFINEHungarianMatcher
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv2 import (
+from detrs.modeling.losses.deim_loss import DEIMCriterion
+from detrs.modeling.transformers.dfine_decoder import DFINETransformer
+from detrs.modeling.transformers.dfine_support import DFINEHungarianMatcher
+from detrs.modeling.transformers.rtdetr_transformerv2 import (
     RTDETRTransformerv2,
 )
 

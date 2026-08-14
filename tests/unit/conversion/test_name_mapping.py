@@ -1,14 +1,14 @@
 """Unit tests for parameter name mapping
 
-Tests for NameMapper class in ppdet_pytorch.conversion.name_mapping
+Tests for NameMapper class in detrs.conversion.name_mapping
 """
 
 import json
 
 import pytest
 
-from ppdet_pytorch.conversion.models import MappingType
-from ppdet_pytorch.conversion.name_mapping import NameMapper
+from detrs.conversion.models import MappingType
+from detrs.conversion.name_mapping import NameMapper
 
 
 class TestNameMapper:

@@ -1,21 +1,21 @@
 import numpy as np
 import pytest
 
-from ppdet_pytorch.data.reader import CombineSSODLoader
-from ppdet_pytorch.data.source.dataset import ImageFolder
-from ppdet_pytorch.data.source.voc import VOCDataSet
-from ppdet_pytorch.data.transform.autoaugment_utils import (
+from detrs.data.reader import CombineSSODLoader
+from detrs.data.source.dataset import ImageFolder
+from detrs.data.source.voc import VOCDataSet
+from detrs.data.transform.autoaugment_utils import (
     shear_x,
     shear_y,
     translate_x,
     translate_y,
 )
-from ppdet_pytorch.data.transform.batch_operators import (
+from detrs.data.transform.batch_operators import (
     BatchRandomResizeForSSOD,
     Gt2GFLTarget,
 )
-from ppdet_pytorch.data.transform.gridmask_utils import Gridmask
-from ppdet_pytorch.data.transform.operators import RandomResize, Resize
+from detrs.data.transform.gridmask_utils import Gridmask
+from detrs.data.transform.operators import RandomResize, Resize
 
 
 def test_image_folder_loads_plain_images_without_annotation(tmp_path):

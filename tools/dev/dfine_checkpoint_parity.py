@@ -11,10 +11,10 @@ from pathlib import Path
 import torch
 import yaml
 
-from ppdet_pytorch import modeling as _modeling  # noqa: F401
-from ppdet_pytorch.cli.eval import load_evaluation_weights
-from ppdet_pytorch.cli.infer import create_preprocessors, prepare_image_batch
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs import modeling as _modeling  # noqa: F401
+from detrs.cli.eval import load_evaluation_weights
+from detrs.cli.infer import create_preprocessors, prepare_image_batch
+from detrs.core.workspace import create, load_config
 
 PINNED_SHA = "267a6da6d04c8ad52e54120692896515b9e55981"
 ROOT = Path(__file__).resolve().parents[2]

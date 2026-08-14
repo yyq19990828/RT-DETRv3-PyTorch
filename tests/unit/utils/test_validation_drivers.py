@@ -551,14 +551,14 @@ def test_validate_rejects_source_import_in_installed_mode(tmp_path):
         ],
     )
     assert result.returncode == 1
-    assert "does not contain ppdet_pytorch" in result.stdout
+    assert "does not contain detrs" in result.stdout
     assert not evidence.exists()
 
 
 def test_validate_accepts_package_inside_installed_prefix(tmp_path):
     prefix = tmp_path / "venv"
     site_packages = prefix / "lib/python3.12/site-packages"
-    package = site_packages / "ppdet_pytorch"
+    package = site_packages / "detrs"
     package.mkdir(parents=True)
     (package / "__init__.py").write_text("", encoding="utf-8")
     (prefix / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
@@ -587,7 +587,7 @@ def test_validate_accepts_package_inside_installed_prefix(tmp_path):
     [
         ({"nodes": ["dinov3/teacher_encoder_output"]}, "training-residue"),
         ({"opset": 16}, "opset"),
-        ({"paddle_imports": ["ppdet_pytorch/model.py:1"]}, "core-dependencies"),
+        ({"paddle_imports": ["detrs/model.py:1"]}, "core-dependencies"),
         ({"tolerances": {"activation_atol": 0.1}}, "tolerance-contract"),
     ],
 )

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs.core.workspace import create, load_config
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIGS = (
@@ -15,7 +15,10 @@ CONFIGS = (
     "configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml",
     *(f"configs/rtdetrv4/rtdetrv4_hgnetv2_{variant}_coco.yml" for variant in "smlx"),
     *(f"configs/deimv2/deimv2_dinov3_{variant}_coco.yml" for variant in "smlx"),
-    *(f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml" for variant in ("n", "pico", "femto", "atto")),
+    *(
+        f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml"
+        for variant in ("n", "pico", "femto", "atto")
+    ),
 )
 
 

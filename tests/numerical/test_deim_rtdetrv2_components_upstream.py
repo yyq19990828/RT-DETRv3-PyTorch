@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 import torch
 
-from ppdet_pytorch.modeling.backbones.presnet import PResNet
-from ppdet_pytorch.modeling.post_process import DETRPostProcess
-from ppdet_pytorch.modeling.transformers.dfine_hybrid_encoder import (
+from detrs.modeling.backbones.presnet import PResNet
+from detrs.modeling.post_process import DETRPostProcess
+from detrs.modeling.transformers.dfine_hybrid_encoder import (
     RTDETRV2HybridEncoder,
 )
 

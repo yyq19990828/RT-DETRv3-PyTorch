@@ -9,7 +9,7 @@ import torch
 import yaml
 from dfine_checkpoint_parity import sha256_file
 
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs.core.workspace import create, load_config
 
 PINNED_SHA = "add5bcdb499bf7b8a366bfeac1a47d3dc278de27"
 ROOT = Path(__file__).resolve().parents[2]

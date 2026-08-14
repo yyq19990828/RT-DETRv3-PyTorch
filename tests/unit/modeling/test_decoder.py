@@ -15,13 +15,13 @@ import pytest
 import torch
 import torch.nn as nn
 
-from ppdet_pytorch.modeling.transformers.rtdetr_transformerv3 import (
+from detrs.modeling.transformers.rtdetr_transformerv3 import (
     MultiHeadAttention,
     RTDETRTransformerv3,
     TransformerDecoder,
     TransformerDecoderLayer,
 )
-from ppdet_pytorch.modeling.transformers.utils import MLP
+from detrs.modeling.transformers.utils import MLP
 
 
 class _AttentionMaskCapture(nn.Module):

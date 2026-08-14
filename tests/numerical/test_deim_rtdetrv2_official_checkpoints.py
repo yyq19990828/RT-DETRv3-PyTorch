@@ -38,7 +38,7 @@ def test_official_checkpoint_matches_pinned_upstream(variant):
 def test_rejects_r50_variant_swap_before_prediction():
     import torch
 
-    from ppdet_pytorch.core.workspace import create, load_config
+    from detrs.core.workspace import create, load_config
 
     checkpoint_root, _ = _assets()
     state = torch.load(

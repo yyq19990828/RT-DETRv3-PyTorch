@@ -135,7 +135,7 @@ GradScaler 检测到溢出时，`scaler.step()` 会跳过 optimizer 更新并降
 ```bash
 COCO_ROOT=/path/to/coco2017
 CUDA_VISIBLE_DEVICES=0,1 .venv/bin/torchrun --standalone --nproc_per_node=2 \
-  .venv/bin/rtdetrv3-train --ddp --amp --enable_ce True \
+  .venv/bin/detrs train --ddp --amp --enable_ce True \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   -o TrainDataset.dataset_dir="$COCO_ROOT" TrainReader.batch_size=8 \
      worker_num=4 epoch=1 log_iter=50 use_ema=False \
@@ -144,7 +144,7 @@ CUDA_VISIBLE_DEVICES=0,1 .venv/bin/torchrun --standalone --nproc_per_node=2 \
 ```
 
 ```bash
-CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
+CUDA_VISIBLE_DEVICES=0 .venv/bin/detrs eval \
   -c configs/rtdetrv3/rtdetrv3_r18vd_6x_coco.yml \
   --checkpoint output/m3-r18-coco-one-epoch/model_final.pth \
   --anno_file "$COCO_ROOT/annotations/instances_val2017.json" \

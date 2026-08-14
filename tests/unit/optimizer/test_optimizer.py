@@ -2,8 +2,8 @@ import pytest
 import torch
 from torch import nn
 
-from ppdet_pytorch.modeling.backbones.resnet import ConvNormLayer, ResNet
-from ppdet_pytorch.optimizer.optimizer import (
+from detrs.modeling.backbones.resnet import ConvNormLayer, ResNet
+from detrs.optimizer.optimizer import (
     LearningRate,
     LinearWarmup,
     OptimizerBuilder,

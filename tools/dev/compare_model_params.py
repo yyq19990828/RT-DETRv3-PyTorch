@@ -36,7 +36,7 @@ def load_paddle_model(config_path):
 
 def load_pytorch_model(config_path):
     """Load PyTorch model from config"""
-    from ppdet_pytorch.core.workspace import create, load_config
+    from detrs.core.workspace import create, load_config
 
     print(f"Loading PyTorch config: {config_path}")
     cfg = load_config(config_path)

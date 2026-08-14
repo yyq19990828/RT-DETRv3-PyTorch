@@ -10,11 +10,11 @@ import pytest
 import torch
 import yaml
 
-from ppdet_pytorch import modeling as _torch_modeling  # noqa: F401
-from ppdet_pytorch.conversion.converter import WeightConverter
-from ppdet_pytorch.conversion.models import ConversionConfig
-from ppdet_pytorch.core.workspace import create as torch_create
-from ppdet_pytorch.core.workspace import load_config as torch_load_config
+from detrs import modeling as _torch_modeling  # noqa: F401
+from detrs.conversion.converter import WeightConverter
+from detrs.conversion.models import ConversionConfig
+from detrs.core.workspace import create as torch_create
+from detrs.core.workspace import load_config as torch_load_config
 
 pytestmark = [pytest.mark.numerical, pytest.mark.paddle, pytest.mark.slow]
 

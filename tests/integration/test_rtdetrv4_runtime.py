@@ -11,8 +11,8 @@ import torch.nn.functional as F
 from PIL import Image
 from torch import nn
 
-from ppdet_pytorch.core.workspace import load_config
-from ppdet_pytorch.engine.trainer import Trainer
+from detrs.core.workspace import load_config
+from detrs.engine.trainer import Trainer
 
 ROOT = Path(__file__).resolve().parents[2]
 

@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from ppdet_pytorch.deploy import (
+from detrs.deploy import (
     DetectionExportAdapter,
     export_torchscript,
     make_example_inputs,
@@ -45,7 +45,7 @@ def test_rejects_dynamic_height(tmp_path):
     pytest.importorskip("onnx")
     import onnx
 
-    from ppdet_pytorch.deploy import export_onnx
+    from detrs.deploy import export_onnx
 
     path = tmp_path / "model.onnx"
     export_onnx(

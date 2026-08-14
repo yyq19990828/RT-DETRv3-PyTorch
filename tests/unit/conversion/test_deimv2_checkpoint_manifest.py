@@ -7,8 +7,8 @@ from pathlib import Path
 
 import yaml
 
-from ppdet_pytorch import data, engine, modeling  # noqa: F401
-from ppdet_pytorch.core.workspace import create, load_config
+from detrs import data, engine, modeling  # noqa: F401
+from detrs.core.workspace import create, load_config
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/deimv2_coco.yml"

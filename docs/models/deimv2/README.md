@@ -39,4 +39,4 @@
 
 ## DINOv3 许可边界
 
-`DINOv3STAs` 依赖的 DINOv3 ViT 前向代码 vendored 于 `src/ppdet_pytorch/modeling/backbones/dinov3/`,按上游 DEIMv2 同样方式裁剪,保留 Meta DINOv3 License 头。该代码遵循 [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/346f38fee679c56a6888f91c51670fae61d364e0/LICENSE.md),不能按 Apache-2.0 处理;本项目不 vendor、不再分发任何 DINOv3 或作者私有骨干初始权重,训练初始化权重(`weights_path`)由使用者按上游说明自行获取。官方 COCO checkpoint 已包含微调后的骨干权重,评估、推理与导出不需要任何外部骨干资产。
+`DINOv3STAs` 依赖的 DINOv3 ViT 前向代码 vendored 于 `src/detrs/modeling/backbones/dinov3/`,按上游 DEIMv2 同样方式裁剪,保留 Meta DINOv3 License 头。该代码遵循 [DINOv3 License](https://github.com/facebookresearch/dinov3/blob/346f38fee679c56a6888f91c51670fae61d364e0/LICENSE.md),不能按 Apache-2.0 处理;本项目不 vendor、不再分发任何 DINOv3 或作者私有骨干初始权重,训练初始化权重(`weights_path`)由使用者按上游说明自行获取。官方 COCO checkpoint 已包含微调后的骨干权重,评估、推理与导出不需要任何外部骨干资产。

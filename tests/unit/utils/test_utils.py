@@ -4,10 +4,10 @@ from argparse import Namespace
 import yaml
 from PIL import Image, ImageFont
 
-from ppdet_pytorch.utils.checkpoint import get_latest_checkpoint
-from ppdet_pytorch.utils.cli import ArgsParser
-from ppdet_pytorch.utils.config import AttrDict, save_config
-from ppdet_pytorch.utils.visualizer import draw_bbox
+from detrs.utils.checkpoint import get_latest_checkpoint
+from detrs.utils.cli import ArgsParser
+from detrs.utils.config import AttrDict, save_config
+from detrs.utils.visualizer import draw_bbox
 
 
 def test_args_parser_preserves_namespace_and_parses_nested_options():
