@@ -81,8 +81,6 @@ class DINOv3TeacherModel(nn.Module):
         std=(0.229, 0.224, 0.225),
     ):
         super().__init__()
-        if sys.version_info < (3, 11):
-            raise RuntimeError("DINOv3 teacher training requires Python 3.11+")
         if dinov3_model_type != DINOV3_MODEL_TYPE:
             raise ValueError("DINOv3 teacher model type must be dinov3_vitb16")
         if patch_size != DINOV3_PATCH_SIZE:
@@ -126,6 +124,8 @@ class DINOv3TeacherModel(nn.Module):
             raise ValueError("DINOv3 repository has local modifications")
         if not (repo / "hubconf.py").is_file():
             raise FileNotFoundError("DINOv3 hubconf.py is missing")
+        if sys.version_info < (3, 11):
+            raise RuntimeError("DINOv3 teacher training requires Python 3.11+")
 
         model = torch.hub.load(
             str(repo),
