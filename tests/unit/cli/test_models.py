@@ -51,7 +51,7 @@ def test_schema_v1_default_manifest_lists_v010_models_as_published(capsys):
     ]
     assert {record["distribution_status"] for record in records} == {"published"}
     release_prefix = (
-        "https://github.com/yyq19990828/RT-DETRv3-PyTorch/releases/download/v0.1.0/"
+        "https://github.com/yyq19990828/DETR-series/releases/download/v0.1.0/"
     )
     assert all(record["download_url"].startswith(release_prefix) for record in records)
     assert all(

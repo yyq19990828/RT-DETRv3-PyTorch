@@ -14,7 +14,7 @@ def test_checkpoint_manifest_references_repository_configs():
     assert manifest["schema_version"] == 1
     assert len(manifest["source_repository"]["revision"]) == 40
     assert manifest["distribution"] == {
-        "repository": "https://github.com/yyq19990828/RT-DETRv3-PyTorch",
+        "repository": "https://github.com/yyq19990828/DETR-series",
         "release_tag": "v0.1.0",
     }
     package_version = re.search(

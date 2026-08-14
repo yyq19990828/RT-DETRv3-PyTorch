@@ -18,5 +18,7 @@
 
 ## 已完成记录
 
+- [DEIM 模型文档目录合并计划](../archive/2026-08-14-consolidate-deim-documentation.md)：2026-08-14 将两个 decoder profile 合并到唯一 `docs/models/deim/` 文档域。
+- [仓库文档优化与整理计划](../archive/2026-08-14-documentation-reorganization.md)：2026-08-14 完成入口收敛、历史归档和通用文档 CI 门禁。
 - [RT-DETRv3 v0.1.0 已完成计划归档](../archive/rtdetrv3-v0.1.0/plans/README.md)：M1–M3、M5–M12 和 2026-07-18 迁移进度快照。
 - [仓库迁移路线图](../../ROADMAP.md)：未完成工作的唯一顶层大纲。

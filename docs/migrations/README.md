@@ -4,7 +4,7 @@
 
 ## 文档索引
 
-- [Paddle 与 PyTorch 模块对比](paddle-pytorch-comparison.md)：组件级语义差异与迁移注意事项。
+- [Paddle 与 PyTorch 语义对照](paddle-pytorch-comparison.md)：当前可复用的框架差异、证据口径和验证顺序；历史逐模块长篇分析已归档。
 - [排错经验](troubleshooting.md)：环境、子模块、配置、权重转换和数值差异的常见问题。
 - [权重转换经验](weight-conversion.md)：参数命名、张量布局、校验层级、统一渲染可视化和已知边界。
 - [注册与配置迁移](registry-and-configuration.md)：`workspace`、`__inject__`、`__shared__` 和 YAML 继承的语义。

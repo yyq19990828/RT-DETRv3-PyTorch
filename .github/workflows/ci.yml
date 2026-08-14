@@ -35,6 +35,9 @@ jobs:
       - name: Run quality gate
         run: uv run --no-sync python scripts/check_quality.py
 
+      - name: Check repository documentation
+        run: uv run --no-sync python scripts/check_docs.py
+
   cpu-tests:
     name: CPU / Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest

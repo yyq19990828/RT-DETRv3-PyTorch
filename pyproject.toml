@@ -1,7 +1,7 @@
 [project]
 name = "rtdetrv3-pytorch"
 version = "0.1.0"
-description = "PyTorch implementation and migration workspace for RT-DETRv3"
+description = "Unified PyTorch implementations and validation workspace for DETR models"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
@@ -107,9 +107,9 @@ rtdetrv3-models = "ppdet_pytorch.cli.models:main"
 rtdetrv3-train = "ppdet_pytorch.cli.train:main"
 
 [project.urls]
-Documentation = "https://github.com/yyq19990828/RT-DETRv3-PyTorch/tree/main/docs"
-Issues = "https://github.com/yyq19990828/RT-DETRv3-PyTorch/issues"
-Repository = "https://github.com/yyq19990828/RT-DETRv3-PyTorch"
+Documentation = "https://github.com/yyq19990828/DETR-series/tree/main/docs"
+Issues = "https://github.com/yyq19990828/DETR-series/issues"
+Repository = "https://github.com/yyq19990828/DETR-series"
 
 [build-system]
 requires = ["hatchling"]

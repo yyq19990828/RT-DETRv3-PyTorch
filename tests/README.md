@@ -1,45 +1,33 @@
 # 测试指南
 
-测试使用根目录 `pyproject.toml` 中的 pytest 配置，并从已同步的 `.venv` 运行。
+测试使用根目录 `pyproject.toml` 中的 pytest 配置，并从 uv 管理的 `.venv` 运行。完整测试、质量和文档维护流程见[开发者指南](../docs/development/README.md)。
+
+## 常用命令
 
 ```bash
+# 不依赖 Paddle 的测试环境与全量测试
+uv sync --extra test
+uv run --extra test pytest -m "not paddle"
+
+# 单元、集成与覆盖率门禁
+uv run --extra test pytest tests/unit
+uv run --extra test pytest tests/integration
+uv run --extra test python scripts/check_coverage.py
+
+# Paddle 转换和数值对齐
+uv sync --extra dev
+uv run --extra dev pytest tests/numerical
 uv run --extra dev pytest
 ```
 
-常用的分类命令：
+需要官方 checkpoint、COCO、GPU 或 DINOv3 teacher 的用例可能需要额外资产和环境变量；缺失时应按测试合同明确跳过或失败。不要把 smoke、shape 或成功加载结果描述成数值、精度或训练收敛证据。
 
-```bash
-# 单元测试
-uv run --extra dev pytest tests/unit
+## 目录约定
 
-# 集成测试
-uv run --extra dev pytest tests/integration
-
-# 数值与 Paddle 对照测试
-uv run --extra dev pytest tests/numerical
-
-# 不运行需要 Paddle 的用例
-uv run --extra dev pytest -m "not paddle"
-
-# M1 R18 最小训练链（快速回归）
-uv run --extra dev pytest tests/integration/test_rtdetrv3_training_chain.py -m "integration and not slow"
-
-# M1 R18 5-step CPU 训练
-uv run --extra dev pytest tests/integration/test_rtdetrv3_training_chain.py -m "integration and slow"
-```
-
-目录约定：
-
-- `unit/`：当前公开 API 的单元测试，其中 `conversion/` 覆盖 Paddle 到 PyTorch 权重转换。
-- `integration/`：跨模块工作流与转换流程。
-- `numerical/`：确定性、数值范围及 Paddle 对照验证。
-- `legacy/`：迁移早期、依赖旧 API 的历史测试；默认不收集，待按当前 API 重写后再移回。
+- `unit/`：当前公开 API 的局部行为，其中 `conversion/` 覆盖 Paddle 到 PyTorch 权重转换。
+- `integration/`：跨模块工作流、训练恢复、打包与运行时。
+- `numerical/`：确定性、官方 checkpoint 及 Paddle/上游 PyTorch 数值对照。
+- `legacy/`：迁移早期旧 API 历史测试，默认不收集；需要恢复时按当前 API 重写。
 - `configs/`：测试专用配置。
 
-Paddle 和测试工具均属于 `dev` 附加依赖，开发环境用以下命令创建或更新：
-
-```bash
-uv sync --extra dev
-```
-
-测试产生的缓存、临时目录和构建产物应在测试后清理，不提交到仓库。
+测试完成后清理由本次工作产生的缓存、临时 checkpoint、导出和构建产物，不删除 `.venv`。

@@ -4,3 +4,4 @@
 
 - [实现一致性检查](consistency-check.md)
 - [历史规格整合记录](spec-history.md)
+- [PaddlePaddle 与 PyTorch 模块对比](paddle-pytorch-comparison.md)：2025-10-20 的逐模块分析和当时完成度判断。

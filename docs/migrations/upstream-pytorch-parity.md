@@ -42,7 +42,7 @@
 
 实测失败不得通过事后放宽容差改写为通过。应先定位首个分歧激活，再判断是实现、权重映射、预处理还是运行环境差异。
 
-模型族专属容差不得提升为共享默认值。当前 DEIM-RT-DETRv2 的预注册 ONNX 例外及实测结果见其[模型合同](../models/deim-rtdetrv2/README.md#部署边界)；D-FINE、DEIM-D-FINE 和其他模型族继续使用表中的默认门槛。
+模型族专属容差不得提升为共享默认值。当前 DEIM-RT-DETRv2 的预注册 ONNX 例外及实测结果见其[模型合同](../models/deim/README.md#deim-rt-detrv2-部署边界)；D-FINE、DEIM-D-FINE 和其他模型族继续使用表中的默认门槛。
 
 ## 驱动与证据
 
@@ -58,8 +58,7 @@
 ## 模型证据入口
 
 - [D-FINE](../models/dfine/README.md)：官方 checkpoint、预处理、COCO、训练恢复和部署结果。
-- [DEIM-D-FINE](../models/deim-dfine/README.md)：MAL/Dense O2O、两阶段训练和五变体验收结果。
-- [DEIM-RT-DETRv2](../models/deim-rtdetrv2/README.md)：PResNet 初始化、后处理、family-specific ONNX 门槛和五变体验收结果。
+- [DEIM](../models/deim/README.md)：统一记录 D-FINE/RT-DETRv2 decoder profile 的 MAL/Dense O2O、PResNet 初始化、两阶段训练、family-specific ONNX 门槛和十变体验收结果。
 - [RT-DETRv4](../models/rtdetrv4/README.md)：已验证的 student 与训练专用 DINOv3 教师边界。
 
 跨模型可复用的结论是：预处理必须独立于模型图进行像素级验证；导出 fixture 应使用固定的非退化输入；checker/reload 成功不能替代 runtime parity 与训练节点残留审计；任何 family-specific 修复或容差必须留在对应模型合同中。
