@@ -12,6 +12,11 @@ import detrs.modeling.teachers.dinov3 as dinov3_module
 from detrs.engine.trainer import Trainer
 from detrs.modeling.teachers.dinov3 import DINOv3TeacherModel
 
+pytestmark = pytest.mark.skipif(
+    sys.version_info < (3, 11),
+    reason="DINOv3 teacher construction requires Python 3.11+",
+)
+
 HUBCONF = """
 import torch
 from torch import nn

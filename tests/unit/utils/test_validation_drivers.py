@@ -11,7 +11,7 @@ import pytest
 from tests.helpers.upstream_parity import run_driver, tensor_document
 
 ROOT = Path(__file__).resolve().parents[3]
-PLAN = ROOT / ".omo/plans/rtdetrv4-merge.md"
+PLAN = ROOT / "tests/fixtures/plans/rtdetrv4-merge.md"
 DRIVERS = (
     "compare_upstream_pytorch.py",
     "validate_model_family.py",
@@ -79,8 +79,15 @@ def test_normalized_plan_identity_ignores_only_task_checkboxes(tmp_path):
     )
 
     assert result_a.returncode == result_b.returncode == 0
-    assert json.loads(output_a.read_text())["plan_identity"] == expected
-    assert output_a.read_bytes() == output_b.read_bytes()
+    document_a = json.loads(output_a.read_text())
+    document_b = json.loads(output_b.read_text())
+    assert document_a["plan_identity"] == expected
+    # The documents echo the full command line, which embeds the distinct
+    # --plan paths; everything else must match exactly.
+    assert document_a["command"] != document_b["command"]
+    del document_a["command"]
+    del document_b["command"]
+    assert document_a == document_b
 
 
 def test_plan_identity_changes_for_any_other_byte(tmp_path):
@@ -126,6 +133,8 @@ def test_compare_rejects_wrong_upstream_sha_before_output(tmp_path):
             "wrong",
             "--expected-upstream-revision",
             "267a6da6d04c8ad52e54120692896515b9e55981",
+            "--plan",
+            str(PLAN),
             "--output",
             str(output),
         ],
@@ -164,6 +173,8 @@ def test_parity_rejects_v3_baseline_mismatch(tmp_path):
             "rtdetrv3",
             "--surfaces",
             "eager,onnx,torchscript",
+            "--plan",
+            str(PLAN),
             "--output",
             str(output),
         ],
@@ -186,6 +197,8 @@ def test_compare_reports_perturbed_tensor_and_maximum_error(tmp_path):
             str(tensor_document(tmp_path / "reference.json", {"aifi.f5": [0.0]})),
             "--candidate",
             str(tensor_document(tmp_path / "candidate.json", {"aifi.f5": [0.1]})),
+            "--plan",
+            str(PLAN),
             "--output",
             str(output),
         ],
@@ -213,6 +226,8 @@ def test_validate_parses_final_multi_family_invocation_deterministically(tmp_pat
         "--output",
         str(output),
         "--contract-only",
+        "--plan",
+        str(PLAN),
     ]
     first = run_driver(ROOT, "validate_model_family.py", arguments)
     first_bytes = output.read_bytes()
@@ -419,6 +434,8 @@ def test_validate_rejects_missing_assets_before_creating_evidence(tmp_path):
             "checkpoint-parity",
             "--evidence-dir",
             str(evidence),
+            "--plan",
+            str(PLAN),
         ],
     )
     assert result.returncode == 2
@@ -440,6 +457,8 @@ def test_deim_rtdetrv2_validate_contract_and_missing_asset_boundary(tmp_path):
         "--output",
         str(output),
         "--contract-only",
+        "--plan",
+        str(PLAN),
     ]
     result = run_driver(ROOT, "validate_model_family.py", arguments)
     assert result.returncode == 0
@@ -463,6 +482,8 @@ def test_deim_rtdetrv2_validate_contract_and_missing_asset_boundary(tmp_path):
             "verify",
             "--evidence-dir",
             str(tmp_path / "blocked"),
+            "--plan",
+            str(PLAN),
         ],
     )
     assert blocked.returncode == 2
@@ -480,6 +501,8 @@ def test_rtdetrv4_teacher_preflight_does_not_require_student_checkpoint(tmp_path
             "teacher-preflight",
             "--evidence-dir",
             str(tmp_path),
+            "--plan",
+            str(PLAN),
         ],
     )
 
@@ -548,6 +571,8 @@ def test_validate_rejects_source_import_in_installed_mode(tmp_path):
             "--installed-prefix",
             str(prefix),
             "--contract-only",
+            "--plan",
+            str(PLAN),
         ],
     )
     assert result.returncode == 1
@@ -576,6 +601,8 @@ def test_validate_accepts_package_inside_installed_prefix(tmp_path):
             "--installed-prefix",
             str(prefix),
             "--contract-only",
+            "--plan",
+            str(PLAN),
         ],
     )
     assert result.returncode == 0
@@ -608,6 +635,8 @@ def test_graph_audit_rejects_training_node_opset16_paddle_import_tolerance_chang
             str(tmp_path),
             "--output",
             str(output),
+            "--plan",
+            str(PLAN),
         ],
     )
     assert result.returncode == 1
@@ -684,6 +713,8 @@ def test_audit_plan_accepts_tasks_and_finals(tmp_path):
             "F2",
             "--output",
             str(output),
+            "--plan",
+            str(PLAN),
         ],
     )
     assert result.returncode == 0

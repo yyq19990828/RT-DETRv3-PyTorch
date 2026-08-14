@@ -122,7 +122,7 @@ jobs:
           uv run --no-sync pytest -p no:cacheprovider -q
           tests/unit/cli/test_eval.py
           tests/unit/cli/test_infer.py
-           tests/unit/cli/test_export.py
-           tests/unit/deploy/test_export.py
-           tests/unit/deploy/test_model_family_matrix.py
-           tests/integration/test_packaged_model_families.py
+          tests/unit/cli/test_export.py
+          tests/unit/deploy/test_export.py
+          tests/unit/deploy/test_model_family_matrix.py
+          tests/integration/test_packaged_model_families.py
