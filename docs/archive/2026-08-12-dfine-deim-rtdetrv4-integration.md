@@ -1,8 +1,10 @@
 # D-FINE、DEIM 与 RT-DETRv4 集成计划
 
-- 状态：`in-progress`
+> 完成计划归档快照（2026-08-15）：本文保存三族集成的实际范围与验收证据，不代表后续仓库状态。
+
+- 状态：`completed`
 - 创建日期：`2026-08-12`
-- 最后更新：`2026-08-14`
+- 最后更新：`2026-08-15`
 - 负责人：仓库维护者与后续执行代理
 - 执行规范：本计划的任务、验证矩阵与完成记录；模型级结果见 [`docs/models`](../models/README.md)
 - 审查记录：2026-08-12，Momus 与独立 Oracle 对同一执行计划完成双重批准；审查轮次 `rtdetrv4-merge-20260812-r6`
@@ -264,3 +266,7 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 本计划的执行环境为 Python `3.12.13`、PyTorch `2.5.1+cu121`，student/core 验收覆盖 CPU/FP32，真实 DINOv3 与 Paddle 探针使用 RTX 4090；各数值阶段的上游、checkpoint、COCO、seed、dtype 与容差已整理到正式报告。19 个新变体均完成官方 checkpoint 的完整 val2017 和固定 640 部署矩阵；reduced train/resume 只证明有限更新和确定性恢复，不证明完整 schedule 收敛。DEIM-RT-DETRv2 保留预注册的 family-specific ONNX 门槛，DINOv3 只属于 RT-DETRv4 训练，R34/R50 长训与多 seed 仍按路线图 deferred。全部最终审计均为 `APPROVE`；临时 venv、wheel、`dist/`、导出、重复 checkpoint cache、sdist 和测试 cache 已清理。技术验收已完成，计划保持 `in-progress` 直到维护者明确接受最终结果。
 
 最终机器验收记录绑定基线 revision `41961f796dca06aee47bde01bd41a8ed807635ad` 与 normalized plan identity `60333d67db893e1b12be693d53a3873f7f028878e9f77e7e4aecb34c85613ac5`。这两个值描述验收时的代码和计划身份，不是当前 HEAD；原始机器收据、重复渲染和代理续跑状态在结论进入正式文档后清理。
+
+### 维护者确认
+
+2026-08-15 维护者确认接受最终结果，计划转为 `completed` 并归档至 `docs/archive/`。上文 plan identity 描述验收时的计划文本，与归档后本文本不再一致，属预期。

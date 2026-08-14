@@ -43,6 +43,6 @@
 - 官方 checkpoint 清单：[`configs/checkpoints/dfine_coco.yml`](../../../configs/checkpoints/dfine_coco.yml)
 - 架构：[`DFINE`](../../../src/detrs/modeling/architectures/dfine.py)
 - Backbone：[`HGNetv2`](../../../src/detrs/modeling/backbones/hgnetv2.py)
-- 执行计划与逐任务证据摘要：[D-FINE、DEIM 与 RT-DETRv4 集成计划](../../plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)
+- 执行计划与逐任务证据摘要：[D-FINE、DEIM 与 RT-DETRv4 集成计划](../../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md)
 
 上游为 `Peterande/D-FINE@267a6da6d04c8ad52e54120692896515b9e55981`（Apache-2.0）。官方 checkpoint 继续由上游托管，不进入本项目 Release；配置和 manifest 已进入 wheel/sdist。

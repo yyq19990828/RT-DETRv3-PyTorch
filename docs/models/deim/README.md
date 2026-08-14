@@ -106,4 +106,4 @@ TorchScript 在固定 640、CPU/FP32、batch 1/4 下逐值一致。ONNX 使用�
 - 两个 profile 的 detector、训练初始化、checkpoint 和部署容差不可交换；文档合并不改变两个 CLI family。
 - 官方 checkpoint 继续由上游托管，不进入本项目 Release；配置和 manifest 已进入 wheel/sdist。
 - Reduced train/resume 只证明有限更新和 epoch-boundary 恢复，不证明完整 schedule、多 seed、低精度、TensorRT 或性能。
-- 执行计划与逐任务证据摘要见 [D-FINE、DEIM 与 RT-DETRv4 集成计划](../../plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)。
+- 执行计划与逐任务证据摘要见 [D-FINE、DEIM 与 RT-DETRv4 集成计划](../../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md)。

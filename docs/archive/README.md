@@ -8,5 +8,7 @@
 
 ## 仓库级维护快照
 
+- [2026-08-15 DEIMv2 集成计划](2026-08-14-deimv2-integration.md)：8 个官方 COCO 变体接入统一运行时的执行与验收记录,维护者已于 2026-08-15 接受。
+- [2026-08-15 D-FINE、DEIM 与 RT-DETRv4 集成计划](2026-08-12-dfine-deim-rtdetrv4-integration.md)：三族 19 个 COCO 变体接入统一运行时的执行与验收记录,维护者已于 2026-08-15 接受。
 - [2026-08-14 DEIM 模型文档目录合并计划](2026-08-14-consolidate-deim-documentation.md)：将两个运行时 profile 收敛到唯一 DEIM 文档域的完成记录。
 - [2026-08-14 文档优化与整理计划](2026-08-14-documentation-reorganization.md)：入口收敛、历史迁移和通用文档门禁的完成记录。

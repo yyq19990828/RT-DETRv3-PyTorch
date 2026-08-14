@@ -2,11 +2,7 @@
 
 **Status**: Active
 
-**Last updated**: 2026-08-14
-
-**Current execution plan**: [DEIMv2 集成](docs/plans/2026-08-14-deimv2-integration.md)（in-progress，8 个官方 COCO 变体）
-
-**Pending acceptance**: [D-FINE、DEIM 与 RT-DETRv4 集成](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（技术验收完成，等待维护者接受）
+**Last updated**: 2026-08-15
 
 **Deferred plan**: [M4——COCO 精度与稳定性对齐](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)
 
@@ -18,10 +14,6 @@
 
 ## 当前未完成工作
 
-### DEIMv2 集成（in-progress）
-
-把上游 `Intellindust-AI-Lab/DEIMv2@add5bcd` 的 8 个官方 COCO 变体（DINOv3 X/L/M/S 与 HGNetv2 N/Pico/Femto/Atto）接入统一运行时。执行矩阵、资产约定与数值合同见[集成计划](docs/plans/2026-08-14-deimv2-integration.md)。权重由上游 Google Drive 托管，本仓库只描述并校验，不重新发布。
-
 ### M4——RT-DETRv3 COCO 精度与稳定性（deferred）
 
 同一官方 R18 checkpoint 的 Paddle/PyTorch CPU/FP32 完整 val2017 gate 已通过：bbox AP 分别为 `0.480477300367` 与 `0.480477134768`，绝对差 `1.65599e-7`。该结果验证同权重评估，不代表本仓库标准 schedule 的训练收敛。
@@ -32,14 +24,6 @@
 - [ ] 在同设备、相同 batch 和同步边界下补齐 Paddle/PyTorch 训练吞吐、显存与端到端性能比较。
 
 恢复该计划前需要维护者明确训练时间和算力预算。社区可用 [`scripts/run_stability_experiment.py`](scripts/run_stability_experiment.py) 按 `model + seed` 分片执行，但只有 commit、输入、配置和训练协议一致的结果才能合并。
-
-### 新模型集成接受决策
-
-D-FINE、DEIM-D-FINE、DEIM-RT-DETRv2 与 RT-DETRv4 共 19 个变体已经通过官方 checkpoint、pinned activation/raw-output、reduced train/resume、四图 eager、ONNX/TorchScript、完整 COCO val2017、打包与最终审计。
-
-- [ ] 由维护者明确接受最终结果，再把[集成计划](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)从 `in-progress` 改为 `completed` 并移入归档。
-
-技术验收不自动表示官方权重由本项目发布，也不证明四个新模型族的完整 schedule、多 seed、低精度或性能收敛。
 
 ## 已完成里程碑索引
 
@@ -56,6 +40,8 @@ D-FINE、DEIM-D-FINE、DEIM-RT-DETRv2 与 RT-DETRv4 共 19 个变体已经通过
 | M10 TorchScript 设备 | R18 CUDA 默认与 CPU fallback 合同通过 | [计划](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m10-torchscript-cuda-inference.md) |
 | M11 ONNX Runtime 设备 | R18 CUDA/CPU provider 合同通过 | [计划](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m11-onnx-runtime-cuda-inference.md) |
 | M12 导出设备矩阵 | R34/R50 CUDA/CPU 功能矩阵与容差边界完成 | [计划](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m12-variant-export-device-matrix.md) |
+| D-FINE、DEIM、RT-DETRv4 集成 | 19 个 COCO 变体完成官方 checkpoint、数值、reduced train/resume、部署与打包验收，2026-08-15 维护者接受 | [计划](docs/archive/2026-08-12-dfine-deim-rtdetrv4-integration.md) |
+| DEIMv2 集成 | 8 个 COCO 变体完成官方 checkpoint、数值、reduced train/resume、导出与打包验收，2026-08-15 维护者接受 | [计划](docs/archive/2026-08-14-deimv2-integration.md) |
 
 RT-DETRv3 `v0.1.0` 的统一证据入口见[版本归档](docs/archive/rtdetrv3-v0.1.0/README.md)，当前模型合同见 [`docs/models/rtdetrv3`](docs/models/rtdetrv3/README.md)。
 

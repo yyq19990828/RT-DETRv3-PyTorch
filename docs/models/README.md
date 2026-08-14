@@ -14,7 +14,7 @@
 | RT-DETRv4 | S/M/L/X | 已完成 | 未发布，使用上游资产 |
 | DEIMv2 | DINOv3 X/L/M/S；HGNetv2 N/Pico/Femto/Atto | 已完成 | 未发布，使用上游资产 |
 
-“模型级验收已完成”表示固定官方 checkpoint 的构建、数值、完整 COCO、reduced train/resume 和部署矩阵达到各报告预注册门槛，不表示完整 schedule、多 seed、性能或权重发布。2026-08-14 跨模型最终审计的环境、测试计数和打包记录保存在[集成计划完成记录](../plans/2026-08-12-dfine-deim-rtdetrv4-integration.md#完成记录)，不作为会随代码变化的模型总览内容重复维护。
+“模型级验收已完成”表示固定官方 checkpoint 的构建、数值、完整 COCO、reduced train/resume 和部署矩阵达到各报告预注册门槛，不表示完整 schedule、多 seed、性能或权重发布。2026-08-14 跨模型最终审计的环境、测试计数和打包记录保存在[集成计划完成记录](../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md#完成记录)，不作为会随代码变化的模型总览内容重复维护。
 
 ## 模型入口
 

@@ -13,13 +13,13 @@
 
 ## 当前活动计划
 
-- [DEIMv2 集成计划](2026-08-14-deimv2-integration.md)：in-progress；8 个 COCO 变体的实现、数值对齐、完整 val2017、reduced train/resume、导出、打包与文档验收已完成，等待维护者明确接受最终结果。
-- [D-FINE、DEIM 与 RT-DETRv4 集成计划](2026-08-12-dfine-deim-rtdetrv4-integration.md)：in-progress；全部实现阶段与最终审计均已通过，技术验收完成，等待维护者明确接受最终结果。模型报告、逐变体指标和证据索引见 [`docs/models`](../models/README.md)。
 - [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：活动但 deferred；同权重完整 val2017 gate 已通过，本机 72 epoch、多 seed 与 R34/R50 长训于 2026-07-19 暂缓。
 
 ## 已完成记录
 
-- [包与 CLI 重命名计划](2026-08-15-rename-to-detrs.md)：2026-08-15 完成 `ppdet_pytorch` → `detrs` 包名/项目名切换,六个 `rtdetrv3-*` 命令收敛为单 `detrs` 入口 + 子命令;17 个 pre-existing 测试失败(`.omo` 本地文件缺失)与重命名无关,待维护者决策。
+- [包与 CLI 重命名计划](2026-08-15-rename-to-detrs.md)：2026-08-15 完成 `ppdet_pytorch` → `detrs` 包名/项目名切换,六个 `rtdetrv3-*` 命令收敛为单 `detrs` 入口 + 子命令;TorchScript 跨设备修复与 CI 恢复另见后续提交。
+- [DEIMv2 集成计划](../archive/2026-08-14-deimv2-integration.md)：2026-08-15 维护者接受,归档;8 个 COCO 变体的实现、数值对齐、完整 val2017、reduced train/resume、导出与打包验收完成。
+- [D-FINE、DEIM 与 RT-DETRv4 集成计划](../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md)：2026-08-15 维护者接受,归档;全部实现阶段与最终审计通过,模型报告、逐变体指标和证据索引见 [`docs/models`](../models/README.md)。
 
 - [DEIM 模型文档目录合并计划](../archive/2026-08-14-consolidate-deim-documentation.md)：2026-08-14 将两个 decoder profile 合并到唯一 `docs/models/deim/` 文档域。
 - [仓库文档优化与整理计划](../archive/2026-08-14-documentation-reorganization.md)：2026-08-14 完成入口收敛、历史归档和通用文档 CI 门禁。

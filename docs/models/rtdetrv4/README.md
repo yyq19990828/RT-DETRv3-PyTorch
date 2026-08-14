@@ -41,7 +41,7 @@
 - 官方 checkpoint 清单：[`configs/checkpoints/rtdetrv4_coco.yml`](../../../configs/checkpoints/rtdetrv4_coco.yml)
 - 架构：[`RTDETRV4`](../../../src/detrs/modeling/architectures/rtdetrv4.py)
 - 教师边界：[`DINOv3TeacherModel`](../../../src/detrs/modeling/teachers/dinov3.py)
-- 执行计划与逐任务证据摘要：[D-FINE、DEIM 与 RT-DETRv4 集成计划](../../plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)
+- 执行计划与逐任务证据摘要：[D-FINE、DEIM 与 RT-DETRv4 集成计划](../../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md)
 
 上游为 `RT-DETRs/RT-DETRv4@55fefaaed7efe2a5f72d0a18fd4e05965e35c292`（Apache-2.0）。官方 student checkpoint 继续由上游托管，不进入本项目 Release。
 
