@@ -7,6 +7,9 @@ RT-DETRv3 是当前仓库首个完成迁移和发布验证的 DETR 系列模型�
 - [配置迁移指南](configuration-guide.md)：R18/R34/R50 配置字段、必要改写与未声明支持范围。
 - [CLI 与导出边界](cli-and-export.md)：Train/Eval/Infer/Convert/Export/Models 的当前用户合同。
 - [已知限制](limitations.md)：数值、环境、配置、API 与导出边界。
+- [验证报告](validation-report.md)：官方 checkpoint、Paddle/PyTorch 保真、回归与最终范围审计。
+- [指标记录](metrics.md)：COCO、权重转换及 eager/ONNX/TorchScript 的数值结果。
+- [证据索引](evidence-index.md)：当前最终门与 `v0.1.0` 历史报告之间的映射。
 
 ## 版本证据
 

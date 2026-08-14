@@ -2,9 +2,13 @@
 
 本目录记录 DEIM 的 RT-DETRv2 decoder 分支合同。该分支是 DEIM 产品族所需的受限实现切片，不表示仓库新增了独立 RT-DETRv2 产品族，也不能与 RT-DETRv3 配置或 checkpoint 混用。
 
+- [验证报告](validation-report.md)：受限切片、训练初始化、恢复、推理和部署结论。
+- [指标记录](metrics.md)：五变体 detector/pretrained、COCO 与部署数值。
+- [证据索引](evidence-index.md)：Task 8、14-15、17、21-23 与最终门映射。
+
 ## 当前状态
 
-截至 2026-08-14，S/M/M*/L/X 已完成 Task 17 的模型级验收和 Task 21-22 的 Models CLI/打包验收；官方权重仍未由本项目发布。
+截至 2026-08-14，S/M/M*/L/X 已完成 Task 8、14-15、17、21-23 验收并通过 F1-F4 最终门；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | val2017 bbox AP | checkpoint tensors |
 |---|---|---:|---:|

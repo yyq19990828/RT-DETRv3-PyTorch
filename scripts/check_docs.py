@@ -32,6 +32,7 @@ MANIFESTS = {
     "deim-rtdetrv2": "deim_rtdetrv2_coco.yml",
     "rtdetrv4": "rtdetrv4_coco.yml",
 }
+MODEL_REPORT_FILES = ("validation-report.md", "metrics.md", "evidence-index.md")
 ATTRIBUTIONS = {
     "https://github.com/Peterande/D-FINE": (
         "267a6da6d04c8ad52e54120692896515b9e55981",
@@ -65,6 +66,16 @@ def _require(condition: bool, message: str) -> None:
 def require_expected_variants(actual: Sequence[str], family: str) -> None:
     expected = FAMILIES[family]
     _require(tuple(actual) == expected, f"stale variant matrix for {family}")
+
+
+def require_model_report_layout(models_root: Path) -> None:
+    for family in FAMILIES:
+        family_root = models_root / family
+        for filename in MODEL_REPORT_FILES:
+            _require(
+                (family_root / filename).is_file(),
+                f"missing model report: {family}/{filename}",
+            )
 
 
 def require_attributions(text: str) -> None:
@@ -147,6 +158,7 @@ def validate_repository(plan: Path, evidence_dir: Path) -> dict[str, int]:
     evidence_dir = evidence_dir.resolve()
     aliases = []
     config_count = 0
+    require_model_report_layout(REPO_ROOT / "docs/models")
     for family, filename in MANIFESTS.items():
         path = REPO_ROOT / "configs/checkpoints" / filename
         document = yaml.safe_load(path.read_text(encoding="utf-8"))

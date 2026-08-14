@@ -2,9 +2,13 @@
 
 本目录记录 RT-DETRv4 模型族的当前仓库合同。跨模型复用的上游 PyTorch 数值验证方法见[上游 PyTorch 数值对齐](../../migrations/upstream-pytorch-parity.md)。
 
+- [验证报告](validation-report.md)：checkpoint、真实 teacher、DSI/GAM、训练恢复、推理和部署结论。
+- [指标记录](metrics.md)：四变体 checkpoint、COCO、四图 parity、部署和 DINOv3 身份数值。
+- [证据索引](evidence-index.md)：Task 18-23 与 F1-F4 的结论映射及复现入口。
+
 ## 当前状态
 
-截至 2026-08-14，RT-DETRv4 S/M/L/X 已完成 Task 18-20 的模型级验收和 Task 21-22 的 Models CLI/打包验收；官方权重仍未由本项目发布。
+截至 2026-08-14，RT-DETRv4 S/M/L/X 已完成 Task 18-23 的模型、Models CLI、打包和文档验收，并通过 F1-F4 最终门；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | 参数量 | val2017 bbox AP |
 |---|---|---:|---:|

@@ -13,7 +13,7 @@
 
 ## 当前活动计划
 
-- [D-FINE、DEIM 与 RT-DETRv4 集成计划](2026-08-12-dfine-deim-rtdetrv4-integration.md)：in-progress；Task 1-23 已完成，模型、Models CLI、打包、许可和文档任务均已通过；下一步为 F2-F4 并行最终验证及其后的 F1 合规审计。模型合同见 [`docs/models`](../models/README.md)。
+- [D-FINE、DEIM 与 RT-DETRv4 集成计划](2026-08-12-dfine-deim-rtdetrv4-integration.md)：in-progress；Task 1-23 与 F1-F4 均已通过，技术验收完成，等待维护者明确接受最终结果。模型报告、逐变体指标和证据索引见 [`docs/models`](../models/README.md)。
 - [M4——COCO 精度与稳定性对齐计划](2026-07-18-m4-coco-accuracy-stability.md)：活动但 deferred；同权重完整 val2017 gate 已通过，本机 72 epoch、多 seed 与 R34/R50 长训于 2026-07-19 暂缓。
 
 ## 已完成记录

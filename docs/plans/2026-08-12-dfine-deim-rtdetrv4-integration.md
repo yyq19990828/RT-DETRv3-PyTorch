@@ -213,10 +213,10 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 
 ### 最终验证波
 
-- [ ] F1 计划合规（F2-F4 全部批准后串行）：运行 `uv run python tools/dev/audit_plan_evidence.py --plan .omo/plans/rtdetrv4-merge.md --attempt-dir "$attemptDir" --require-tasks 1-23 --require-finals F2,F3,F4 --output "$attemptDir/final-F1-plan-compliance.md"`；使用忽略 checkbox 状态、其他字节敏感的 normalized plan identity，拒绝陈旧 SHA、自报通过或缺失命令，并用 wrong-plan-identity fixture 验证失败路径。
-- [ ] F2 质量与数值（并行）：顺序运行 quality、coverage、非 Paddle unit/integration、全部新增上游数值测试和 graph auditor，使用 `pipefail + tee` 保存完整日志；再用 training-node/opset16/Paddle-import/tolerance fixtures 验证 auditor 的非零失败。
-- [ ] F3 真实用户 QA（并行）：先核对 Todo 22 所保留 wheel 的 SHA，使用 `python3.11 -m venv` 在仓库外创建 venv，明确安装 wheel、pytest、onnx、onnxruntime；从源码 checkout 用该 venv 解释器运行非打包 `validate_model_family.py`，并强制 `ppdet_pytorch` 只能解析到 venv site-packages。四族最小变体及全部负例通过后，flush 证据并清理 venv、保留 wheel 和空 `dist/`。
-- [ ] F4 范围与 v3（并行）：检查 `git status` 与 Paddle submodule diff，运行完整非 Paddle、R18 官方数值，并对照任务 1 的 v3 eager/ONNX/TorchScript 基线；使用 submodule-diff 和 baseline-mismatch fixtures 验证失败路径。
+- [x] F1 计划合规（F2-F4 全部批准后串行）：运行 `uv run python tools/dev/audit_plan_evidence.py --plan .omo/plans/rtdetrv4-merge.md --attempt-dir "$attemptDir" --require-tasks 1-23 --require-finals F2,F3,F4 --output "$attemptDir/final-F1-plan-compliance.md"`；使用忽略 checkbox 状态、其他字节敏感的 normalized plan identity，拒绝陈旧 SHA、自报通过或缺失命令，并用 wrong-plan-identity fixture 验证失败路径。
+- [x] F2 质量与数值（并行）：顺序运行 quality、coverage、非 Paddle unit/integration、全部新增上游数值测试和 graph auditor，使用 `pipefail + tee` 保存完整日志；再用 training-node/opset16/Paddle-import/tolerance fixtures 验证 auditor 的非零失败。
+- [x] F3 真实用户 QA（并行）：先核对 Todo 22 所保留 wheel 的 SHA，使用 `python3.11 -m venv` 在仓库外创建 venv，明确安装 wheel、pytest、onnx、onnxruntime；从源码 checkout 用该 venv 解释器运行非打包 `validate_model_family.py`，并强制 `ppdet_pytorch` 只能解析到 venv site-packages。四族最小变体及全部负例通过后，flush 证据并清理 venv、wheel 和 `dist/`。
+- [x] F4 范围与 v3（并行）：检查 `git status` 与 Paddle submodule diff，运行完整非 Paddle、R18 官方数值，并对照任务 1 的 v3 eager/ONNX/TorchScript 基线；使用 submodule-diff 和 baseline-mismatch fixtures 验证失败路径。
 
 先并行运行 F2-F4，三者批准后再串行运行 F1。全部 F1-F4 必须无条件批准；任何 blocked 资产或失败门都使计划保持未完成。
 
@@ -260,4 +260,4 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 
 任务 23 已于 2026-08-14 完成。`NOTICE` 分别记录 D-FINE、DEIM、RT-DETRv4 的 Apache-2.0 上游 revision，并将 DINOv3 自定义许可证、Meta 门控授权、acknowledgment 和不打包/不再分发边界独立列出；根 README、路线图、五族模型合同和迁移索引同步到 Task 1-23 当前状态。文档检查器将 manifest 的 23 个 alias、19 个新配置、相对链接、归属、工作站路径和 Task 20 四变体 student-only 图证据绑定，并覆盖 stale variant、缺失归属、绝对路径和 teacher graph contradiction 四类负例。
 
-本计划 Task 1-23 的任务级执行环境为 Python `3.12.13`、PyTorch `2.5.1+cu121`，student/core 验收覆盖 CPU/FP32，真实 DINOv3 与 Paddle 探针使用 RTX 4090；各数值任务的上游、checkpoint、COCO、seed、dtype 与容差记录在对应机器证据中。19 个新变体均完成官方 checkpoint 的完整 val2017 和固定 640 部署矩阵；reduced train/resume 只证明有限更新和确定性恢复，不证明完整 schedule 收敛。DEIM-RT-DETRv2 保留预注册的 family-specific ONNX 门槛，DINOv3 只属于 RT-DETRv4 训练，R34/R50 长训与多 seed 仍按路线图 deferred。当前无 blocked 任务资产；临时导出、重复 checkpoint cache、sdist 和测试 cache 已清理，仅为 F3 保留上述一个已校验 wheel。Task 1-23 完成不等于整个计划完成，仍须 F2-F4 全部 `APPROVE` 后串行通过 F1。
+本计划 Task 1-23 的任务级执行环境为 Python `3.12.13`、PyTorch `2.5.1+cu121`，student/core 验收覆盖 CPU/FP32，真实 DINOv3 与 Paddle 探针使用 RTX 4090；各数值任务的上游、checkpoint、COCO、seed、dtype 与容差记录在对应机器证据中。19 个新变体均完成官方 checkpoint 的完整 val2017 和固定 640 部署矩阵；reduced train/resume 只证明有限更新和确定性恢复，不证明完整 schedule 收敛。DEIM-RT-DETRv2 保留预注册的 family-specific ONNX 门槛，DINOv3 只属于 RT-DETRv4 训练，R34/R50 长训与多 seed 仍按路线图 deferred。F2-F4 与其后的 F1 均为 `APPROVE`；临时 venv、wheel、`dist/`、导出、重复 checkpoint cache、sdist 和测试 cache已清理。技术验收已完成，计划保持 `in-progress` 直到维护者明确接受最终结果。

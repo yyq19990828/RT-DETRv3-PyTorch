@@ -2,9 +2,13 @@
 
 本目录记录 D-FINE 模型族的当前仓库合同。跨模型复用的上游 PyTorch 数值验证方法见[上游 PyTorch 数值对齐](../../migrations/upstream-pytorch-parity.md)。
 
+- [验证报告](validation-report.md)：上游对齐、训练恢复、推理、部署与限制。
+- [指标记录](metrics.md)：五变体 checkpoint、COCO、四图和导出数值。
+- [证据索引](evidence-index.md)：Task 2-13、21-23 与 F1-F4 的结论映射。
+
 ## 当前状态
 
-截至 2026-08-14，D-FINE N/S/M/L/X 已完成 Task 9-13 的模型级验收和 Task 21-22 的 Models CLI/打包验收；官方权重仍未由本项目发布。
+截至 2026-08-14，D-FINE N/S/M/L/X 已完成 Task 2-13、21-23 验收并通过 F1-F4 最终门；官方权重仍未由本项目发布。
 
 | 变体 | Backbone | 参数量 | val2017 bbox AP |
 |---|---|---:|---:|

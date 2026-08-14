@@ -2,6 +2,8 @@
 
 本目录按面向用户和验证驱动使用的模型族组织专属文档。跨模型复用的配置、训练、权重转换和排错经验仍保存在 [`docs/migrations`](../migrations/README.md)，这里不重复这些公共合同。
 
+每个实际运行模型族都维护四个入口：`README.md` 描述当前用户合同，`validation-report.md` 记录验证方法、环境、结论和限制，`metrics.md` 保存逐变体 checkpoint、精度、数值对齐与部署指标，`evidence-index.md` 将结论映射到任务和最终门。机器日志中的临时路径、重复输出和无结论排错过程不会原样进入正式文档。
+
 ## 已收录模型
 
 - [RT-DETRv3](rtdetrv3/README.md)：已发布模型，包含配置支持、CLI/导出边界、已知限制和 `v0.1.0` 验证证据入口。

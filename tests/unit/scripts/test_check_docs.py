@@ -10,6 +10,18 @@ def test_rejects_stale_variant():
         check_docs.require_expected_variants(("dfine-n", "dfine-s"), "dfine")
 
 
+def test_rejects_missing_model_report(tmp_path):
+    for family in check_docs.FAMILIES:
+        family_root = tmp_path / family
+        family_root.mkdir()
+        for filename in check_docs.MODEL_REPORT_FILES:
+            (family_root / filename).touch()
+    (tmp_path / "dfine" / "metrics.md").unlink()
+
+    with pytest.raises(ValueError, match="missing model report: dfine/metrics.md"):
+        check_docs.require_model_report_layout(tmp_path)
+
+
 def test_rejects_missing_attribution():
     with pytest.raises(ValueError, match="missing attribution"):
         check_docs.require_attributions("Apache-2.0")
