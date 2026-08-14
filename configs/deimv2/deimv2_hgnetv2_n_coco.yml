@@ -1,0 +1,80 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  '_base_/deimv2.yml',
+]
+
+save_dir: output/deimv2_hgnetv2_n_coco
+epoch: 160
+base_lr: 0.0008
+ema_restart_decay: 0.9999
+
+HGNetv2:
+  name: B0
+  return_idx: [2, 3]
+  use_lab: true
+
+DFINEHybridEncoder:
+  version: dfine
+  in_channels: [512, 1024]
+  feat_strides: [16, 32]
+  hidden_dim: 128
+  use_encoder_idx: [1]
+  dim_feedforward: 512
+  expansion: 0.34
+  depth_mult: 0.5
+
+DEIMTransformer:
+  feat_channels: [128, 128]
+  feat_strides: [16, 32]
+  hidden_dim: 128
+  num_levels: 2
+  num_points: [6, 6]
+  num_layers: 3
+  dim_feedforward: 512
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deimv2
+  stop_epoch: 148
+  ema_restart_decay: 0.9999
+
+LearningRate:
+  base_lr: 0.0008
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 160
+      warmup_iter: 2000
+      flat_epochs: 7800
+      no_aug_epochs: 12
+      lr_gamma: 1.0
+
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    betas: [0.9, 0.999]
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.0004
+      - params: ['^backbone\..*(?:norm|bn).*$']
+        lr: 0.0004
+        weight_decay: 0.0
+      - params: ['^(?:encoder|decoder)\..*(?:norm|bn|bias).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 32
+  dense_o2o_policy:
+    policy_epochs: [4, 78, 148]
+    mixup_epochs: [4, 78]
+    multiscale_stop_epoch: 148
+    copyblend_prob: 0.4
+    copyblend_epochs: [4, 78]
+    multiscale_sizes: null
+
+DEIMv2Criterion:
+  matcher:
+    matcher_change_epoch: 136

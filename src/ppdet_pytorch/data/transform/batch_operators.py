@@ -126,7 +126,7 @@ class PadBatch(BaseOperator):
 
 @register_op
 class DEIMDenseO2OCollate(BaseOperator):
-    """Epoch-aware Dense O2O MixUp and multiscale batch transform."""
+    """Epoch-aware Dense O2O MixUp, Copy-Blend and multiscale batch transform."""
 
     def __init__(
         self,
@@ -135,6 +135,12 @@ class DEIMDenseO2OCollate(BaseOperator):
         multiscale_stop_epoch,
         multiscale_sizes=None,
         seed=0,
+        copyblend_prob=0.0,
+        copyblend_epochs=(0, 0),
+        area_threshold=100,
+        num_objects=3,
+        with_expand=False,
+        expand_ratios=(0.1, 0.25),
     ):
         super().__init__()
         self.mixup_prob = float(mixup_prob)
@@ -142,6 +148,12 @@ class DEIMDenseO2OCollate(BaseOperator):
         self.multiscale_stop_epoch = int(multiscale_stop_epoch)
         self.multiscale_sizes = multiscale_sizes
         self.seed = int(seed)
+        self.copyblend_prob = float(copyblend_prob)
+        self.copyblend_epochs = list(copyblend_epochs)
+        self.area_threshold = float(area_threshold)
+        self.num_objects = int(num_objects)
+        self.with_expand = bool(with_expand)
+        self.expand_ratios = tuple(expand_ratios)
         self.epoch = 0
         self.rank = 0
 
@@ -152,8 +164,130 @@ class DEIMDenseO2OCollate(BaseOperator):
     def mixup_active(self, epoch):
         return self.mixup_epochs[0] <= epoch < self.mixup_epochs[1]
 
+    def copyblend_active(self, epoch):
+        return (
+            self.copyblend_prob > 0
+            and self.copyblend_epochs[0] <= epoch < self.copyblend_epochs[-1]
+        )
+
     def multiscale_active(self, epoch):
         return epoch < self.multiscale_stop_epoch
+
+    def _apply_copyblend(self, samples, rng):
+        """Blend copied objects into batch images (upstream Copy-Blend).
+
+        Boxes are pixel xyxy at this stage; the upstream area filter uses the
+        COCO annotation area, approximated here by the pixel box area.
+        """
+        beta = round(float(rng.uniform(0.45, 0.55)), 6)
+        pool_boxes = []
+        pool_classes = []
+        pool_sources = []
+        for image_index, sample in enumerate(samples):
+            boxes = np.asarray(sample["gt_bbox"])
+            for box_index in range(len(boxes)):
+                box = boxes[box_index]
+                area = (box[2] - box[0]) * (box[3] - box[1])
+                if area >= self.area_threshold:
+                    pool_boxes.append(box)
+                    pool_classes.append(sample["gt_class"][box_index])
+                    pool_sources.append((image_index, box))
+        if not pool_boxes:
+            return samples
+
+        samples = [copy.deepcopy(sample) for sample in samples]
+        height, width = samples[0]["image"].shape[:2]
+        for image_index, sample in enumerate(samples):
+            image = sample["image"]
+            channel_first = image.ndim == 3 and image.shape[0] in (1, 3, 4)
+            canvas = image.transpose(1, 2, 0) if channel_first else image
+            blended_boxes = []
+            blended_classes = []
+            blended_ratios = []
+            count = min(self.num_objects, len(pool_sources))
+            for source_index in rng.choice(
+                len(pool_sources), size=count, replace=False
+            ):
+                source_image_index, source_box = pool_sources[source_index]
+                source = (
+                    samples[source_image_index]["image"]
+                    if source_image_index != image_index
+                    else canvas
+                )
+                if source is canvas:
+                    source_plane = canvas
+                else:
+                    other = samples[source_image_index]["image"]
+                    source_plane = (
+                        other.transpose(1, 2, 0)
+                        if other.ndim == 3 and other.shape[0] in (1, 3, 4)
+                        else other
+                    )
+                x1_src = max(int(source_box[0]), 0)
+                y1_src = max(int(source_box[1]), 0)
+                x2_src = min(int(source_box[2]), width)
+                y2_src = min(int(source_box[3]), height)
+                patch_w, patch_h = x2_src - x1_src, y2_src - y1_src
+                if patch_w <= 0 or patch_h <= 0:
+                    continue
+                x1 = int(rng.integers(0, width - patch_w + 1))
+                y1 = int(rng.integers(0, height - patch_h + 1))
+                x2, y2 = x1 + patch_w, y1 + patch_h
+
+                if self.with_expand:
+                    alpha = round(
+                        float(rng.uniform(*sorted(self.expand_ratios))), 6
+                    )
+                    expand_w, expand_h = int(patch_w * alpha), int(patch_h * alpha)
+                    grow_left = min(x1_src - max(x1_src - expand_w, 0), x1)
+                    grow_top = min(y1_src - max(y1_src - expand_h, 0), y1)
+                    grow_right = min(
+                        min(x2_src + expand_w, width) - x2_src, width - x2
+                    )
+                    grow_bottom = min(
+                        min(y2_src + expand_h, height) - y2_src, height - y2
+                    )
+                    x1_src -= grow_left
+                    y1_src -= grow_top
+                    x2_src += grow_right
+                    y2_src += grow_bottom
+                    x1 -= grow_left
+                    y1 -= grow_top
+                    x2 += grow_right
+                    y2 += grow_bottom
+                    patch_w, patch_h = x2 - x1, y2 - y1
+
+                patch = source_plane[y1_src:y2_src, x1_src:x2_src]
+                region = canvas[y1:y2, x1:x2]
+                canvas[y1:y2, x1:x2] = region * beta + patch * (1.0 - beta)
+
+                blended_boxes.append(
+                    [x1, y1, x2, y2]
+                )
+                blended_classes.append(pool_classes[source_index])
+                blended_ratios.append(1.0 - beta)
+
+            if blended_boxes:
+                sample["image"] = (
+                    canvas.transpose(2, 0, 1) if channel_first else canvas
+                )
+                sample["gt_bbox"] = np.concatenate(
+                    [np.asarray(sample["gt_bbox"], dtype=np.float32),
+                     np.asarray(blended_boxes, dtype=np.float32)]
+                )
+                sample["gt_class"] = np.concatenate(
+                    [np.asarray(sample["gt_class"]),
+                     np.asarray(blended_classes)]
+                )
+                if "gt_score" in sample:
+                    existing = float(np.asarray(sample["gt_score"]).flatten()[0])
+                    ratios = [existing] * (
+                        len(sample["gt_bbox"]) - len(blended_boxes)
+                    ) + blended_ratios
+                    sample["gt_score"] = np.asarray(
+                        ratios, dtype=np.float32
+                    ).reshape(-1, 1)
+        return samples
 
     def __call__(self, samples, context=None):
         worker = get_worker_info()
@@ -183,6 +317,8 @@ class DEIMDenseO2OCollate(BaseOperator):
                 ).astype(np.float32)
                 mixed.append(sample)
             samples = mixed
+        elif self.copyblend_active(self.epoch) and rng.random() < self.copyblend_prob:
+            samples = self._apply_copyblend(samples, rng)
         if (
             self.multiscale_sizes
             and self.multiscale_active(self.epoch)

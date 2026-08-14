@@ -16,6 +16,8 @@ Available components:
 """
 
 from .attention import MSDeformableAttention, deformable_attention_core_func
+from .deimv2_decoder import DEIMTransformer
+from .deimv2_lite_encoder import LiteEncoder
 from .dfine_decoder import (
     LQE,
     DFINETransformer,
@@ -25,6 +27,7 @@ from .dfine_decoder import (
     TransformerDecoder as DFINETransformerDecoder,
 )
 from .dfine_hybrid_encoder import DFINEHybridEncoder, RTDETRV2HybridEncoder
+from .dfine_support import DEIMv2HungarianMatcher
 from .dfine_utils import bbox2distance, distance2bbox, weighting_function
 from .hybrid_encoder import (
     CSPRepLayer,
@@ -63,6 +66,9 @@ __all__ = [
     "DFINETransformer",
     "DFINEHybridEncoder",
     "RTDETRV2HybridEncoder",
+    "DEIMTransformer",
+    "LiteEncoder",
+    "DEIMv2HungarianMatcher",
     "weighting_function",
     "distance2bbox",
     "bbox2distance",

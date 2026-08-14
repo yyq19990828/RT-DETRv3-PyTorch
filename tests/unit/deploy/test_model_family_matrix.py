@@ -14,6 +14,8 @@ CONFIGS = (
     "configs/deim/rtdetrv2/deim_r50vd_60e_coco.yml",
     "configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml",
     *(f"configs/rtdetrv4/rtdetrv4_hgnetv2_{variant}_coco.yml" for variant in "smlx"),
+    *(f"configs/deimv2/deimv2_dinov3_{variant}_coco.yml" for variant in "smlx"),
+    *(f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml" for variant in ("n", "pico", "femto", "atto")),
 )
 
 

@@ -77,3 +77,6 @@ htmlcov/
 # Temporary files
 *.bak
 *.tmp
+
+# Local agent CLI session state
+.zcode/

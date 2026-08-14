@@ -251,6 +251,16 @@ class BaseDataLoader(object):
                             "multiscale_stop_epoch"
                         ],
                         "multiscale_sizes": dense_o2o_policy.get("multiscale_sizes"),
+                        "copyblend_prob": dense_o2o_policy.get("copyblend_prob", 0.0),
+                        "copyblend_epochs": dense_o2o_policy.get(
+                            "copyblend_epochs", [0, 0]
+                        ),
+                        "area_threshold": dense_o2o_policy.get("area_threshold", 100),
+                        "num_objects": dense_o2o_policy.get("num_objects", 3),
+                        "with_expand": dense_o2o_policy.get("with_expand", False),
+                        "expand_ratios": dense_o2o_policy.get(
+                            "expand_ratios", [0.1, 0.25]
+                        ),
                         "seed": seed,
                     }
                 },
@@ -317,6 +327,13 @@ class BaseDataLoader(object):
         stop = policy.get("multiscale_stop_epoch")
         if stop != epochs[-1]:
             raise ValueError("multiscale_stop_epoch must equal the final policy epoch")
+        copyblend = policy.get("copyblend_epochs", [0, 0])
+        if (
+            not isinstance(copyblend, list)
+            or len(copyblend) != 2
+            or any(not isinstance(value, int) for value in copyblend)
+        ):
+            raise ValueError("copyblend_epochs must contain two integers")
         return policy
 
     def __call__(self, dataset, worker_num, batch_sampler=None, return_list=False):

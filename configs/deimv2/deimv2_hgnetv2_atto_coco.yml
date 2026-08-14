@@ -1,0 +1,121 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  '_base_/deimv2.yml',
+]
+
+save_dir: output/deimv2_hgnetv2_atto_coco
+epoch: 500
+base_lr: 0.002
+ema_restart_decay: 0.9999
+eval_spatial_size: [320, 320]
+
+DEIMV2:
+  encoder: LiteEncoder
+
+HGNetv2:
+  name: Atto
+  return_idx: [2]
+  use_lab: true
+
+LiteEncoder:
+  in_channels: [256]
+  feat_strides: [16]
+  hidden_dim: 64
+  expansion: 0.34
+  depth_mult: 0.5
+
+DEIMTransformer:
+  feat_channels: [64, 64]
+  feat_strides: [16, 32]
+  hidden_dim: 64
+  num_levels: 2
+  num_points: [4, 2]
+  num_layers: 3
+  num_queries: 100
+  dim_feedforward: 160
+  share_bbox_head: true
+  use_gateway: false
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deimv2
+  stop_epoch: 468
+  ema_restart_decay: 0.9999
+
+LearningRate:
+  base_lr: 0.002
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 500
+      warmup_iter: 4000
+      flat_epochs: 250
+      no_aug_epochs: 32
+      lr_gamma: 0.5
+
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    betas: [0.9, 0.999]
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.001
+      - params: ['^backbone\..*(?:norm|bn).*$']
+        lr: 0.001
+        weight_decay: 0.0
+      - params: ['^(?:encoder|decoder)\..*(?:norm|bn|bias).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 128
+  sample_transforms:
+    - Decode: {}
+    - RandomDistort: {prob: 0.5}
+    - RandomExpand: {fill_value: [0, 0, 0]}
+    - RandomCrop: {prob: 0.8}
+    - RandomFlip: {}
+    - Resize: {target_size: [320, 320], keep_ratio: false}
+  dense_o2o_policy:
+    policy_epochs: [4, 250, 400]
+    mixup_epochs: [4, 250]
+    multiscale_stop_epoch: 400
+    mosaic_prob: 0.3
+    mixup_prob: 0.0
+    copyblend_prob: 0.0
+    copyblend_epochs: [4, 250]
+    mosaic:
+      output_size: 160
+      rotation_range: 10
+      translation_range: [0.1, 0.1]
+      scaling_range: [0.5, 1.5]
+      fill_value: 0
+      use_cache: false
+      max_cached_images: 50
+      random_pop: true
+    multiscale_sizes: null
+
+EvalReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [320, 320], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - Permute: {}
+  total_batch_size: 64
+
+TestReader:
+  inputs_def:
+    image_shape: [3, 320, 320]
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [320, 320], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - Permute: {}
+
+DEIMv2Criterion:
+  losses: [mal, boxes]
+  use_uni_set: false
+  matcher:
+    matcher_change_epoch: 450

@@ -37,6 +37,7 @@ FAMILIES = {
     "deim-dfine": ("n", "s", "m", "l", "x"),
     "deim-rtdetrv2": ("s", "m", "m-star", "l", "x"),
     "rtdetrv4": ("s", "m", "l", "x"),
+    "deimv2": ("x", "l", "m", "s", "n", "pico", "femto", "atto"),
 }
 PHASES = (
     "verify",
@@ -79,6 +80,17 @@ FAMILY_PHASES = {
     ),
     "rtdetrv3": ("verify", "eval", "infer", "export"),
     "rtdetrv4": PHASES,
+    # deimv2: the infer phase's four-image upstream parity helper is a
+    # follow-up; inference is covered by coco/export phases and the model
+    # documentation's val2017 evidence.
+    "deimv2": (
+        "verify",
+        "checkpoint-parity",
+        "train-resume",
+        "eval",
+        "coco",
+        "export",
+    ),
 }
 NEGATIVES = (
     "missing-teacher",
@@ -109,6 +121,9 @@ def _family_config(family, variant):
         return f"configs/deim/dfine/deim_hgnetv2_{variant}_coco.yml"
     if family == "rtdetrv4":
         return f"configs/rtdetrv4/rtdetrv4_hgnetv2_{variant}_coco.yml"
+    if family == "deimv2":
+        branch = "dinov3" if variant in {"x", "l", "m", "s"} else "hgnetv2"
+        return f"configs/deimv2/deimv2_{branch}_{variant}_coco.yml"
     names = {
         "s": "r18vd_120e",
         "m": "r34vd_120e",
@@ -273,6 +288,7 @@ def _deim_runtime_preflight(args, phases, variants, family):
         "deim-dfine": "deim_dfine_checkpoint_parity",
         "deim-rtdetrv2": "deim_rtdetrv2_checkpoint_parity",
         "rtdetrv4": "rtdetrv4_checkpoint_parity",
+        "deimv2": "deimv2_checkpoint_parity",
     }[family]
     module = importlib.import_module(parity_module)
     DEFAULT_MANIFEST = module.DEFAULT_MANIFEST
@@ -306,9 +322,12 @@ def _deim_runtime_preflight(args, phases, variants, family):
     upstream_root = None
     image_paths = []
     if set(phases) & {"checkpoint-parity", "infer"}:
-        upstream_name = (
-            "RTDETRV4_UPSTREAM_ROOT" if family == "rtdetrv4" else "DEIM_UPSTREAM_ROOT"
-        )
+        if family == "rtdetrv4":
+            upstream_name = "RTDETRV4_UPSTREAM_ROOT"
+        elif family == "deimv2":
+            upstream_name = "DEIMV2_UPSTREAM_ROOT"
+        else:
+            upstream_name = "DEIM_UPSTREAM_ROOT"
         upstream_value = os.environ.get(upstream_name)
         if not upstream_value or not Path(upstream_value).is_dir():
             raise FileNotFoundError(
@@ -719,8 +738,12 @@ def _run_dfine_export(variant, checkpoint, evidence_dir, *, family="dfine"):
     output_dir.mkdir(parents=True)
     config_path = _family_config(family, variant)
     cfg = load_config(config_path)
-    cfg.eval_size = [640, 640]
-    cfg.eval_spatial_size = [640, 640]
+    # DEIMv2 tiny variants export at their own fixed input sizes.
+    export_size = (320, 320) if family == "deimv2" and variant == "atto" else (
+        (416, 416) if family == "deimv2" and variant == "femto" else (640, 640)
+    )
+    cfg.eval_size = list(export_size)
+    cfg.eval_spatial_size = list(export_size)
     model = build_model(
         cfg,
         checkpoint,
@@ -741,7 +764,7 @@ def _run_dfine_export(variant, checkpoint, evidence_dir, *, family="dfine"):
         if family == "deim-rtdetrv2"
         else {}
     )
-    single_inputs = make_example_inputs(1, 640, 640)
+    single_inputs = make_example_inputs(1, *export_size)
     inputs_by_batch = {
         1: single_inputs,
         4: tuple(value.expand(4, *value.shape[1:]).clone() for value in single_inputs),

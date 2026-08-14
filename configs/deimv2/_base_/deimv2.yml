@@ -1,0 +1,167 @@
+architecture: DEIMV2
+validate: true
+num_classes: 80
+use_focal_loss: true
+eval_spatial_size: [640, 640]
+
+DEIMV2:
+  backbone: HGNetv2
+  encoder: DFINEHybridEncoder
+  decoder: DEIMTransformer
+  criterion: DEIMv2Criterion
+  post_process: DETRPostProcess
+
+HGNetv2:
+  freeze_at: -1
+  freeze_norm: false
+
+DFINEHybridEncoder:
+  version: deim
+  fuse_op: sum
+  csp_type: csp2
+
+DEIMTransformer:
+  activation: silu
+  mlp_act: silu
+  num_layers: 6
+  eval_idx: -1
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  reg_max: 32
+  reg_scale: 4
+  layer_scale: 1
+  num_points: [3, 6, 3]
+  cross_attn_method: default
+  query_select_method: default
+  use_gateway: true
+  share_bbox_head: false
+  share_score_head: false
+
+DETRPostProcess:
+  num_top_queries: 300
+
+DEIMv2Criterion:
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5}
+  losses: [mal, boxes, local]
+  alpha: 0.75
+  gamma: 1.5
+  reg_max: 32
+  use_uni_set: true
+  matcher:
+    name: DEIMv2HungarianMatcher
+    weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+    alpha: 0.25
+    gamma: 2.0
+    change_matcher: true
+    iou_order_alpha: 4.0
+    matcher_change_epoch: 45
+
+worker_num: 4
+
+TrainReader:
+  name: TrainReader
+  sample_transforms:
+    - Decode: {}
+    - RandomDistort: {prob: 0.5}
+    - RandomExpand: {fill_value: [0, 0, 0]}
+    - RandomCrop: {prob: 0.8}
+    - RandomFlip: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false}
+  batch_transforms:
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - NormalizeBox: {}
+    - BboxXYXY2XYWH: {}
+    - Permute: {}
+  dense_o2o_policy:
+    policy_epochs: [4, 29, 50]
+    mixup_epochs: [4, 29]
+    multiscale_stop_epoch: 50
+    mosaic_prob: 0.5
+    mixup_prob: 0.5
+    copyblend_prob: 0.5
+    copyblend_epochs: [4, 50]
+    area_threshold: 100
+    num_objects: 3
+    with_expand: true
+    expand_ratios: [0.1, 0.25]
+    multiscale_sizes: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+    mosaic:
+      output_size: 320
+      rotation_range: 10
+      translation_range: [0.1, 0.1]
+      scaling_range: [0.5, 1.5]
+      fill_value: 0
+      use_cache: false
+      max_cached_images: 50
+      random_pop: true
+  total_batch_size: 32
+  shuffle: true
+  drop_last: true
+  collate_batch: false
+  use_shared_memory: true
+
+EvalReader:
+  name: EvalReader
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - Permute: {}
+  total_batch_size: 64
+  shuffle: false
+  drop_last: false
+
+TestReader:
+  name: TestReader
+  inputs_def:
+    image_shape: [3, 640, 640]
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - Permute: {}
+  batch_size: 1
+  shuffle: false
+  drop_last: false
+
+amp: true
+use_ema: true
+ema_decay: 0.9999
+ema_decay_type: exponential
+ema_warmups: 1000
+ema_filter_no_grad: false
+norm_type: sync_bn
+find_unused_parameters: false
+log_iter: 100
+snapshot_epoch: 12
+
+epoch: 72
+base_lr: 0.0005
+
+LearningRate:
+  base_lr: 0.0005
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 72
+      warmup_iter: 2000
+      flat_epochs: 29
+      no_aug_epochs: 8
+      lr_gamma: 0.5
+
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    betas: [0.9, 0.999]
+    weight_decay: 0.000125
+    param_groups:
+      - params: ['^(?=.*backbone.dinov3)(?!.*(?:norm|bn|bias)).*$']
+        lr: 0.00001
+      - params: ['^(?=.*backbone.dinov3)(?=.*(?:norm|bn|bias)).*$']
+        lr: 0.00001
+        weight_decay: 0.0
+      - params: ['^(?=.*(?:sta|encoder|decoder))(?=.*(?:norm|bn|bias)).*$']
+        weight_decay: 0.0

@@ -1,0 +1,98 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  '_base_/deimv2.yml',
+]
+
+save_dir: output/deimv2_dinov3_s_coco
+epoch: 132
+base_lr: 0.0005
+ema_restart_decay: 0.9999
+
+DEIMV2:
+  backbone: DINOv3STAs
+
+DINOv3STAs:
+  name: vit_tiny
+  weights_path: null
+  interaction_indexes: [3, 7, 11]
+  embed_dim: 192
+  num_heads: 3
+
+DFINEHybridEncoder:
+  in_channels: [192, 192, 192]
+  hidden_dim: 192
+  dim_feedforward: 512
+  depth_mult: 0.67
+  expansion: 0.34
+
+DEIMTransformer:
+  feat_channels: [192, 192, 192]
+  hidden_dim: 192
+  num_layers: 4
+  dim_feedforward: 512
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deimv2
+  stop_epoch: 120
+  ema_restart_decay: 0.9999
+
+LearningRate:
+  base_lr: 0.0005
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 132
+      warmup_iter: 2000
+      flat_epochs: 64
+      no_aug_epochs: 12
+      lr_gamma: 0.5
+
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    betas: [0.9, 0.999]
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^(?=.*backbone.dinov3)(?!.*(?:norm|bn|bias)).*$']
+        lr: 0.000025
+      - params: ['^(?=.*backbone.dinov3)(?=.*(?:norm|bn|bias)).*$']
+        lr: 0.000025
+        weight_decay: 0.0
+      - params: ['^(?=.*(?:sta|encoder|decoder))(?=.*(?:norm|bn|bias)).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 32
+  batch_transforms:
+    - NormalizeImage: {mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], is_scale: true}
+    - NormalizeBox: {}
+    - BboxXYXY2XYWH: {}
+    - Permute: {}
+  dense_o2o_policy:
+    policy_epochs: [4, 64, 120]
+    mixup_epochs: [4, 64]
+    multiscale_stop_epoch: 120
+    copyblend_epochs: [4, 120]
+    multiscale_sizes: [480, 512, 544, 576, 608, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 640, 672, 704, 736, 768, 800]
+
+EvalReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], is_scale: true}
+    - Permute: {}
+  total_batch_size: 64
+
+TestReader:
+  sample_transforms:
+    - Decode: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false, backend: pil}
+    - NormalizeImage: {mean: [0.485, 0.456, 0.406], std: [0.229, 0.224, 0.225], is_scale: true}
+    - Permute: {}
+
+DEIMv2Criterion:
+  matcher:
+    matcher_change_epoch: 100

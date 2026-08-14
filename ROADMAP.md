@@ -4,7 +4,9 @@
 
 **Last updated**: 2026-08-14
 
-**Current execution plan**: [D-FINE、DEIM 与 RT-DETRv4 集成](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（技术验收完成，等待维护者接受）
+**Current execution plan**: [DEIMv2 集成](docs/plans/2026-08-14-deimv2-integration.md)（in-progress，8 个官方 COCO 变体）
+
+**Pending acceptance**: [D-FINE、DEIM 与 RT-DETRv4 集成](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（技术验收完成，等待维护者接受）
 
 **Deferred plan**: [M4——COCO 精度与稳定性对齐](docs/plans/2026-07-18-m4-coco-accuracy-stability.md)
 
@@ -15,6 +17,10 @@
 建立一个可安装、可训练、可评估、可恢复、可转换官方 Paddle 权重，并能在相同 checkpoint、预处理、输入、模式、dtype 和容差下提供数值、精度与部署证据的 PyTorch DETR 训练库。
 
 ## 当前未完成工作
+
+### DEIMv2 集成（in-progress）
+
+把上游 `Intellindust-AI-Lab/DEIMv2@add5bcd` 的 8 个官方 COCO 变体（DINOv3 X/L/M/S 与 HGNetv2 N/Pico/Femto/Atto）接入统一运行时。执行矩阵、资产约定与数值合同见[集成计划](docs/plans/2026-08-14-deimv2-integration.md)。权重由上游 Google Drive 托管，本仓库只描述并校验，不重新发布。
 
 ### M4——RT-DETRv3 COCO 精度与稳定性（deferred）
 

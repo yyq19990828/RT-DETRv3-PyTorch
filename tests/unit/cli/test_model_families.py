@@ -48,6 +48,19 @@ def _write_v2_manifest(
         ("dfine", [f"dfine-{variant}" for variant in "nsmlx"]),
         ("deim-dfine", [f"deim-dfine-{variant}" for variant in "nsmlx"]),
         (
+            "deimv2",
+            [
+                "deimv2-x",
+                "deimv2-l",
+                "deimv2-m",
+                "deimv2-s",
+                "deimv2-n",
+                "deimv2-pico",
+                "deimv2-femto",
+                "deimv2-atto",
+            ],
+        ),
+        (
             "deim-rtdetrv2",
             [
                 "deim-rtv2-s",

@@ -59,7 +59,7 @@ class _Criterion(nn.Module):
         super().__init__()
         self.nonfinite = nonfinite
 
-    def forward(self, outputs, targets):
+    def forward(self, outputs, targets, epoch=None):
         loss = outputs["pred_logits"].square().mean()
         if self.nonfinite:
             loss = loss * torch.tensor(float("inf"))
@@ -174,7 +174,7 @@ class _InvalidCriterion(nn.Module):
         super().__init__()
         self.value = value
 
-    def forward(self, outputs, targets):
+    def forward(self, outputs, targets, epoch=None):
         return self.value(outputs)
 
 

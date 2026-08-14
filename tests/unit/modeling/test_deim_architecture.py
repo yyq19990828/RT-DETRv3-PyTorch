@@ -70,7 +70,7 @@ class _Criterion(nn.Module):
         self.outputs = None
         self.targets = None
 
-    def forward(self, outputs, targets):
+    def forward(self, outputs, targets, epoch=None):
         self.outputs = outputs
         self.targets = targets
         return {"loss_mal": outputs["pred_logits"].square().mean()}

@@ -1,6 +1,6 @@
 # DETR-series
 
-DETR-series 是 DETR 系列目标检测模型的 PyTorch 实现合集，在统一的训练、评估、推理、checkpoint 和部署运行时中维护 RT-DETRv3、D-FINE、DEIM 与 RT-DETRv4。
+DETR-series 是 DETR 系列目标检测模型的 PyTorch 实现合集，在统一的训练、评估、推理、checkpoint 和部署运行时中维护 RT-DETRv3、D-FINE、DEIM、RT-DETRv4 与 DEIMv2。
 
 仓库起源于 RT-DETRv3 的 Paddle-to-PyTorch 迁移，因此当前 Python 包和六个公开命令仍保留 `ppdet_pytorch` 与 `rtdetrv3-*` 名称以维持兼容性。Paddle 官方实现仅作为只读参考子模块保留；核心 PyTorch 运行时不导入 Paddle。
 
@@ -38,6 +38,7 @@ uv run rtdetrv3-infer \
 | `deim-dfine` | N/S/M/L/X | [`configs/deim/dfine`](configs/deim/dfine/) | [`deim_dfine_coco.yml`](configs/checkpoints/deim_dfine_coco.yml) |
 | `deim-rtdetrv2` | S/M/M*/L/X | [`configs/deim/rtdetrv2`](configs/deim/rtdetrv2/) | [`deim_rtdetrv2_coco.yml`](configs/checkpoints/deim_rtdetrv2_coco.yml) |
 | `rtdetrv4` | S/M/L/X | [`configs/rtdetrv4`](configs/rtdetrv4/) | [`rtdetrv4_coco.yml`](configs/checkpoints/rtdetrv4_coco.yml) |
+| `deimv2` | X/L/M/S;N/Pico/Femto/Atto | [`configs/deimv2`](configs/deimv2/) | [`deimv2_coco.yml`](configs/checkpoints/deimv2_coco.yml) |
 
 除 RT-DETRv3 外的 19 个 COCO 变体已完成官方 checkpoint、完整 val2017、reduced 训练恢复和部署验收，但权重继续由上游托管，不属于仓库初始 `v0.1.0` Release。模型级数值、来源和限制见[模型合同与证据](docs/models/README.md)。
 

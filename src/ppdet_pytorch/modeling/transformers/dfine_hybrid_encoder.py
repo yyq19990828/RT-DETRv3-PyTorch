@@ -199,17 +199,80 @@ class CSPLayer(nn.Module):
 
 
 class RepNCSPELAN4(nn.Module):
+    def __init__(
+        self, c1, c2, c3, c4, n=3, bias=False, act="silu", csp_type="csp"
+    ):
+        super().__init__()
+        self.c = c3 // 2
+        self.cv1 = ConvNormLayer_fuse(c1, c3, 1, 1, bias=bias, act=act)
+        csp_block = CSPLayer2 if csp_type == "csp2" else CSPLayer
+        self.cv2 = nn.Sequential(
+            csp_block(c3 // 2, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock),
+            ConvNormLayer_fuse(c4, c4, 3, 1, bias=bias, act=act),
+        )
+        self.cv3 = nn.Sequential(
+            csp_block(c4, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock),
+            ConvNormLayer_fuse(c4, c4, 3, 1, bias=bias, act=act),
+        )
+        self.cv4 = ConvNormLayer_fuse(c3 + 2 * c4, c2, 1, 1, bias=bias, act=act)
+
+    def forward(self, value):
+        outputs = list(self.cv1(value).split((self.c, self.c), 1))
+        outputs.extend(module(outputs[-1]) for module in (self.cv2, self.cv3))
+        return self.cv4(torch.cat(outputs, 1))
+
+
+class CSPLayer2(nn.Module):
+    """RepC3-style CSP block with a single chunked projection."""
+
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        num_blocks=3,
+        expansion=1.0,
+        bias=False,
+        act="silu",
+        bottletype=VGGBlock,
+    ):
+        super().__init__()
+        hidden = int(out_channels * expansion)
+        self.conv1 = ConvNormLayer_fuse(
+            in_channels, hidden * 2, 1, 1, bias=bias, act=act
+        )
+        self.bottlenecks = nn.Sequential(
+            *[
+                bottletype(hidden, hidden, act=_activation(act))
+                for _ in range(num_blocks)
+            ]
+        )
+        self.conv3 = (
+            ConvNormLayer_fuse(hidden, out_channels, 1, 1, bias=bias, act=act)
+            if hidden != out_channels
+            else nn.Identity()
+        )
+
+    def forward(self, value):
+        first, second = self.conv1(value).chunk(2, 1)
+        return self.conv3(first + self.bottlenecks(second))
+
+
+class RepNCSPELAN5(nn.Module):
+    """DEIM encoder fuse block: RepNCSPELAN4 with plain CSPLayer2 branches."""
+
     def __init__(self, c1, c2, c3, c4, n=3, bias=False, act="silu"):
         super().__init__()
         self.c = c3 // 2
         self.cv1 = ConvNormLayer_fuse(c1, c3, 1, 1, bias=bias, act=act)
+        # Upstream wraps each branch in a single-element Sequential; keep the
+        # wrapper so checkpoint keys keep their .0 index.
         self.cv2 = nn.Sequential(
-            CSPLayer(c3 // 2, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock),
-            ConvNormLayer_fuse(c4, c4, 3, 1, bias=bias, act=act),
+            CSPLayer2(
+                c3 // 2, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock
+            )
         )
         self.cv3 = nn.Sequential(
-            CSPLayer(c4, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock),
-            ConvNormLayer_fuse(c4, c4, 3, 1, bias=bias, act=act),
+            CSPLayer2(c4, c4, n, 1, bias=bias, act=act, bottletype=VGGBlock)
         )
         self.cv4 = ConvNormLayer_fuse(c3 + 2 * c4, c2, 1, 1, bias=bias, act=act)
 
@@ -295,6 +358,8 @@ class DFINEHybridEncoder(nn.Module):
         act="silu",
         eval_spatial_size=None,
         version="dfine",
+        fuse_op="cat",
+        csp_type="csp",
         distill_teacher_dim=None,
         project_f5=False,
     ):
@@ -317,8 +382,14 @@ class DFINEHybridEncoder(nn.Module):
             raise ValueError(
                 "project_f5 must be enabled when distill_teacher_dim is provided"
             )
-        if version not in ("dfine", "rt_detrv2"):
+        if version not in ("dfine", "deim", "rt_detrv2"):
             raise ValueError("unsupported D-FINE family encoder version")
+        if fuse_op not in ("cat", "sum"):
+            raise ValueError("fuse_op must be 'cat' or 'sum'")
+        # csp_type only parameterizes the dfine fuse blocks; the deim and
+        # rt_detrv2 versions have fixed block layouts and ignore it.
+        self.fuse_op = fuse_op
+        self.csp_type = csp_type
         self.in_channels = list(in_channels)
         self.feat_strides = list(feat_strides)
         self.hidden_dim = hidden_dim
@@ -330,7 +401,13 @@ class DFINEHybridEncoder(nn.Module):
         self.out_strides = list(feat_strides)
         self.encoder_idx_for_distillation = use_encoder_idx[-1]
         self.input_proj = nn.ModuleList(
-            nn.Sequential(
+            # The DEIMv2-era upstream encoder keeps nn.Identity when the
+            # backbone already outputs hidden_dim channels; the pinned
+            # D-FINE/RT-DETRv2 graphs always project (their official
+            # checkpoints contain these weights).
+            nn.Identity()
+            if version == "deim" and channels == hidden_dim
+            else nn.Sequential(
                 OrderedDict(
                     [
                         ("conv", nn.Conv2d(channels, hidden_dim, 1, bias=False)),
@@ -352,6 +429,35 @@ class DFINEHybridEncoder(nn.Module):
             if project_f5
             else None
         )
+        # DEIM fuses by summation, keeping the fuse-block input at hidden_dim.
+        input_dim = hidden_dim if fuse_op == "sum" else hidden_dim * 2
+
+        def _fuse_block():
+            if version == "rt_detrv2":
+                return CSPLayer(
+                    hidden_dim * 2,
+                    hidden_dim,
+                    round(3 * depth_mult),
+                    expansion=expansion,
+                    act=act,
+                )
+            if version == "deim":
+                return RepNCSPELAN5(
+                    input_dim,
+                    hidden_dim,
+                    hidden_dim * 2,
+                    round(expansion * hidden_dim // 2),
+                    round(3 * depth_mult),
+                )
+            return RepNCSPELAN4(
+                input_dim,
+                hidden_dim,
+                hidden_dim * 2,
+                round(expansion * hidden_dim // 2),
+                round(3 * depth_mult),
+                csp_type=csp_type,
+            )
+
         self.lateral_convs = nn.ModuleList()
         self.fpn_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1, 0, -1):
@@ -364,23 +470,7 @@ class DFINEHybridEncoder(nn.Module):
                     act=act if version == "rt_detrv2" else None,
                 )
             )
-            self.fpn_blocks.append(
-                CSPLayer(
-                    hidden_dim * 2,
-                    hidden_dim,
-                    round(3 * depth_mult),
-                    expansion=expansion,
-                    act=act,
-                )
-                if version == "rt_detrv2"
-                else RepNCSPELAN4(
-                    hidden_dim * 2,
-                    hidden_dim,
-                    hidden_dim * 2,
-                    round(expansion * hidden_dim // 2),
-                    round(3 * depth_mult),
-                )
-            )
+            self.fpn_blocks.append(_fuse_block())
         self.downsample_convs = nn.ModuleList()
         self.pan_blocks = nn.ModuleList()
         for _ in range(len(in_channels) - 1):
@@ -389,23 +479,7 @@ class DFINEHybridEncoder(nn.Module):
                 if version == "rt_detrv2"
                 else nn.Sequential(SCDown(hidden_dim, hidden_dim, 3, 2))
             )
-            self.pan_blocks.append(
-                CSPLayer(
-                    hidden_dim * 2,
-                    hidden_dim,
-                    round(3 * depth_mult),
-                    expansion=expansion,
-                    act=act,
-                )
-                if version == "rt_detrv2"
-                else RepNCSPELAN4(
-                    hidden_dim * 2,
-                    hidden_dim,
-                    hidden_dim * 2,
-                    round(expansion * hidden_dim // 2),
-                    round(3 * depth_mult),
-                )
-            )
+            self.pan_blocks.append(_fuse_block())
         if eval_spatial_size:
             for index in use_encoder_idx:
                 stride = feat_strides[index]
@@ -484,22 +558,22 @@ class DFINEHybridEncoder(nn.Module):
         for index in range(len(self.in_channels) - 1, 0, -1):
             high = self.lateral_convs[len(self.in_channels) - 1 - index](inner[0])
             inner[0] = high
-            fused = self.fpn_blocks[len(self.in_channels) - 1 - index](
-                torch.cat(
-                    [
-                        F.interpolate(high, scale_factor=2, mode="nearest"),
-                        projected[index - 1],
-                    ],
-                    1,
-                )
+            upsampled = F.interpolate(high, scale_factor=2, mode="nearest")
+            fused_input = (
+                upsampled + projected[index - 1]
+                if self.fuse_op == "sum"
+                else torch.cat([upsampled, projected[index - 1]], 1)
             )
-            inner.insert(0, fused)
+            inner.insert(0, self.fpn_blocks[len(self.in_channels) - 1 - index](fused_input))
         outputs = [inner[0]]
         for index in range(len(self.in_channels) - 1):
             downsampled = self.downsample_convs[index](outputs[-1])
-            outputs.append(
-                self.pan_blocks[index](torch.cat([downsampled, inner[index + 1]], 1))
+            fused_input = (
+                downsampled + inner[index + 1]
+                if self.fuse_op == "sum"
+                else torch.cat([downsampled, inner[index + 1]], 1)
             )
+            outputs.append(self.pan_blocks[index](fused_input))
         return (
             (outputs, projected_f5)
             if self.training and projected_f5 is not None

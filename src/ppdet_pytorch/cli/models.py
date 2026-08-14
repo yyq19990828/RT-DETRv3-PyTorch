@@ -22,6 +22,7 @@ FAMILY_MANIFESTS = {
     "deim-dfine": Path("configs/checkpoints/deim_dfine_coco.yml"),
     "deim-rtdetrv2": Path("configs/checkpoints/deim_rtdetrv2_coco.yml"),
     "rtdetrv4": Path("configs/checkpoints/rtdetrv4_coco.yml"),
+    "deimv2": Path("configs/checkpoints/deimv2_coco.yml"),
 }
 DISTRIBUTION_SECTIONS = (("models", "config"), ("pretraining", "target_config"))
 

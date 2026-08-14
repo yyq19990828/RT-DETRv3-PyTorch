@@ -12,11 +12,22 @@ Apache-2.0-licensed projects:
   revision 09d35d53d39ee3145a1e61e3a989b28b9468d1dd, Apache-2.0.
 - RT-DETRv4, https://github.com/RT-DETRs/RT-DETRv4,
   revision 55fefaaed7efe2a5f72d0a18fd4e05965e35c292, Apache-2.0.
+- DEIMv2, https://github.com/Intellindust-AI-Lab/DEIMv2,
+  revision add5bcdb499bf7b8a366bfeac1a47d3dc278de27, Apache-2.0.
 
 Copyright and attribution notices from those projects are retained in the
 individual source files. The official and converted model checkpoints are not
 included in the Python wheel or source distribution. Their provenance,
 checksums, and hosting boundaries are recorded in configs/checkpoints/.
+
+The DEIMv2 backbone adapters vendor the DINOv3 vision-transformer forward
+code (trimmed) from facebookresearch/DINOv3 via DEIMv2 under
+src/ppdet_pytorch/modeling/backbones/dinov3/. That code retains the Meta
+DINOv3 License headers and follows the DINOv3 License at
+https://github.com/facebookresearch/dinov3/blob/346f38fee679c56a6888f91c51670fae61d364e0/LICENSE.md;
+it must not be treated as Apache-2.0. No DINOv3 or DEIMv2 backbone
+initialization weights are vendored or redistributed; official DEIMv2 COCO
+checkpoints already contain the fine-tuned backbone weights.
 
 RT-DETRv4 training can optionally use facebookresearch/DINOv3,
 https://github.com/facebookresearch/dinov3, revision

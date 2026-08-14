@@ -14,6 +14,7 @@ from .utils import inverse_sigmoid
 
 __all__ = [
     "DFINEHungarianMatcher",
+    "DEIMv2HungarianMatcher",
     "box_cxcywh_to_xyxy",
     "box_iou",
     "box_xyxy_to_cxcywh",
@@ -193,6 +194,86 @@ class DFINEHungarianMatcher(nn.Module):
             + self.cost_class * class_cost
             + self.cost_giou * giou_cost
         ).view(batch_size, num_queries, -1)
+        cost = torch.nan_to_num(cost, nan=1.0)
+        split_costs = cost.split(sizes, dim=-1)
+        indices = [
+            linear_sum_assignment(image_cost[index].cpu().numpy())
+            for index, image_cost in enumerate(split_costs)
+        ]
+        return {
+            "indices": [
+                (
+                    torch.as_tensor(source, dtype=torch.int64, device=boxes.device),
+                    torch.as_tensor(target, dtype=torch.int64, device=boxes.device),
+                )
+                for source, target in indices
+            ]
+        }
+
+
+@register
+@serializable
+class DEIMv2HungarianMatcher(DFINEHungarianMatcher):
+    """DEIMv2 matcher that can switch to IoU-ordered cost at a set epoch.
+
+    Before the switch epoch this matches exactly like ``DFINEHungarianMatcher``.
+    From the switch epoch on, the cost becomes the product of the target-class
+    score and the IoU raised to ``iou_order_alpha`` (upstream
+    ``change_matcher`` semantics, DEIMv2@add5bcd engine/deim/matcher.py).
+    """
+
+    def __init__(
+        self,
+        weight_dict,
+        use_focal_loss=False,
+        alpha=0.25,
+        gamma=2.0,
+        change_matcher=False,
+        iou_order_alpha=1.0,
+        matcher_change_epoch=10000,
+    ):
+        super().__init__(weight_dict, use_focal_loss, alpha, gamma)
+        self.change_matcher = bool(change_matcher)
+        self.iou_order_alpha = float(iou_order_alpha)
+        self.matcher_change_epoch = int(matcher_change_epoch)
+
+    @torch.no_grad()
+    def forward(self, outputs, targets, epoch=0):
+        if not (self.change_matcher and int(epoch) >= self.matcher_change_epoch):
+            return super().forward(outputs, targets)
+
+        _validate_targets(targets)
+        logits = outputs.get("pred_logits")
+        boxes = outputs.get("pred_boxes")
+        if logits is None or boxes is None:
+            raise ValueError("outputs must contain pred_logits and pred_boxes")
+        if not torch.isfinite(logits).all() or not torch.isfinite(boxes).all():
+            raise ValueError("matcher predictions must be finite")
+
+        batch_size, num_queries = logits.shape[:2]
+        sizes = [len(target["boxes"]) for target in targets]
+        if batch_size != len(targets):
+            raise ValueError("prediction and target batch lengths differ")
+        if sum(sizes) == 0:
+            empty = torch.empty(0, dtype=torch.int64, device=boxes.device)
+            return {"indices": [(empty, empty) for _ in targets]}
+
+        probabilities = logits.flatten(0, 1)
+        probabilities = (
+            probabilities.sigmoid()
+            if self.use_focal_loss
+            else probabilities.softmax(-1)
+        )
+        flat_boxes = boxes.flatten(0, 1)
+        target_labels = torch.cat([target["labels"] for target in targets])
+        target_boxes = torch.cat([target["boxes"] for target in targets])
+
+        class_score = probabilities[:, target_labels]
+        iou, _ = box_iou(
+            box_cxcywh_to_xyxy(flat_boxes), box_cxcywh_to_xyxy(target_boxes)
+        )
+        cost = (-1) * (class_score * iou.pow(self.iou_order_alpha))
+        cost = cost.view(batch_size, num_queries, -1)
         cost = torch.nan_to_num(cost, nan=1.0)
         split_costs = cost.split(sizes, dim=-1)
         indices = [

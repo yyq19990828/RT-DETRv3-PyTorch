@@ -108,7 +108,12 @@ class DFINE(BaseArch):
         self._validate_predictions(outputs)
 
         if self.training:
-            losses = self.criterion(outputs, targets)
+            epoch = (
+                int(self.inputs["curr_epoch"][0])
+                if "curr_epoch" in self.inputs
+                else None
+            )
+            losses = self.criterion(outputs, targets, epoch=epoch)
             if not isinstance(losses, Mapping) or not losses:
                 raise ValueError("DFINECriterion must return a non-empty loss mapping")
             if "loss" in losses:

@@ -168,21 +168,28 @@ class DEIMCriterion(DFINECriterion):
             if key in self.weight_dict
         }
 
-    def forward(self, outputs, targets, **kwargs):
+    def _match_indices(self, output, targets, epoch=None):
+        """Match one prediction dict; epoch hooks are family-specific."""
+        del epoch
+        return self.matcher(output, targets)["indices"]
+
+    def forward(self, outputs, targets, epoch=None, **kwargs):
         del kwargs
         batch_size = self._validate_outputs(outputs)
         self._validate_targets(targets, batch_size)
-        indices = self.matcher(
-            {key: value for key, value in outputs.items() if "aux" not in key}, targets
-        )["indices"]
+        indices = self._match_indices(
+            {key: value for key, value in outputs.items() if "aux" not in key},
+            targets,
+            epoch,
+        )
         self._clear_cache()
 
         cached_aux = [
-            self.matcher(output, targets)["indices"]
+            self._match_indices(output, targets, epoch)
             for output in outputs["aux_outputs"]
         ]
         cached_pre = (
-            self.matcher(outputs["pre_outputs"], targets)["indices"]
+            self._match_indices(outputs["pre_outputs"], targets, epoch)
             if "pre_outputs" in outputs
             else None
         )
@@ -192,7 +199,7 @@ class DEIMCriterion(DFINECriterion):
             for target in enc_targets:
                 target["labels"] = torch.zeros_like(target["labels"])
         cached_enc = [
-            self.matcher(output, enc_targets)["indices"]
+            self._match_indices(output, enc_targets, epoch)
             for output in outputs.get("enc_aux_outputs", [])
         ]
         all_indices = [*cached_aux]

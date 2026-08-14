@@ -1,0 +1,134 @@
+schema_version: 2
+family: deimv2
+hosting: upstream
+source_repository:
+  url: https://github.com/Intellindust-AI-Lab/DEIMv2
+  revision: add5bcdb499bf7b8a366bfeac1a47d3dc278de27
+  model_zoo: https://github.com/Intellindust-AI-Lab/DEIMv2#-model-zoo
+  license: Apache-2.0
+
+models:
+  x:
+    alias: deimv2-x
+    config: configs/deimv2/deimv2_dinov3_x_coco.yml
+    official_bbox_ap: 0.578
+    filename: deimv2_dinov3_x_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_dinov3_x_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1pTiQaBGt8hwtO0mbYlJ8nE-HGztGafS7
+    source_size_bytes: 205581424
+    source_sha256: 8b79dc9a619d2cbf94b712f705e0a4ace8c44d6304be54ddfcd6f4a85c45b039
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 989
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  l:
+    alias: deimv2-l
+    config: configs/deimv2/deimv2_dinov3_l_coco.yml
+    official_bbox_ap: 0.560
+    filename: deimv2_dinov3_l_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_dinov3_l_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1dRJfVHr9HtpdvaHlnQP460yPVHynMray
+    source_size_bytes: 130815976
+    source_sha256: 54ec9c9a0f1c16e958fde04ffebb4766061fbf5312e86f80090058c82dcfa183
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 809
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m:
+    alias: deimv2-m
+    config: configs/deimv2/deimv2_dinov3_m_coco.yml
+    official_bbox_ap: 0.530
+    filename: deimv2_dinov3_m_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_dinov3_m_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1nPKDHrotusQ748O1cQXJfi5wdShq6bKp
+    source_size_bytes: 73924409
+    source_sha256: 3ef951bfc71b177df65009d97506b3ed50a3b3b306729cc4584e37dc222c6706
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 769
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  s:
+    alias: deimv2-s
+    config: configs/deimv2/deimv2_dinov3_s_coco.yml
+    official_bbox_ap: 0.509
+    filename: deimv2_dinov3_s_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_dinov3_s_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1MDOh8UXD39DNSew6rDzGFp1tAVpSGJdL
+    source_size_bytes: 39537357
+    source_sha256: 9491ab33b68ecfc0e34043abb3009599ab1e892fb953a1faad12ef4fca5a35c4
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 673
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  n:
+    alias: deimv2-n
+    config: configs/deimv2/deimv2_hgnetv2_n_coco.yml
+    official_bbox_ap: 0.430
+    filename: deimv2_hgnetv2_n_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_hgnetv2_n_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1G_Q80EVO4T7LZVPfHwZ3sT65FX5egp9K
+    source_size_bytes: 14743995
+    source_sha256: 2ce67dc3535e345f6ac3f46e735bbc12a93c344aa46cb630f7a047089a88b7e9
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 639
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  pico:
+    alias: deimv2-pico
+    config: configs/deimv2/deimv2_hgnetv2_pico_coco.yml
+    official_bbox_ap: 0.385
+    filename: deimv2_hgnetv2_pico_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_hgnetv2_pico_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1PXpUxYSnQO-zJHtzrCPqQZ3KKatZwzFT
+    source_size_bytes: 6437843
+    source_sha256: f8cb69e7cdd4b7fc414831a6e3e99a6c9d721ef9e268bef3ff549b3fcd72231f
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 551
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  femto:
+    alias: deimv2-femto
+    config: configs/deimv2/deimv2_hgnetv2_femto_coco.yml
+    official_bbox_ap: 0.310
+    filename: deimv2_hgnetv2_femto_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_hgnetv2_femto_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/16hh6l9Oln9TJng4V0_HNf_Z7uYb7feds
+    source_size_bytes: 4163663
+    source_sha256: 1eebcaeacd1d7f1547b4fbc87fa690dec9eaeb9faa2770c93644e79ac7a666a7
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 493
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  atto:
+    alias: deimv2-atto
+    config: configs/deimv2/deimv2_hgnetv2_atto_coco.yml
+    official_bbox_ap: 0.238
+    filename: deimv2_hgnetv2_atto_coco.pth
+    path: pretrained_models/upstream/deimv2/deimv2_hgnetv2_atto_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/18sRJXX3FBUigmGJ1y5Oo_DPC5C3JCgYc
+    source_size_bytes: 2247119
+    source_sha256: b793f073e068429c162f8e743dc10b5f93203c704a3617db56f9c8fa5f659f14
+    container_keys: [model]
+    evaluation_state: model
+    state_tensor_count: 493
+    key_mapping: identity
+    tensor_layout: pytorch-native
+
+numerical_tolerance:
+  rtol: 1.0e-5
+  atol: 1.0e-6

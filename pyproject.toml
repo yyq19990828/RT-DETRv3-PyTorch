@@ -197,6 +197,9 @@ extend-exclude = [
     "pretrained_models",
     "tests/legacy",
     "third-party",
+    # Vendored (trimmed) Meta DINOv3 forward code kept verbatim for
+    # provenance; only style rules are skipped, not correctness gates.
+    "src/ppdet_pytorch/modeling/backbones/dinov3",
 ]
 
 [tool.ruff.lint]
@@ -212,3 +215,4 @@ select = ["E4", "E7", "E9", "F", "I"]
 python_version = "3.9"
 check_untyped_defs = true
 ignore_missing_imports = true
+exclude = "src/ppdet_pytorch/modeling/backbones/dinov3/"

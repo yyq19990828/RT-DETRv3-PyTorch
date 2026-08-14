@@ -23,6 +23,16 @@ FAMILIES = {
         "deim-rtv2-x",
     ),
     "rtdetrv4": tuple(f"rtdetrv4-{variant}" for variant in "smlx"),
+    "deimv2": (
+        "deimv2-x",
+        "deimv2-l",
+        "deimv2-m",
+        "deimv2-s",
+        "deimv2-n",
+        "deimv2-pico",
+        "deimv2-femto",
+        "deimv2-atto",
+    ),
 }
 MANIFESTS = {
     "rtdetrv3": "rtdetrv3_coco.yml",
@@ -30,9 +40,10 @@ MANIFESTS = {
     "deim-dfine": "deim_dfine_coco.yml",
     "deim-rtdetrv2": "deim_rtdetrv2_coco.yml",
     "rtdetrv4": "rtdetrv4_coco.yml",
+    "deimv2": "deimv2_coco.yml",
 }
 MODEL_REPORT_FILES = ("validation-report.md", "metrics.md", "evidence-index.md")
-MODEL_DOCUMENTATION_FAMILIES = ("rtdetrv3", "dfine", "deim", "rtdetrv4")
+MODEL_DOCUMENTATION_FAMILIES = ("rtdetrv3", "dfine", "deim", "rtdetrv4", "deimv2")
 LEGACY_MODEL_DOCUMENTATION_DIRECTORIES = ("deim-dfine", "deim-rtdetrv2")
 ATTRIBUTIONS = {
     "https://github.com/Peterande/D-FINE": (
@@ -45,6 +56,10 @@ ATTRIBUTIONS = {
     ),
     "https://github.com/RT-DETRs/RT-DETRv4": (
         "55fefaaed7efe2a5f72d0a18fd4e05965e35c292",
+        "Apache-2.0",
+    ),
+    "https://github.com/Intellindust-AI-Lab/DEIMv2": (
+        "add5bcdb499bf7b8a366bfeac1a47d3dc278de27",
         "Apache-2.0",
     ),
     "https://github.com/facebookresearch/dinov3": (
@@ -312,7 +327,7 @@ def validate_repository(plan: Optional[Path] = None) -> dict[str, int]:
             if family != "rtdetrv3":
                 config_count += 1
     _require(len(aliases) == len(set(aliases)), "model aliases are not globally unique")
-    _require(config_count == 19, "current support matrix must contain 19 new variants")
+    _require(config_count == 27, "current support matrix must contain 27 new variants")
 
     notice = (REPO_ROOT / "NOTICE").read_text(encoding="utf-8")
     require_attributions(notice)

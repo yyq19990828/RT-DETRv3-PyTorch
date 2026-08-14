@@ -103,7 +103,7 @@ class TrainingProtocol:
 class TwoStageDetectionProtocol(TrainingProtocol):
     """Deterministic best-checkpoint and EMA restart state machine."""
 
-    FAMILIES = {"dfine", "deim", "rtdetrv4"}
+    FAMILIES = {"dfine", "deim", "deimv2", "rtdetrv4"}
 
     def __init__(
         self,

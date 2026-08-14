@@ -13,7 +13,7 @@ from ppdet_pytorch.cli import export as export_cli
 
 ROOT = Path(__file__).resolve().parents[2]
 DIST = ROOT / "dist"
-FAMILIES = ("rtdetrv3", "dfine", "deim-dfine", "deim-rtdetrv2", "rtdetrv4")
+FAMILIES = ("rtdetrv3", "dfine", "deim-dfine", "deim-rtdetrv2", "rtdetrv4", "deimv2")
 NEW_FAMILY_CONFIGS = (
     *(f"configs/dfine/dfine_hgnetv2_{variant}_coco.yml" for variant in "nsmlx"),
     *(f"configs/deim/dfine/deim_hgnetv2_{variant}_coco.yml" for variant in "nsmlx"),
@@ -23,6 +23,8 @@ NEW_FAMILY_CONFIGS = (
     "configs/deim/rtdetrv2/deim_r50vd_60e_coco.yml",
     "configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml",
     *(f"configs/rtdetrv4/rtdetrv4_hgnetv2_{variant}_coco.yml" for variant in "smlx"),
+    *(f"configs/deimv2/deimv2_dinov3_{variant}_coco.yml" for variant in "smlx"),
+    *(f"configs/deimv2/deimv2_hgnetv2_{variant}_coco.yml" for variant in ("n", "pico", "femto", "atto")),
 )
 MANIFESTS = (
     "rtdetrv3_coco.yml",
@@ -30,6 +32,7 @@ MANIFESTS = (
     "deim_dfine_coco.yml",
     "deim_rtdetrv2_coco.yml",
     "rtdetrv4_coco.yml",
+    "deimv2_coco.yml",
 )
 
 

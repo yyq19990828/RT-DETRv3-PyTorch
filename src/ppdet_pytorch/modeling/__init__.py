@@ -25,7 +25,7 @@ from . import (
 )
 
 # Import main model
-from .architectures import DEIM, DFINE, RTDETRV3, RTDETRV4
+from .architectures import DEIM, DEIMV2, DFINE, RTDETRV3, RTDETRV4
 
 __all__ = [
     "backbones",

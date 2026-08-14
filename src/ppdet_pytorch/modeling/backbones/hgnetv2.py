@@ -280,7 +280,34 @@ class HGStage(nn.Module):
 class HGNetv2(nn.Module):
     """HGNetv2 B0/B2/B4/B5 with the pinned D-FINE state layout."""
 
+    # Pruned DEIMv2 variants reuse the B0 stage-1 weights with partial loading.
+    PRUNED_VARIANTS = ("Atto", "Femto", "Pico")
+
     ARCH_CONFIGS = {
+        "Atto": (
+            [3, 16, 16],
+            [
+                [16, 16, 64, 1, False, False, 3, 3],
+                [64, 32, 256, 1, True, False, 3, 3],
+                [256, 64, 256, 1, True, True, 3, 3],
+            ],
+        ),
+        "Femto": (
+            [3, 16, 16],
+            [
+                [16, 16, 64, 1, False, False, 3, 3],
+                [64, 32, 256, 1, True, False, 3, 3],
+                [256, 64, 512, 1, True, True, 5, 3],
+            ],
+        ),
+        "Pico": (
+            [3, 16, 16],
+            [
+                [16, 16, 64, 1, False, False, 3, 3],
+                [64, 32, 256, 1, True, False, 3, 3],
+                [256, 64, 512, 2, True, True, 5, 3],
+            ],
+        ),
         "B0": (
             [3, 16, 16],
             [
@@ -336,8 +363,8 @@ class HGNetv2(nn.Module):
                     name, ", ".join(self.ARCH_CONFIGS)
                 )
             )
-        if not return_idx or any(index not in range(4) for index in return_idx):
-            raise ValueError("return_idx must contain HGNetv2 stage indices in [0, 3]")
+        if not return_idx:
+            raise ValueError("return_idx must not be empty")
         if len(set(return_idx)) != len(return_idx) or tuple(
             sorted(return_idx)
         ) != tuple(return_idx):
@@ -350,6 +377,12 @@ class HGNetv2(nn.Module):
             list[tuple[int, int, int, int, bool, bool, int, int]],
             raw_stage_configs,
         )
+        stage_count = len(stage_configs)
+        if any(index not in range(stage_count) for index in self.return_idx):
+            raise ValueError(
+                "return_idx must contain HGNetv2 stage indices in "
+                "[0, {}]".format(stage_count - 1)
+            )
         self._out_strides = [4, 8, 16, 32]
         self._out_channels = [config[2] for config in stage_configs]
         self.stem = StemBlock(
@@ -426,6 +459,22 @@ class HGNetv2(nn.Module):
             raise ValueError("HGNetv2 checkpoint must be a tensor state dict")
 
         target = self.state_dict()
+        if self.name in self.PRUNED_VARIANTS:
+            # Pruned DEIMv2 variants initialize from the B0 stage-1 weights by
+            # keeping only tensors whose key and shape both match this graph.
+            matched = {
+                key: value
+                for key, value in state.items()
+                if key in target and value.shape == target[key].shape
+            }
+            if not matched:
+                raise ValueError(
+                    "HGNetv2 pruned variant {} found no matching tensors in {}".format(
+                        self.name, path
+                    )
+                )
+            self.load_state_dict(matched, strict=False)
+            return
         missing = sorted(
             key
             for key in set(target) - set(state)

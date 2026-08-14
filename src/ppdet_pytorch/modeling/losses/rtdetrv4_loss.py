@@ -98,8 +98,8 @@ class RTDETRV4Criterion(DEIMCriterion):
             raise ValueError("distillation weight must be finite and non-negative")
         self.weight_dict["loss_distill"] = value
 
-    def forward(self, outputs, targets, **kwargs):
-        losses = super().forward(outputs, targets, **kwargs)
+    def forward(self, outputs, targets, epoch=None, **kwargs):
+        losses = super().forward(outputs, targets, epoch=epoch, **kwargs)
         losses["loss_distill"] = (
             self.loss_distillation(outputs) * self.weight_dict["loss_distill"]
         )

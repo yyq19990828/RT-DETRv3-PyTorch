@@ -1,6 +1,6 @@
 # DEIM
 
-本目录是 DEIM 当前合同的唯一文档入口。固定上游的正式名称是 [DEIM](https://github.com/Intellindust-AI-Lab/DEIM)，不是 `DEIMv1`；[DEIMv2](https://github.com/Intellindust-AI-Lab/DEIMv2) 是另一个独立上游，不属于当前仓库支持范围。
+本目录是 DEIM 当前合同的唯一文档入口。固定上游的正式名称是 [DEIM](https://github.com/Intellindust-AI-Lab/DEIM)，不是 `DEIMv1`；[DEIMv2](https://github.com/Intellindust-AI-Lab/DEIMv2) 是另一个独立上游，其合同见 [deimv2](../deimv2/README.md)，与本目录的 DEIM profile 不可混用。
 
 仓库保留两个不能互换 checkpoint 的运行时 profile：
 
