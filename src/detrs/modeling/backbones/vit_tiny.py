@@ -61,6 +61,20 @@ class RopePositionEmbedding(nn.Module):
         self._init_weights()
 
     def forward(self, *, H: int, W: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        if not self.training:
+            # Cache eval-time sin/cos as buffers: torch.jit.trace freezes
+            # `self.periods.device` at trace time, so a dynamically built grid
+            # would stay on the trace device and break cross-device inference.
+            grid_hw = (int(H), int(W))
+            if getattr(self, "_deploy_grid_hw", None) != grid_hw:
+                sin, cos = self._compute_grid(H, W)
+                self.register_buffer("deploy_sin", sin, persistent=False)
+                self.register_buffer("deploy_cos", cos, persistent=False)
+                self._deploy_grid_hw = grid_hw
+            return self.deploy_sin, self.deploy_cos
+        return self._compute_grid(H, W)
+
+    def _compute_grid(self, H: int, W: int) -> Tuple[torch.Tensor, torch.Tensor]:
         device = self.periods.device
         dtype = self.dtype if self.dtype is not None else torch.get_default_dtype()
         dd = {"device": device, "dtype": dtype}

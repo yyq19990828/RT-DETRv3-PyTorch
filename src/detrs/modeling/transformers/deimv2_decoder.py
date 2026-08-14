@@ -213,8 +213,13 @@ class DEIMv2TransformerDecoder(nn.Module):
         return value.permute(0, 2, 3, 1).split(split_shape, dim=-1)
 
     def convert_to_deploy(self):
-        self.project = weighting_function(
-            self.reg_max, self.up, self.reg_scale, deploy=True
+        # persistent=False keeps the key out of state_dict so official
+        # checkpoints still strict-load; a bare tensor attribute would be
+        # frozen on the trace device and break CUDA TorchScript inference.
+        self.register_buffer(
+            "project",
+            weighting_function(self.reg_max, self.up, self.reg_scale, deploy=True),
+            persistent=False,
         )
         self.layers = self.layers[: self.eval_idx + 1]
         self.lqe_layers = nn.ModuleList(

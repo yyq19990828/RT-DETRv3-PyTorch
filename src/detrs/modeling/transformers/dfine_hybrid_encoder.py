@@ -526,7 +526,8 @@ class DFINEHybridEncoder(nn.Module):
             for encoder, index in zip(self.encoder, self.use_encoder_idx):
                 height, width = projected[index].shape[2:]
                 flattened = projected[index].flatten(2).permute(0, 2, 1)
-                if self.training or self.eval_spatial_size is None:
+                position = getattr(self, f"pos_embed{index}", None)
+                if self.training or position is None:
                     position = self.build_2d_sincos_position_embedding(
                         width,
                         height,
@@ -534,8 +535,13 @@ class DFINEHybridEncoder(nn.Module):
                         self.pe_temperature,
                         flattened.device,
                     )
-                else:
-                    position = getattr(self, f"pos_embed{index}")
+                    if not self.training:
+                        # Cache eval grids as buffers: torch.jit.trace freezes
+                        # the device argument built here at trace time, while a
+                        # buffer follows the model across devices.
+                        self.register_buffer(
+                            f"pos_embed{index}", position, persistent=False
+                        )
                 memory = encoder(flattened, pos_embed=position)
                 projected[index] = (
                     memory.permute(0, 2, 1)

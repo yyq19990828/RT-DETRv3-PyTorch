@@ -57,6 +57,22 @@ class RopePositionEmbedding(nn.Module):
         self._init_weights()
 
     def forward(self, *, H: int, W: int) -> tuple[Tensor, Tensor]:
+        # DETR-series deployment fix (upstream code kept verbatim below):
+        # torch.jit.trace freezes `self.periods.device` at trace time, so the
+        # dynamically built grid would stay on the trace device and break
+        # cross-device TorchScript inference. Eval-time grids are cached as
+        # non-persistent buffers, which follow the model across devices.
+        if not self.training:
+            grid_hw = (int(H), int(W))
+            if getattr(self, "_deploy_grid_hw", None) != grid_hw:
+                sin, cos = self._compute_grid(H, W)
+                self.register_buffer("deploy_sin", sin, persistent=False)
+                self.register_buffer("deploy_cos", cos, persistent=False)
+                self._deploy_grid_hw = grid_hw
+            return self.deploy_sin, self.deploy_cos
+        return self._compute_grid(H, W)
+
+    def _compute_grid(self, H: int, W: int) -> tuple[Tensor, Tensor]:
         device = self.periods.device
         dtype = self.dtype
         dd = {"device": device, "dtype": dtype}

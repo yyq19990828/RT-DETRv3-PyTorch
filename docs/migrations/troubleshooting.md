@@ -193,3 +193,13 @@ R50 官方权重回归中，decoder box 仅 1/1200 个值在 `rtol=1e-4` 下超�
 评估入口还应使用当前 EvalReader 的 batch dict 和模型已后处理的 `bbox/bbox_num` 输出。如果入口仍假定 Dataset 返回 `(image, target)` 或模型返回 `pred_logits/pred_boxes`，说明它还停留在旧 API，即使单独的 postprocess 函数存在也不代表 CLI 可用。
 
 Infer 同样必须复用 TestReader 和 `bbox/bbox_num`。旧入口曾同时使用手写 letterbox、ImageNet mean/std、`pred_logits/pred_boxes` 和外置 NMS；只补上 modeling 注册导入会越过第一处报错，但不会修复后续数据与输出合同。当前排查顺序应是：确认配置注册成功，再打印 batch 的 `image/im_shape/scale_factor`，最后检查模型输出是否已经完成后处理；不要在 CLI 叠加第二套解码。
+
+## TorchScript 导出在 CUDA 上加载报设备混用（2026-08-15 验证）
+
+`torch.jit.trace` 会把运行时读取的 `.device` 固化为 trace 时的常量，因此三类写法会让导出的 TorchScript 只能在 trace 设备上运行，`map_location="cuda"` 或 `.to("cuda")` 后报 `Expected all tensors to be on the same device, cpu and cuda:0`：
+
+- 模块上的裸张量属性（`self.x = tensor`）：trace 固化为常量，`map_location` 与 `.to()` 都不迁移。应改为 `register_buffer`；对官方 checkpoint 做 identity strict-load 的模块用 `persistent=False` 保持 state_dict 不变。
+- `x.to(other.device)` / `x.to(other)`：trace 会把目标设备烘焙进 graph。若两张量本来就随模块同设备，直接删除该转换。
+- forward 内 `torch.arange(..., device=t.device)` 等工厂调用：设备参数被固化。eval 尺寸固定的派生网格（RoPE sin/cos、pos_embed）应在首次 eval forward 时缓存为 `persistent=False` buffer（与 decoder 的 `anchors`/`valid_mask` 同模式），trace 后 graph 只含 buffer 引用。
+
+排查入口：直接读 TorchScript 报错里的序列化堆栈（`code/__torch__/...`），`torch.device("cpu")` 字样即固化点；用 `torch._C._jit_pass_inline` 展平 graph 后按 `sourceRange` 定位源码行。

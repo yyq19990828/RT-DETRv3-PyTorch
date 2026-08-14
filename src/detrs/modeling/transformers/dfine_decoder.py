@@ -222,7 +222,10 @@ class Integral(nn.Module):
     def forward(self, value, project):
         shape = value.shape
         probabilities = F.softmax(value.reshape(-1, self.reg_max + 1), 1)
-        result = F.linear(probabilities, project.to(value.device)).reshape(-1, 4)
+        # project comes from a buffer (or is derived from model parameters),
+        # so it already shares value's device; a .to(value.device) here would
+        # freeze the trace-time device and break cross-device TorchScript.
+        result = F.linear(probabilities, project).reshape(-1, 4)
         return result.reshape(list(shape[:-1]) + [-1])
 
 
