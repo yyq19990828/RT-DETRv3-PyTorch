@@ -60,6 +60,18 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 
 **已验证（2026-07-18）**：19 个 seed/sampler/worker/checkpoint/训练链定向测试通过；真实 2-GPU、32 图训练以 base seed 17 完成 8 次更新，checkpoint 记录 `seed=17`、`sampler_epoch=1` 与完整有效配置。修复 rank 0 RNG 复用问题后，另一次真实 2-GPU checkpoint 烟测写入 2 份不同的 rank RNG，SHA-256 分别为 `d7b3b2a9dc4bf089cee4d62c8d7e2d19e76f7f0cad58cc79d1773b5751c2c58e` 和 `0bd2daed27d16a78e0af552aa3968970fccd5625ada5b1236fd06744432502a3`。该烟测的唯一 AMP update 被初始 loss scale 跳过，所以它只验证分布式 checkpoint collective/RNG，不作优化器更新证据。这些结果只证明 PyTorch 内部可复现协议，不是多 seed AP 稳定性结论。
 
+### 两阶段检测训练
+
+**已验证（2026-08-13）**：D-FINE、DEIM 与 RT-DETRv4 共用 action 驱动的两阶段状态机。stage-1 严格提升时由 rank 0 原子发布 `best_stg1.pth` 并广播 SHA；stop epoch 训练前，所有 rank 校验并事务式恢复 model、optimizer、scheduler、scaler、EMA 与 RNG，再切换实际 EMA decay。stage-2 同时维护全局 top 和 restart 后的局部 best：只有超过全局 top 才发布 `best_stg2.pth`，局部不提升则降低 decay 并回载 stage-1 companion。
+
+协议状态必须持久化 family、stage、stop epoch、metric identity、全局/局部 best、restart count、当前/restart EMA decay、companion basename/SHA 与可选 GAM weight。companion 的 epoch metadata 不覆盖当前主循环 cursor，避免上游完整回载后重复执行旧 epoch；EMA evaluation state 也必须是只读快照，不能借验证调用推进 EMA epoch 或触发 cycle reset。缺失/篡改 companion、配置或 stage 不匹配及缺失 bbox metric 均应在 live state mutation 前失败。
+
+### 梯度自适应蒸馏权重
+
+**已验证（2026-08-14）**：GAM 不能按 rank 先计算 percentage 再取平均。应先对 encoder-transformer gradient L1 numerator 和全模型 gradient L1 denominator 分别执行跨 rank SUM，再计算 `100 * global_encoder / global_total`。观测点必须位于最终 accumulation microbatch 的 AMP unscale 后、gradient clip 前；AMP skip 不计入 epoch。若任一 rank 出现非有限梯度，必须在任何 rank optimizer step 前同步为全局 skip，避免部分更新或后续 collective 死锁。
+
+自适应权重不是模型 parameter/buffer，不能依赖 model `state_dict`。当前值必须由训练协议持久化，并在 init、resume、stage checkpoint 回载和 restart 后显式写回 criterion；stage transition action 还必须携带回载前的最新值，避免历史 best checkpoint 静默恢复旧权重。epoch 末只由 rank 0 应用更新公式，再广播并校验所有 rank 在下一 forward 前一致。
+
 ## 已验证的 PyTorch 迁移陷阱
 
 以下结论在 2026-07-18 的 R18 最小训练链中已通过 PyTorch 单元或集成测试；它们仍不是 Paddle/PyTorch 数值等价证据。
@@ -164,6 +176,15 @@ CUDA_VISIBLE_DEVICES=0 .venv/bin/rtdetrv3-eval \
 - 最终 boxes/scores 容差必须与预处理、图像尺寸和后处理关联；不使用无单位的单一数字。
 - COCO 精度目标用 AP 点表达，发布门槛暂定为与 Paddle 基线的绝对差不超过 `0.5 AP`，并记录 AP50/AP75/APs/APm/APl。
 - 所有数值报告必须附环境、权重 checksum、数据集版本、seed、dtype、命令和容差。
+
+## 部署迁移
+
+- `deploy()` 必须幂等；重复调用不得二次替换 head 或改变参数值。
+- 固定空间尺寸的 cached anchors 可以复用，但 batch 维必须在运行时扩展，不能由 batch-1 trace 固化。
+- 当前 ONNX 合同为 opset 17、固定高宽和动态 batch；TorchScript 使用相同固定高宽。空间尺寸变化需要重新导出。
+- 导出 fixture 必须是固定的非退化输入。全零输入可能使 TopK 大量并列，不能作为候选顺序或数值门的唯一证据。
+- checker、序列化和重载成功之后，仍须执行 runtime parity，并审计 criterion、denoising、teacher、distillation、projector 和其他训练节点残留。
+- family-specific 容差只记录在对应模型合同，不得提升为共享默认值。
 
 ## 当前缺口
 

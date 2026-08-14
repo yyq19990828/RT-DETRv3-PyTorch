@@ -1,0 +1,118 @@
+schema_version: 2
+family: deim-rtdetrv2
+hosting: upstream
+source_repository:
+  url: https://github.com/Intellindust-AI-Lab/DEIM
+  revision: 09d35d53d39ee3145a1e61e3a989b28b9468d1dd
+  model_zoo: https://github.com/Intellindust-AI-Lab/DEIM#2-model-zoo
+  license: Apache-2.0
+
+pretrained_backbones:
+  r18vd:
+    filename: ResNet18_vd_pretrained_from_paddle.pth
+    source_url: https://github.com/lyuwenyu/storage/releases/download/v0.1/ResNet18_vd_pretrained_from_paddle.pth
+    source_size_bytes: 44878642
+    source_sha256: 911a745b62e173c8f4b9af513c2ea295428cf23f1bbfe9048381500f140fd720
+    container_keys: []
+    state_tensor_count: 115
+    key_mapping: backbone-prefix
+  r34vd:
+    filename: ResNet34_vd_pretrained_from_paddle.pth
+    source_url: https://github.com/lyuwenyu/storage/releases/download/v0.1/ResNet34_vd_pretrained_from_paddle.pth
+    source_size_bytes: 85368770
+    source_sha256: 4354120509368b59e0ab07e3e829e08c917012e478371830ff3a09e56d353fe9
+    container_keys: []
+    state_tensor_count: 195
+    key_mapping: backbone-prefix
+  r50vd:
+    filename: ResNet50_vd_ssld_v2_pretrained_from_paddle.pth
+    source_url: https://github.com/lyuwenyu/storage/releases/download/v0.1/ResNet50_vd_ssld_v2_pretrained_from_paddle.pth
+    source_size_bytes: 94419322
+    source_sha256: 641dc59835d5228e6013ac45acb633592ec825144fb3d78055bc07699f404353
+    container_keys: []
+    state_tensor_count: 275
+    key_mapping: backbone-prefix
+  r101vd:
+    filename: ResNet101_vd_ssld_pretrained_from_paddle.pth
+    source_url: https://github.com/lyuwenyu/storage/releases/download/v0.1/ResNet101_vd_ssld_pretrained_from_paddle.pth
+    source_size_bytes: 170686705
+    source_sha256: 3683aca21d46f3a78de3171ee8f0497a9b1b4cd139a254e81b3d5bf579a0ff78
+    container_keys: []
+    state_tensor_count: 530
+    key_mapping: backbone-prefix
+
+models:
+  s:
+    alias: deim-rtv2-s
+    config: configs/deim/rtdetrv2/deim_r18vd_120e_coco.yml
+    official_bbox_ap: 0.490
+    filename: deim_r18vd_120e_coco.pth
+    path: pretrained_models/upstream/deim-rtdetrv2/deim_r18vd_120e_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/153_JKff6EpFgiLKaqkJsoDcLal_0ux_F/view?usp=drive_link
+    source_size_bytes: 81197791
+    source_sha256: cec854d43c88f11402c19a477127e7601195e011bf1d93d90a81fb7ed16b9d93
+    container_keys: [model]
+    state_tensor_count: 540
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m:
+    alias: deim-rtv2-m
+    config: configs/deim/rtdetrv2/deim_r34vd_120e_coco.yml
+    official_bbox_ap: 0.509
+    filename: deim_r34vd_120e_coco.pth
+    path: pretrained_models/upstream/deim-rtdetrv2/deim_r34vd_120e_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1O9RjZF6kdFWGv1Etn1Toml4r-YfdMDMM/view?usp=drive_link
+    source_size_bytes: 126309052
+    source_sha256: eb513a4ec608cb4f45170a4a628d361c27b29a2a98602df58b6907f3535fe6fc
+    container_keys: [model]
+    state_tensor_count: 667
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m-star:
+    alias: deim-rtv2-m-star
+    config: configs/deim/rtdetrv2/deim_r50vd_m_60e_coco.yml
+    official_bbox_ap: 0.532
+    filename: deim_r50vd_m_60e_coco.pth
+    path: pretrained_models/upstream/deim-rtdetrv2/deim_r50vd_m_60e_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/10dLuqdBZ6H5ip9BbBiE6S7ZcmHkRbD0E/view?usp=drive_link
+    source_size_bytes: 133513405
+    source_sha256: 5d733097d7399105dcda6f475f3fafab8accb008994a2fb517d34a84cb8804ce
+    container_keys: [model]
+    state_tensor_count: 732
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  l:
+    alias: deim-rtv2-l
+    config: configs/deim/rtdetrv2/deim_r50vd_60e_coco.yml
+    official_bbox_ap: 0.543
+    filename: deim_r50vd_60e_coco.pth
+    path: pretrained_models/upstream/deim-rtdetrv2/deim_r50vd_60e_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1mWknAXD5JYknUQ94WCEvPfXz13jcNOTI/view?usp=drive_link
+    source_size_bytes: 172544299
+    source_sha256: 4dac568e6a43bd7e67c81204ddce566b874a27f11bf8cae91d313211747b676e
+    container_keys: [model]
+    state_tensor_count: 801
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  x:
+    alias: deim-rtv2-x
+    config: configs/deim/rtdetrv2/deim_r101vd_60e_coco.yml
+    official_bbox_ap: 0.555
+    filename: deim_r101vd_60e_coco.pth
+    path: pretrained_models/upstream/deim-rtdetrv2/deim_r101vd_60e_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1BIevZijOcBO17llTyDX32F_pYppBfnzu/view?usp=drive_link
+    source_size_bytes: 307790543
+    source_sha256: 1696faa43918bc211c0f6fa3d6da1f6854fffb8ab8f54080072680ba8eb9b72b
+    container_keys: [model]
+    state_tensor_count: 1107
+    key_mapping: identity
+    tensor_layout: pytorch-native
+
+numerical_tolerance:
+  rtol: 1.0e-5
+  atol: 1.0e-6

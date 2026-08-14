@@ -38,8 +38,12 @@ from typing import Optional, Union
 
 import cv2
 import numpy as np
+import torch
 from PIL import Image, ImageDraw, ImageEnhance
 from pycocotools import mask
+from torch.utils.data import get_worker_info
+from torchvision import tv_tensors
+from torchvision.transforms import v2 as tv_transforms
 
 from ppdet_pytorch.core.workspace import serializable
 from ppdet_pytorch.modeling.keypoint_utils import get_affine_transform
@@ -849,7 +853,9 @@ class RandomFlip(BaseOperator):
 
 @register_op
 class Resize(BaseOperator):
-    def __init__(self, target_size, keep_ratio, interp=cv2.INTER_LINEAR):
+    def __init__(
+        self, target_size, keep_ratio, interp=cv2.INTER_LINEAR, backend="opencv"
+    ):
         """
         Resize image to target size. if keep_ratio is True,
         resize the image's long side to the maximum of target_size
@@ -858,10 +864,14 @@ class Resize(BaseOperator):
             target_size (int|list): image target size
             keep_ratio (bool): whether keep_ratio or not, default true
             interp (int): the interpolation method
+            backend (str): image resize backend, either OpenCV or Pillow
         """
         super(Resize, self).__init__()
         self.keep_ratio = keep_ratio
         self.interp = interp
+        if backend not in {"opencv", "pil"}:
+            raise ValueError("Resize backend must be 'opencv' or 'pil'")
+        self.backend = backend
         if not isinstance(target_size, (Integral, Sequence)):
             raise TypeError(
                 "Type of target_size is invalid. Must be Integer or List or Tuple, now is {}".format(
@@ -874,6 +884,17 @@ class Resize(BaseOperator):
 
     def apply_image(self, image, scale):
         im_scale_x, im_scale_y = scale
+
+        if self.backend == "pil":
+            from PIL import Image
+
+            width = int(round(image.shape[1] * im_scale_x))
+            height = int(round(image.shape[0] * im_scale_y))
+            return np.asarray(
+                Image.fromarray(image).resize(
+                    (width, height), resample=Image.Resampling.BILINEAR
+                )
+            )
 
         return cv2.resize(
             image, None, None, fx=im_scale_x, fy=im_scale_y, interpolation=self.interp
@@ -3675,6 +3696,183 @@ class CenterRandColor(BaseOperator):
             sample["pre_image"] = pre_img
 
         return sample
+
+
+@register_op
+class DEIMDenseO2OMosaic(BaseOperator):
+    """DEIM Dense O2O mosaic adapted to NumPy/PaddleDetection samples."""
+
+    def __init__(
+        self,
+        output_size=320,
+        max_size=None,
+        rotation_range=0,
+        translation_range=(0.1, 0.1),
+        scaling_range=(0.5, 1.5),
+        probability=1.0,
+        fill_value=114,
+        use_cache=False,
+        max_cached_images=50,
+        random_pop=True,
+        policy_epochs=None,
+        seed=0,
+        **kwargs,
+    ):
+        super().__init__()
+        del kwargs
+        if output_size <= 0:
+            raise ValueError("output_size must be positive")
+        if not 0 <= probability <= 1:
+            raise ValueError("probability must be between 0 and 1")
+        if use_cache and max_cached_images < 1:
+            raise ValueError("max_cached_images must be positive")
+        self.output_size = int(output_size)
+        self.max_size = max_size
+        self.rotation_range = rotation_range
+        self.translation_range = translation_range
+        self.scaling_range = scaling_range
+        self.probability = float(probability)
+        self.fill_value = fill_value
+        self.use_cache = bool(use_cache)
+        self.max_cached_images = int(max_cached_images)
+        self.random_pop = bool(random_pop)
+        self.policy_epochs = policy_epochs
+        self.seed = int(seed)
+        self.epoch = 0
+        self.rank = 0
+        self.calls = 0
+        self.cache = []
+
+    def set_epoch(self, epoch, rank=0):
+        self.epoch = int(epoch)
+        self.rank = int(rank)
+        self.calls = 0
+
+    def is_active(self, epoch):
+        policy = getattr(self, "policy_epochs", None)
+        return policy is None or policy[0] <= epoch < policy[1]
+
+    @staticmethod
+    def _clone_sample(sample):
+        return {
+            key: value.copy() if isinstance(value, np.ndarray) else copy.deepcopy(value)
+            for key, value in sample.items()
+        }
+
+    @staticmethod
+    def _validate_sample(sample, cache=False):
+        required = {"image", "gt_bbox", "gt_class"}
+        if not isinstance(sample, dict) or not required.issubset(sample):
+            where = "cache" if cache else "sample"
+            raise ValueError(
+                f"malformed {where}: image, gt_bbox and gt_class are required"
+            )
+        boxes = np.asarray(sample["gt_bbox"])
+        if boxes.ndim != 2 or boxes.shape[1] != 4 or not np.isfinite(boxes).all():
+            raise ValueError("gt_bbox must have shape [N, 4] and contain finite values")
+        if len(sample["gt_class"]) != len(boxes):
+            raise ValueError("gt_bbox and gt_class lengths must match")
+
+    def _cache_samples(self, sample, rng):
+        for item in self.cache:
+            self._validate_sample(item, cache=True)
+        self._validate_sample(sample)
+        self.cache.append(self._clone_sample(sample))
+        if len(self.cache) > self.max_cached_images:
+            index = rng.randint(0, len(self.cache) - 2) if self.random_pop else 0
+            self.cache.pop(index)
+        indices = rng.choices(range(len(self.cache)), k=3)
+        return [self._clone_sample(sample)] + [
+            self._clone_sample(self.cache[index]) for index in indices
+        ]
+
+    def __call__(self, sample, context=None):
+        del context
+        first_sample = sample[0] if isinstance(sample, Sequence) else sample
+        epoch = int(first_sample.get("curr_epoch", self.epoch))
+        if not self.is_active(epoch):
+            return first_sample
+        worker = get_worker_info()
+        worker_id = worker.id if worker is not None else 0
+        call_seed = (
+            self.seed
+            + epoch * 1_000_003
+            + self.rank * 10_007
+            + worker_id * 101
+            + self.calls
+        )
+        rng = random.Random(call_seed)
+        self.calls += 1
+        if self.use_cache and not isinstance(sample, Sequence):
+            samples = self._cache_samples(sample, rng)
+        elif isinstance(sample, Sequence):
+            samples = list(sample[:4])
+        else:
+            self._validate_sample(sample)
+            return sample
+        if len(samples) != 4:
+            raise ValueError("DEIM Dense O2O Mosaic requires four samples")
+        for item in samples:
+            self._validate_sample(item)
+        if self.probability < 1.0 and rng.random() > self.probability:
+            return samples[0]
+
+        resize = tv_transforms.Resize(size=self.output_size, max_size=self.max_size)
+        resized = []
+        aligned_keys = tuple(
+            key
+            for key in ("gt_class", "is_crowd", "difficult", "gt_score")
+            if all(key in item for item in samples)
+        )
+        for item in samples:
+            image = Image.fromarray(item["image"])
+            height, width = item["image"].shape[:2]
+            target = {
+                "boxes": tv_tensors.BoundingBoxes(
+                    torch.as_tensor(item["gt_bbox"], dtype=torch.float32),
+                    format="XYXY",
+                    canvas_size=(height, width),
+                ),
+                **{key: torch.as_tensor(item[key]) for key in aligned_keys},
+            }
+            resized.append(resize(image, target))
+
+        max_height = max(image.height for image, _ in resized)
+        max_width = max(image.width for image, _ in resized)
+        canvas = Image.new(
+            mode=resized[0][0].mode, size=(max_width * 2, max_height * 2), color=0
+        )
+        offsets = torch.tensor(
+            [[0, 0], [max_width, 0], [0, max_height], [max_width, max_height]]
+        ).repeat(1, 2)
+        targets = []
+        for index, (image, target) in enumerate(resized):
+            canvas.paste(image, (int(offsets[index, 0]), int(offsets[index, 1])))
+            target["boxes"] = target["boxes"] + offsets[index]
+            targets.append(target)
+
+        merged = {
+            key: torch.cat([target[key] for target in targets]) for key in targets[0]
+        }
+        merged["boxes"] = tv_tensors.BoundingBoxes(
+            merged["boxes"], format="XYXY", canvas_size=(max_height * 2, max_width * 2)
+        )
+        affine = tv_transforms.RandomAffine(
+            degrees=self.rotation_range,
+            translate=self.translation_range,
+            scale=self.scaling_range,
+            fill=self.fill_value,
+        )
+        with torch.random.fork_rng(devices=[]):
+            torch.manual_seed(call_seed)
+            canvas, merged = affine(canvas, merged)
+
+        result = self._clone_sample(samples[0])
+        result["image"] = np.asarray(canvas).copy()
+        result["gt_bbox"] = merged["boxes"].as_subclass(torch.Tensor).numpy().copy()
+        for key in aligned_keys:
+            result[key] = merged[key].numpy().copy()
+        return result
 
 
 @register_op

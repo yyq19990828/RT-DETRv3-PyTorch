@@ -291,6 +291,13 @@ class Checkpointer(Callback):
                 ),
                 sampler_epoch=epoch_id + 1,
                 gather_distributed_rng=True,
+                training_state=(
+                    self.trainer.training_protocol.checkpoint_state(
+                        str(self.trainer.cfg.get("architecture"))
+                    )
+                    if getattr(self.trainer, "training_protocol", None) is not None
+                    else None
+                ),
                 loss=status.get("loss", 0),
             )
             if saved:
@@ -361,6 +368,13 @@ class BestModelSaver(Callback):
                     else None
                 ),
                 sampler_epoch=status.get("epoch_id", 0) + 1,
+                training_state=(
+                    self.trainer.training_protocol.checkpoint_state(
+                        str(self.trainer.cfg.get("architecture"))
+                    )
+                    if getattr(self.trainer, "training_protocol", None) is not None
+                    else None
+                ),
             )
             logger.info(
                 f"Saved best model with {self.metric_name}: {self.best_metric:.4f}"

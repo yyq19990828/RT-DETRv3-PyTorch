@@ -1,0 +1,48 @@
+_BASE_: [
+  '../../../configs/dfine/dfine_hgnetv2_n_coco.yml',
+  '_base_/deim_dfine.yml',
+]
+
+save_dir: output/deim_hgnetv2_n_coco
+epoch: 160
+base_lr: 0.0008
+ema_restart_decay: 0.9999
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deim
+  stop_epoch: 148
+  ema_restart_decay: 0.9999
+
+LearningRate:
+  base_lr: 0.0008
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 160
+      warmup_iter: 2000
+      flat_epochs: 7800
+      no_aug_epochs: 12
+      lr_gamma: 1.0
+
+OptimizerBuilder:
+  optimizer:
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.0004
+      - params: ['^backbone\..*(?:norm|bn).*$']
+        lr: 0.0004
+        weight_decay: 0.0
+      - params: ['^(?:encoder|decoder)\..*(?:norm|bn|bias).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 128
+  dense_o2o_policy:
+    policy_epochs: [4, 78, 148]
+    mixup_epochs: [4, 78]
+    multiscale_stop_epoch: 148
+    multiscale_sizes: null
+
+EvalReader:
+  total_batch_size: 256

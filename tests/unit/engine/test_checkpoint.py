@@ -8,6 +8,7 @@ from torch import nn
 
 from ppdet_pytorch.engine.callbacks import Checkpointer
 from ppdet_pytorch.engine.trainer import Trainer
+from ppdet_pytorch.engine.training_protocol import TrainingProtocol
 from ppdet_pytorch.optimizer.ema import ModelEMA
 from ppdet_pytorch.optimizer.optimizer import (
     LearningRate,
@@ -20,6 +21,7 @@ from ppdet_pytorch.utils.checkpoint import (
     capture_rng_state,
     convert_to_dict,
     load_checkpoint,
+    load_pretrain_weight,
     save_checkpoint,
 )
 
@@ -34,6 +36,43 @@ class _ResumeModel(nn.Module):
 
     def forward(self, inputs):
         return self.stage(torch.tanh(self.base(inputs)))
+
+
+def test_backbone_only_pretrain_state_is_prefixed_and_loaded(tmp_path):
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.backbone = nn.Linear(2, 2)
+            self.head = nn.Linear(2, 1)
+
+    source = nn.Linear(2, 2)
+    with torch.no_grad():
+        source.weight.fill_(3.0)
+        source.bias.fill_(4.0)
+    checkpoint = tmp_path / "backbone.pth"
+    torch.save(source.state_dict(), checkpoint)
+    model = Model()
+    head = {key: value.clone() for key, value in model.head.state_dict().items()}
+
+    load_pretrain_weight(model, str(checkpoint))
+
+    for key, value in source.state_dict().items():
+        torch.testing.assert_close(model.backbone.state_dict()[key], value)
+    for key, value in head.items():
+        torch.testing.assert_close(model.head.state_dict()[key], value)
+
+
+def test_rejects_partially_matching_backbone_pretrain_state(tmp_path):
+    class Model(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.backbone = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 1))
+
+    checkpoint = tmp_path / "partial.pth"
+    torch.save({"0.weight": torch.ones(2, 2)}, checkpoint)
+
+    with pytest.raises(ValueError, match="only partially match"):
+        load_pretrain_weight(Model(), str(checkpoint))
 
 
 def _build_training_state(seed):
@@ -330,3 +369,314 @@ def test_trainer_resume_restores_progress_from_canonical_checkpoint(tmp_path):
     assert trainer.is_loaded_weights is True
     for expected, actual in zip(model.parameters(), resumed_model.parameters()):
         assert torch.equal(expected, actual)
+
+
+class _StatefulProtocol(TrainingProtocol):
+    def __init__(self, stage=0):
+        self.stage = stage
+
+    def state_dict(self):
+        return {"stage": self.stage}
+
+    def validate_state_dict(self, state_dict, checkpoint_path):
+        super().validate_state_dict(state_dict, checkpoint_path)
+        if set(state_dict) - {"stage", "companion_basename", "companion_sha256"}:
+            raise ValueError("corrupt protocol state")
+        if not isinstance(state_dict.get("stage"), int):
+            raise ValueError("corrupt protocol stage")
+
+    def load_state_dict(self, state_dict):
+        self.validate_state_dict(state_dict, "")
+        self.stage = state_dict["stage"]
+
+
+def _fingerprint(*components):
+    values = []
+    for component in components:
+        state = (
+            component.state_dict_for_save()
+            if isinstance(component, ModelEMA)
+            else component.state_dict()
+        )
+        values.append(str(state))
+    values.append(str(capture_rng_state()))
+    return values
+
+
+def test_checkpoint_protocol_state_round_trip_keeps_format_v1(tmp_path):
+    model = nn.Linear(2, 1)
+    protocol = _StatefulProtocol(stage=2)
+    path = tmp_path / "protocol.pth"
+    save_checkpoint(
+        model,
+        None,
+        epoch=1,
+        iteration=4,
+        save_path=str(path),
+        training_state=protocol.checkpoint_state("Tiny"),
+    )
+    raw = torch.load(path, map_location="cpu", weights_only=False)
+
+    restored = _StatefulProtocol()
+    metadata = load_checkpoint(
+        str(path),
+        nn.Linear(2, 1),
+        protocol=restored,
+        expected_model_identity="Tiny",
+    )
+
+    assert raw["format_version"] == 1
+    assert restored.stage == 2
+    assert metadata["training_state"]["protocol_identity"] == "_StatefulProtocol"
+
+
+def test_rejects_companion_checksum_before_mutation(tmp_path):
+    model, optimizer, scheduler, ema = _build_training_state(seed=31)
+    scaler = torch.amp.GradScaler("cpu")
+    protocol = _StatefulProtocol(stage=1)
+    companion = tmp_path / "best_stg1.pth"
+    companion.write_bytes(b"valid")
+    state = protocol.checkpoint_state("ResumeModel")
+    state["protocol_state"].update(
+        {"companion_basename": companion.name, "companion_sha256": "0" * 64}
+    )
+    path = tmp_path / "resume.pth"
+    save_checkpoint(
+        model,
+        optimizer,
+        epoch=1,
+        iteration=1,
+        save_path=str(path),
+        scheduler=scheduler,
+        scaler=scaler,
+        ema=ema,
+        training_state=state,
+    )
+    before = _fingerprint(model, optimizer, scheduler, scaler, ema, protocol)
+
+    with pytest.raises(ValueError, match="companion SHA-256 mismatch"):
+        load_checkpoint(
+            str(path),
+            model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
+            ema=ema,
+            protocol=protocol,
+            expected_model_identity="ResumeModel",
+            restore_rng=True,
+        )
+
+    assert _fingerprint(model, optimizer, scheduler, scaler, ema, protocol) == before
+
+
+def test_rejects_companion_path_before_mutation(tmp_path):
+    model = nn.Linear(2, 1)
+    protocol = _StatefulProtocol(stage=1)
+    state = protocol.checkpoint_state("Tiny")
+    state["protocol_state"].update(
+        {"companion_basename": "../outside.pth", "companion_sha256": "0" * 64}
+    )
+    path = tmp_path / "path-traversal.pth"
+    save_checkpoint(
+        model,
+        None,
+        epoch=1,
+        iteration=1,
+        save_path=str(path),
+        training_state=state,
+    )
+    before = _fingerprint(model, protocol)
+
+    with pytest.raises(ValueError, match="companion_basename"):
+        load_checkpoint(
+            str(path),
+            model,
+            protocol=protocol,
+            expected_model_identity="Tiny",
+        )
+
+    assert _fingerprint(model, protocol) == before
+
+
+def test_rejects_invalid_protocol_stage_before_mutation(tmp_path):
+    model = nn.Linear(2, 1)
+    protocol = _StatefulProtocol(stage=1)
+    state = protocol.checkpoint_state("Tiny")
+    state["protocol_stage"] = ["invalid"]
+    path = tmp_path / "invalid-stage.pth"
+    save_checkpoint(
+        model,
+        None,
+        epoch=1,
+        iteration=1,
+        save_path=str(path),
+        training_state=state,
+    )
+    before = _fingerprint(model, protocol)
+
+    with pytest.raises(ValueError, match="protocol stage"):
+        load_checkpoint(
+            str(path),
+            model,
+            protocol=protocol,
+            expected_model_identity="Tiny",
+        )
+
+    assert _fingerprint(model, protocol) == before
+
+
+def test_rejects_mismatched_outer_and_inner_protocol_stage_before_mutation(tmp_path):
+    model = nn.Linear(2, 1)
+    protocol = _StatefulProtocol(stage=1)
+    state = protocol.checkpoint_state("Tiny")
+    state["protocol_stage"] = 2
+    path = tmp_path / "mismatched-stage.pth"
+    save_checkpoint(
+        model,
+        None,
+        epoch=1,
+        iteration=1,
+        save_path=str(path),
+        training_state=state,
+    )
+    before = _fingerprint(model, protocol)
+
+    with pytest.raises(ValueError, match="stage mismatch"):
+        load_checkpoint(
+            str(path),
+            model,
+            protocol=protocol,
+            expected_model_identity="Tiny",
+        )
+
+    assert _fingerprint(model, protocol) == before
+
+
+def test_rejects_partial_component_state_before_mutation(tmp_path):
+    model = nn.Linear(2, 1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    path = tmp_path / "partial.pth"
+    torch.save({"format_version": 1, "model": model.state_dict()}, path)
+    before = _fingerprint(model, optimizer)
+
+    with pytest.raises(ValueError, match="missing required optimizer state"):
+        load_checkpoint(str(path), model, optimizer=optimizer)
+
+    assert _fingerprint(model, optimizer) == before
+
+
+def test_rejects_teacher_serialization(tmp_path):
+    model = nn.Linear(2, 1)
+
+    with pytest.raises(ValueError, match="teacher state is forbidden"):
+        save_checkpoint(
+            model,
+            None,
+            epoch=0,
+            iteration=0,
+            save_path=str(tmp_path / "teacher.pth"),
+            training_state={"teacher_encoder_output": torch.ones(1)},
+        )
+
+    assert not (tmp_path / "teacher.pth").exists()
+
+
+def test_apply_failure_rolls_back_every_component_and_rng(tmp_path):
+    class _FailOnceProtocol(_StatefulProtocol):
+        def __init__(self, stage=0, fail_once=False):
+            super().__init__(stage)
+            self.fail_once = fail_once
+
+        def __deepcopy__(self, memo):
+            return type(self)(stage=self.stage, fail_once=False)
+
+        def load_state_dict(self, state_dict):
+            if self.fail_once:
+                self.fail_once = False
+                raise RuntimeError("apply failure")
+            super().load_state_dict(state_dict)
+
+    saved_model, saved_optimizer, saved_scheduler, saved_ema = _build_training_state(5)
+    saved_scaler = torch.amp.GradScaler("cpu", init_scale=64)
+    saved_protocol = _FailOnceProtocol(stage=3)
+    path = tmp_path / "rollback.pth"
+    save_checkpoint(
+        saved_model,
+        saved_optimizer,
+        epoch=1,
+        iteration=2,
+        save_path=str(path),
+        scheduler=saved_scheduler,
+        scaler=saved_scaler,
+        ema=saved_ema,
+        training_state=saved_protocol.checkpoint_state("ResumeModel"),
+    )
+
+    model, optimizer, scheduler, ema = _build_training_state(91)
+    scaler = torch.amp.GradScaler("cpu", init_scale=8)
+    protocol = _FailOnceProtocol(stage=7, fail_once=True)
+    before = _fingerprint(model, optimizer, scheduler, scaler, ema, protocol)
+
+    with pytest.raises(RuntimeError, match="apply failure"):
+        load_checkpoint(
+            str(path),
+            model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
+            ema=ema,
+            protocol=protocol,
+            expected_model_identity="ResumeModel",
+            restore_rng=True,
+        )
+
+    assert _fingerprint(model, optimizer, scheduler, scaler, ema, protocol) == before
+
+
+def test_after_load_failure_rolls_back_every_component_and_rng(tmp_path):
+    class _AfterLoadFailureProtocol(_StatefulProtocol):
+        @property
+        def identity(self):
+            return "_StatefulProtocol"
+
+        def after_load(self, training_state, metadata):
+            del training_state, metadata
+            self.stage = -1
+            raise RuntimeError("after-load failure")
+
+    saved_model, saved_optimizer, saved_scheduler, saved_ema = _build_training_state(5)
+    saved_scaler = torch.amp.GradScaler("cpu", init_scale=64)
+    saved_protocol = _StatefulProtocol(stage=3)
+    path = tmp_path / "after-load-rollback.pth"
+    save_checkpoint(
+        saved_model,
+        saved_optimizer,
+        epoch=1,
+        iteration=2,
+        save_path=str(path),
+        scheduler=saved_scheduler,
+        scaler=saved_scaler,
+        ema=saved_ema,
+        training_state=saved_protocol.checkpoint_state("ResumeModel"),
+    )
+
+    model, optimizer, scheduler, ema = _build_training_state(91)
+    scaler = torch.amp.GradScaler("cpu", init_scale=8)
+    protocol = _AfterLoadFailureProtocol(stage=7)
+    before = _fingerprint(model, optimizer, scheduler, scaler, ema, protocol)
+
+    with pytest.raises(RuntimeError, match="after-load failure"):
+        load_checkpoint(
+            str(path),
+            model,
+            optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
+            ema=ema,
+            protocol=protocol,
+            expected_model_identity="ResumeModel",
+            restore_rng=True,
+        )
+
+    assert _fingerprint(model, optimizer, scheduler, scaler, ema, protocol) == before

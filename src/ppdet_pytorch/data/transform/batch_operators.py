@@ -28,6 +28,7 @@ import math
 import cv2
 import numpy as np
 from scipy import ndimage
+from torch.utils.data import get_worker_info
 
 from ppdet_pytorch.modeling.keypoint_utils import affine_transform, get_affine_transform
 from ppdet_pytorch.utils.logger import setup_logger
@@ -40,6 +41,7 @@ logger = setup_logger(__name__)
 
 __all__ = [
     "PadBatch",
+    "DEIMDenseO2OCollate",
     "BatchRandomResize",
     "Gt2YoloTarget",
     "Gt2FCOSTarget",
@@ -119,6 +121,91 @@ class PadBatch(BaseOperator):
                 padding_segm[:, :im_h, :im_w] = gt_segm
                 data["gt_segm"] = padding_segm
 
+        return samples
+
+
+@register_op
+class DEIMDenseO2OCollate(BaseOperator):
+    """Epoch-aware Dense O2O MixUp and multiscale batch transform."""
+
+    def __init__(
+        self,
+        mixup_prob,
+        mixup_epochs,
+        multiscale_stop_epoch,
+        multiscale_sizes=None,
+        seed=0,
+    ):
+        super().__init__()
+        self.mixup_prob = float(mixup_prob)
+        self.mixup_epochs = list(mixup_epochs)
+        self.multiscale_stop_epoch = int(multiscale_stop_epoch)
+        self.multiscale_sizes = multiscale_sizes
+        self.seed = int(seed)
+        self.epoch = 0
+        self.rank = 0
+
+    def set_epoch(self, epoch, rank=0):
+        self.epoch = int(epoch)
+        self.rank = int(rank)
+
+    def mixup_active(self, epoch):
+        return self.mixup_epochs[0] <= epoch < self.mixup_epochs[1]
+
+    def multiscale_active(self, epoch):
+        return epoch < self.multiscale_stop_epoch
+
+    def __call__(self, samples, context=None):
+        worker = get_worker_info()
+        worker_id = worker.id if worker is not None else 0
+        rng = np.random.default_rng(
+            self.seed + self.epoch * 1_000_003 + self.rank * 10_007 + worker_id * 101
+        )
+        if self.mixup_active(self.epoch) and rng.random() < self.mixup_prob:
+            shifted = samples[-1:] + samples[:-1]
+            beta = round(float(rng.uniform(0.45, 0.55)), 6)
+            mixed = []
+            for sample, other in zip(samples, shifted):
+                sample = copy.deepcopy(sample)
+                sample["image"] = (
+                    sample["image"] * beta + other["image"] * (1 - beta)
+                ).astype(sample["image"].dtype)
+                for key in ("gt_bbox", "gt_class", "is_crowd", "difficult"):
+                    if key in sample and key in other:
+                        sample[key] = np.concatenate([sample[key], other[key]])
+                sample["gt_score"] = np.concatenate(
+                    [
+                        np.full(
+                            (len(sample["gt_bbox"]) - len(other["gt_bbox"]), 1), beta
+                        ),
+                        np.full((len(other["gt_bbox"]), 1), 1 - beta),
+                    ]
+                ).astype(np.float32)
+                mixed.append(sample)
+            samples = mixed
+        if (
+            self.multiscale_sizes
+            and self.multiscale_active(self.epoch)
+            and len(samples) > 0
+        ):
+            size = int(rng.choice(self.multiscale_sizes))
+            for sample in samples:
+                image = sample["image"]
+                channel_first = image.ndim == 3 and image.shape[0] in (1, 3, 4)
+                source = image.transpose(1, 2, 0) if channel_first else image
+                old_height, old_width = source.shape[:2]
+                resized = cv2.resize(
+                    source, (size, size), interpolation=cv2.INTER_LINEAR
+                )
+                sample["image"] = (
+                    resized.transpose(2, 0, 1) if channel_first else resized
+                )
+                boxes = sample.get("gt_bbox")
+                if boxes is not None and len(boxes) and np.max(np.abs(boxes)) > 1:
+                    boxes[:, 0::2] *= size / old_width
+                    boxes[:, 1::2] *= size / old_height
+                if "im_shape" in sample:
+                    sample["im_shape"] = np.array([size, size], dtype=np.float32)
         return samples
 
 

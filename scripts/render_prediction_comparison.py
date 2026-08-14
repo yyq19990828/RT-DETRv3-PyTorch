@@ -359,8 +359,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         },
         "comparison_image": _file_record(
             args.output_image,
-            "docs/archive/rtdetrv3-v0.1.0/reports/assets/"
-            f"{args.output_image.name}",
+            f"docs/archive/rtdetrv3-v0.1.0/reports/assets/{args.output_image.name}",
         ),
     }
     args.output_json.parent.mkdir(parents=True, exist_ok=True)

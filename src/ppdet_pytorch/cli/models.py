@@ -1,4 +1,4 @@
-"""List, verify, and download published RT-DETRv3 model artifacts."""
+"""List, verify, and download model artifacts by family."""
 
 from __future__ import annotations
 
@@ -11,11 +11,18 @@ import tempfile
 import urllib.request
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, cast
 
 import yaml
 
-MANIFEST_RELATIVE_PATH = Path("configs/checkpoints/rtdetrv3_coco.yml")
+DEFAULT_FAMILY = "rtdetrv3"
+FAMILY_MANIFESTS = {
+    "rtdetrv3": Path("configs/checkpoints/rtdetrv3_coco.yml"),
+    "dfine": Path("configs/checkpoints/dfine_coco.yml"),
+    "deim-dfine": Path("configs/checkpoints/deim_dfine_coco.yml"),
+    "deim-rtdetrv2": Path("configs/checkpoints/deim_rtdetrv2_coco.yml"),
+    "rtdetrv4": Path("configs/checkpoints/rtdetrv4_coco.yml"),
+}
 DISTRIBUTION_SECTIONS = (("models", "config"), ("pretraining", "target_config"))
 
 
@@ -29,11 +36,20 @@ class ModelArtifact:
     sha256: str
     distribution_status: str
     download_url: Optional[str]
+    hosting: str = "project"
+    artifact_format: str = "pytorch-checkpoint"
+    source_url: Optional[str] = None
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List, verify, or download RT-DETRv3 PyTorch model weights."
+        description="List, verify, or download PyTorch model weights."
+    )
+    parser.add_argument(
+        "--family",
+        choices=tuple(FAMILY_MANIFESTS),
+        default=DEFAULT_FAMILY,
+        help="Model family; defaults to rtdetrv3.",
     )
     parser.add_argument(
         "--manifest",
@@ -77,11 +93,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def default_manifest_path() -> Path:
-    package_manifest = Path(__file__).resolve().parents[1] / MANIFEST_RELATIVE_PATH
+def default_manifest_path(family: str = DEFAULT_FAMILY) -> Path:
+    relative_path = FAMILY_MANIFESTS[family]
+    package_manifest = Path(__file__).resolve().parents[1] / relative_path
     if package_manifest.is_file():
         return package_manifest
-    repository_manifest = Path(__file__).resolve().parents[3] / MANIFEST_RELATIVE_PATH
+    repository_manifest = Path(__file__).resolve().parents[3] / relative_path
     if repository_manifest.is_file():
         return repository_manifest
     raise FileNotFoundError(
@@ -126,9 +143,7 @@ def _validate_artifact_path(value: Any, label: str) -> str:
     return value
 
 
-def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
-    document = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
-    _require(isinstance(document, dict), "checkpoint manifest must be a mapping")
+def _load_schema_v1(document: dict[str, Any]) -> dict[str, ModelArtifact]:
     artifacts: dict[str, ModelArtifact] = {}
     for section_name, config_key in DISTRIBUTION_SECTIONS:
         section = document.get(section_name)
@@ -136,6 +151,7 @@ def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
             isinstance(section, dict),
             f"checkpoint manifest is missing {section_name}",
         )
+        section = cast(dict[str, Any], section)
         for name, entry in section.items():
             _require(isinstance(name, str), "artifact name must be a string")
             _require(isinstance(entry, dict), f"invalid model entry: {name}")
@@ -171,6 +187,7 @@ def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
                 )
             else:
                 _require(download_url is None, f"unpublished model has a URL: {name}")
+            status = cast(str, status)
             artifacts[alias] = ModelArtifact(
                 alias=alias,
                 name=name,
@@ -183,6 +200,75 @@ def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
             )
 
     return artifacts
+
+
+def _load_schema_v2(document: dict[str, Any]) -> dict[str, ModelArtifact]:
+    family = document.get("family")
+    _require(family in FAMILY_MANIFESTS, "invalid schema-v2 model family")
+    hosting = document.get("hosting")
+    _require(hosting in {"project", "upstream"}, "invalid artifact hosting")
+    hosting = cast(str, hosting)
+    section = document.get("models")
+    _require(
+        isinstance(section, dict) and bool(section),
+        "checkpoint manifest is missing models",
+    )
+    section = cast(dict[str, Any], section)
+    artifacts: dict[str, ModelArtifact] = {}
+    for name, entry in section.items():
+        _require(isinstance(name, str), "artifact name must be a string")
+        _require(isinstance(entry, dict), f"invalid model entry: {name}")
+        alias = _validate_alias(entry.get("alias"), name)
+        _require(alias not in artifacts, f"duplicate artifact alias: {alias}")
+        config = entry.get("config")
+        _require(isinstance(config, str), f"missing config for artifact: {name}")
+        artifact_path = _validate_artifact_path(entry.get("path"), name)
+        size_bytes = entry.get("source_size_bytes")
+        _require(
+            isinstance(size_bytes, int) and size_bytes > 0,
+            f"invalid artifact size: {name}",
+        )
+        artifact_format = entry.get("artifact_format")
+        _require(
+            artifact_format == "pytorch-checkpoint",
+            f"invalid artifact format: {name}",
+        )
+        source_url = entry.get("source_url")
+        _require(
+            isinstance(source_url, str) and source_url.startswith("https://"),
+            f"source URL must use HTTPS: {name}",
+        )
+        download_url = entry.get("download_url")
+        _require(
+            download_url is None
+            or (isinstance(download_url, str) and download_url.startswith("https://")),
+            f"download URL must use HTTPS: {name}",
+        )
+        artifacts[alias] = ModelArtifact(
+            alias=alias,
+            name=name,
+            config=config,
+            path=artifact_path,
+            size_bytes=size_bytes,
+            sha256=_validate_sha256(entry.get("source_sha256"), name),
+            distribution_status=hosting,
+            download_url=download_url,
+            hosting=hosting,
+            artifact_format=artifact_format,
+            source_url=source_url,
+        )
+    return artifacts
+
+
+def load_artifacts(manifest_path: Path) -> dict[str, ModelArtifact]:
+    document = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    _require(isinstance(document, dict), "checkpoint manifest must be a mapping")
+    schema_version = document.get("schema_version", 1)
+    if schema_version == 1:
+        return _load_schema_v1(document)
+    if schema_version == 2:
+        return _load_schema_v2(document)
+    raise ValueError(f"unsupported checkpoint manifest schema: {schema_version}")
 
 
 def _sha256(path: Path) -> str:
@@ -227,6 +313,11 @@ def download_artifact(
     force: bool,
 ) -> dict[str, Any]:
     if artifact.download_url is None:
+        if artifact.hosting == "upstream" and artifact.source_url:
+            raise ValueError(
+                f"{artifact.alias} is hosted upstream; automatic download is "
+                f"unavailable; official source: {artifact.source_url}"
+            )
         raise ValueError(
             f"{artifact.alias} is not published; no download_url is recorded"
         )
@@ -253,7 +344,10 @@ def download_artifact(
             temporary_path = Path(temporary_file.name)
             request = urllib.request.Request(
                 artifact.download_url,
-                headers={"User-Agent": "rtdetrv3-pytorch-model-downloader/0.1"},
+                headers={
+                    "Accept": "application/octet-stream",
+                    "User-Agent": "rtdetrv3-pytorch-model-downloader/0.1",
+                },
             )
             with _open_url(request) as response:
                 final_url = response.geturl()
@@ -290,7 +384,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = create_argument_parser().parse_args(argv)
     try:
         manifest_path = (
-            args.manifest.resolve() if args.manifest else default_manifest_path()
+            args.manifest.resolve()
+            if args.manifest
+            else default_manifest_path(args.family)
         )
         artifacts = load_artifacts(manifest_path)
         if args.command == "list":

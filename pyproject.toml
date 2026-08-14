@@ -88,6 +88,15 @@ test = [
     "pytest-cov>=5.0",
     "typeguard>=4.0",
 ]
+teacher = [
+    "ftfy",
+    "omegaconf",
+    "regex",
+    "scikit-learn>=1.0",
+    "submitit",
+    "termcolor",
+    "torchmetrics",
+]
 
 [project.scripts]
 rtdetrv3-convert = "ppdet_pytorch.cli.convert:main"
@@ -126,7 +135,7 @@ only-include = [
 ]
 
 [tool.uv]
-required-version = ">=0.11.29,<0.12"
+required-version = ">=0.11.29,<0.13"
 required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
 ]

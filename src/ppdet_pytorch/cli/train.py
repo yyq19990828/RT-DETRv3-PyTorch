@@ -183,6 +183,9 @@ def run(FLAGS, cfg):
             "the PyTorch trainer"
         )
 
+    if FLAGS.resume is not None and cfg.get("pretrain_weights"):
+        cfg["pretrain_weights"] = None
+
     # build trainer
     # ssod_method = cfg.get('ssod_method', None)
     # if ssod_method is not None:

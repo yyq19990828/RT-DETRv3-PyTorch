@@ -147,6 +147,39 @@ def test_run_calls_parameterless_trainer_train(monkeypatch):
     assert calls == [("init", config, "train"), ("train", ())]
 
 
+def test_run_resume_does_not_require_pretrain_asset(monkeypatch):
+    observed = []
+
+    class FakeTrainer:
+        def __init__(self, cfg, mode):
+            observed.append((dict(cfg), mode))
+
+        def resume_weights(self, path):
+            observed.append(("resume", path))
+
+        def train(self):
+            observed.append(("train",))
+
+    monkeypatch.setattr(train_cli, "Trainer", FakeTrainer)
+    monkeypatch.setattr(train_cli, "init_parallel_env", lambda: None)
+    flags = SimpleNamespace(
+        ddp=False,
+        enable_ce=False,
+        seed=None,
+        resume="epoch.pth",
+        eval=False,
+    )
+    config = AttrDict(pretrain_weights="missing-imagenet.pth")
+
+    train_cli.run(flags, config)
+
+    assert observed == [
+        ({"pretrain_weights": None}, "train"),
+        ("resume", "epoch.pth"),
+        ("train",),
+    ]
+
+
 def test_run_applies_explicit_seed_per_rank(monkeypatch):
     calls = []
 

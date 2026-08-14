@@ -90,6 +90,18 @@ def _get_ema_state_dict(checkpoint):
         raise RuntimeError("Checkpoint does not contain EMA weights")
 
     ema = checkpoint["ema"]
+    if isinstance(ema, dict) and "module" in ema:
+        state_dict = ema["module"]
+        if (
+            not isinstance(state_dict, dict)
+            or not state_dict
+            or not all(
+                isinstance(key, str) and isinstance(value, torch.Tensor)
+                for key, value in state_dict.items()
+            )
+        ):
+            raise RuntimeError("Upstream EMA module must be a tensor state dict")
+        return state_dict
     if not isinstance(ema, dict) or "ema_state_dict" not in ema:
         return ema
 

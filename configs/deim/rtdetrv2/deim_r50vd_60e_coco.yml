@@ -1,0 +1,40 @@
+_BASE_: ['_base_/deim_rtdetrv2.yml']
+
+save_dir: output/deim_rtdetrv2_r50vd_60e_coco
+pretrain_weights: pretrained_models/deim-rtdetrv2/ResNet50_vd_ssld_v2_pretrained_from_paddle.pth
+epoch: 60
+base_lr: 0.0002
+ema_restart_decay: 0.9999
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deim
+  stop_epoch: 58
+  ema_restart_decay: 0.9999
+
+PResNet:
+  depth: 50
+
+RTDETRV2HybridEncoder:
+  hidden_dim: 256
+  expansion: 1.0
+
+RTDETRTransformerv2:
+  variant: r50vd
+  num_layers: 6
+  eval_idx: -1
+
+LearningRate:
+  base_lr: 0.0002
+
+OptimizerBuilder:
+  optimizer:
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.00002
+      - params: ['^(?=.*(?:norm|bn)).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 16

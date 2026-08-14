@@ -26,6 +26,10 @@ class DetectionExportAdapter(nn.Module):
                 "scale_factor": scale_factor,
             }
         )
+        if not isinstance(outputs, dict) or not {"bbox", "bbox_num"} <= outputs.keys():
+            raise ValueError(
+                "export model must return inference outputs bbox and bbox_num"
+            )
         return outputs["bbox"], outputs["bbox_num"]
 
 
@@ -34,7 +38,10 @@ def make_example_inputs(batch_size, height, width, device="cpu"):
     if batch_size < 1 or height < 1 or width < 1:
         raise ValueError("batch size, height, and width must be positive")
     device = torch.device(device)
-    image = torch.zeros((batch_size, 3, height, width), device=device)
+    generator = torch.Generator(device=device).manual_seed(20260813)
+    image = torch.rand(
+        (batch_size, 3, height, width), device=device, generator=generator
+    )
     im_shape = torch.tensor(
         [[height, width]], dtype=torch.float32, device=device
     ).repeat(batch_size, 1)
@@ -60,6 +67,7 @@ def export_onnx(
     output_path,
     opset_version=17,
     dynamic_batch=True,
+    validate=None,
 ):
     """Export and validate an ONNX model, then publish it atomically."""
     output_path, temporary_path = _temporary_path(output_path)
@@ -88,6 +96,8 @@ def export_onnx(
         import onnx
 
         onnx.checker.check_model(onnx.load(str(temporary_path)))
+        if validate is not None:
+            validate(temporary_path)
         temporary_path.replace(output_path)
     finally:
         if temporary_path.exists():
@@ -95,7 +105,7 @@ def export_onnx(
     return output_path
 
 
-def export_torchscript(adapter, example_inputs, output_path):
+def export_torchscript(adapter, example_inputs, output_path, validate=None):
     """Trace, reload-check, and atomically publish a TorchScript model."""
     output_path, temporary_path = _temporary_path(output_path)
     try:
@@ -127,6 +137,8 @@ def export_torchscript(adapter, example_inputs, output_path):
         )
         if json.loads(loaded_metadata[TORCHSCRIPT_METADATA_FILE]) != metadata:
             raise RuntimeError("TorchScript export metadata verification failed")
+        if validate is not None:
+            validate(temporary_path)
         temporary_path.replace(output_path)
     finally:
         if temporary_path.exists():
@@ -151,7 +163,18 @@ def run_onnx(model_path, inputs):
 
 def run_torchscript(model_path, inputs):
     """Reload and run a TorchScript export on CPU."""
-    model = torch.jit.load(str(model_path), map_location="cpu").eval()
+    metadata_files = {TORCHSCRIPT_METADATA_FILE: b""}
+    model = torch.jit.load(
+        str(model_path), map_location="cpu", _extra_files=metadata_files
+    ).eval()
+    metadata = json.loads(metadata_files[TORCHSCRIPT_METADATA_FILE])
+    input_size = [int(inputs[0].shape[-2]), int(inputs[0].shape[-1])]
+    if input_size != metadata["input_size"]:
+        raise ValueError(
+            "TorchScript input size {} does not match fixed export size {}".format(
+                input_size, metadata["input_size"]
+            )
+        )
     cpu_inputs = tuple(value.detach().cpu() for value in inputs)
     with torch.inference_mode():
         return model(*cpu_inputs)

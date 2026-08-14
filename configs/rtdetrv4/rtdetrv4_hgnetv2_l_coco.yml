@@ -1,0 +1,21 @@
+_BASE_: [
+  '../deim/dfine/deim_hgnetv2_l_coco.yml',
+  '_base_/rtdetrv4.yml',
+]
+
+save_dir: output/rtdetrv4_hgnetv2_l_coco
+
+RTDETRV4Criterion:
+  weight_dict:
+    loss_distill: 15
+  distill_adaptive_params: {enabled: true, rho: 2, delta: 0.1, default_weight: 15}
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: rtdetrv4
+  stop_epoch: 50
+  ema_restart_decay: 0.9999
+  current_gam_weight: 15
+  gam_rho: 2
+  gam_delta: 0.1
+  gam_default_weight: 15

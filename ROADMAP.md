@@ -1,10 +1,10 @@
 # RT-DETRv3 PyTorch Migration Roadmap
 
 **Status**: Active
-**Last updated**: 2026-07-19
+**Last updated**: 2026-08-14
 **Current evidence snapshot**: [`docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m12-variant-export-device-matrix.md)
-**Current execution plan**: 暂无；M4 长训保持 deferred，后续工作需要重新立项
+**Current execution plan**: [`D-FINE、DEIM 与 RT-DETRv4 集成计划`](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（in-progress，Task 1-23 已完成，F1-F4 最终验证待执行）；M4 长训保持 deferred
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -219,9 +219,26 @@ M1–M3 ──> M5 CLI/导出
 M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──> M8 多变体导出 ──> M9 导出产物推理 ──> M10 TorchScript CUDA ──> M11 ONNX Runtime CUDA ──> M12 多变体设备矩阵
 ```
 
+## 新模型族集成（in-progress）
+
+**执行计划**：[`D-FINE、DEIM 与 RT-DETRv4 集成计划`](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)。范围包括 D-FINE N/S/M/L/X、DEIM-D-FINE N/S/M/L/X、DEIM-RT-DETRv2 S/M/M*/L/X 与 RT-DETRv4 S/M/L/X，共 19 个官方 COCO 变体；计划要求共享基础只实现一次、族内训练语义隔离、RT-DETRv4 student-only 推理/导出，并以现有 RT-DETRv3 数值与用户接口作为不可回归基线。
+
+**模型文档**：[D-FINE](docs/models/dfine/README.md)、[DEIM](docs/models/deim/README.md)、[DEIM-D-FINE](docs/models/deim-dfine/README.md)、[DEIM-RT-DETRv2](docs/models/deim-rtdetrv2/README.md)、[RT-DETRv4](docs/models/rtdetrv4/README.md)。四个新模型族均已完成模型级、Models CLI 与打包验收，但尚未声明发布。
+
+- [x] 完成执行计划审查并启动 Wave 1。
+- [x] 完成任务 1 验证驱动、RT-DETRv3 回归基线、Paddle GPU 探针与官方 R18 数值门。
+- [x] 完成 HGNetv2 B0/B2/B4/B5 官方 stage-1 权重与逐 stage 数值对齐。
+- [x] 完成共享 HGNetv2、D-FINE 基元、Dense O2O、FlatCosine、stage-aware checkpoint 与 RT-DETRv2 依赖切片。
+- [x] 完成 D-FINE 与 DEIM-D-FINE 共 10 个变体的官方 checkpoint、上游激活/输出、训练恢复、COCO、推理和部署验收。
+- [x] 完成 DEIM-RT-DETRv2 S/M/M*/L/X 的官方 checkpoint、PResNet 初始化、上游激活/输出、训练恢复、COCO、推理和部署验收。
+- [x] 完成 19 个变体的官方 checkpoint、上游激活/输出、训练恢复、COCO、推理和部署验收。
+- [x] 完成模型目录、打包、许可与模型/迁移文档；全部 RT-DETRv3 最终回归属于 F2-F4。
+
+**当前状态**：任务 1-23 已完成。19 个变体均通过官方 checkpoint、pinned activation/raw-output、reduced train/resume、四图 eager、ONNX/TorchScript 和完整 COCO val2017 门；五族 Models CLI、wheel/sdist、质量、覆盖率和文档合同也已通过任务级验收。RT-DETRv4 S/M/L/X 使用官方 EMA 的 AP 为 `0.498371 / 0.536396 / 0.554134 / 0.570014`，真实 DINOv3 teacher reduced update 与 DSI/GAM 恢复已通过。下一步只执行 F2-F4 并行最终验证及其后的 F1 合规审计，在此之前不声明整个计划完成。
+
 ## 不作为当前阻塞的延伸项
 
 - TensorRT 引擎专项优化。
 - C++ libtorch 完整示例。
-- 剪枝、量化、NAS 或新模型架构。
+- 剪枝、量化或 NAS；已单独立项的新模型族集成不再属于未规划延伸项。
 - Paddle 中与 RT-DETRv3 训练/评估无关的所有检测任务分支。

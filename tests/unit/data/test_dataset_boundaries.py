@@ -15,7 +15,7 @@ from ppdet_pytorch.data.transform.batch_operators import (
     Gt2GFLTarget,
 )
 from ppdet_pytorch.data.transform.gridmask_utils import Gridmask
-from ppdet_pytorch.data.transform.operators import RandomResize
+from ppdet_pytorch.data.transform.operators import RandomResize, Resize
 
 
 def test_image_folder_loads_plain_images_without_annotation(tmp_path):
@@ -113,6 +113,22 @@ def test_random_resize_accepts_fixed_scalar_target():
 
     assert result["image"].shape == (8, 8, 3)
     np.testing.assert_array_equal(result["im_shape"], [8, 8])
+
+
+def test_pil_resize_matches_torchvision_bilinear():
+    from PIL import Image
+    from torchvision.transforms.v2 import Resize as TorchvisionResize
+
+    image = np.arange(7 * 11 * 3, dtype=np.uint8).reshape(7, 11, 3)
+    expected = np.asarray(TorchvisionResize([13, 17])(Image.fromarray(image)))
+    sample = {
+        "image": image,
+        "scale_factor": np.ones(2, dtype=np.float32),
+    }
+
+    result = Resize([13, 17], keep_ratio=False, backend="pil")(sample)
+
+    np.testing.assert_array_equal(result["image"], expected)
 
 
 def test_ssod_fixed_batch_resize_returns_reusable_empty_selection():

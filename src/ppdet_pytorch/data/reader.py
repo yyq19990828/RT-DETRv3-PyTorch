@@ -20,7 +20,7 @@ Handle variable-length annotations and create properly batched tensors.
 
 import os
 import traceback
-from copy import deepcopy
+from copy import copy, deepcopy
 
 import numpy as np
 import torch
@@ -40,8 +40,9 @@ MAIN_PID = os.getpid()
 
 
 class Compose(object):
-    def __init__(self, transforms, num_classes=80):
+    def __init__(self, transforms, num_classes=80, ordinary_transform_policy=None):
         self.transforms = transforms
+        self.ordinary_transform_policy = ordinary_transform_policy
         self.transforms_cls = []
         for t in self.transforms:
             for k, v in t.items():
@@ -53,6 +54,27 @@ class Compose(object):
                 self.transforms_cls.append(f)
 
     def _update_transforms_cls(self, data):
+        if self.ordinary_transform_policy is not None:
+            stop_epoch = self.ordinary_transform_policy["stop_epoch"]
+            stopped_ops = set(self.ordinary_transform_policy["ops"])
+            if data["curr_epoch"] >= stop_epoch:
+                base_size = self.ordinary_transform_policy.get("base_size")
+
+                def stopped_transforms():
+                    for op in self.transforms_cls:
+                        if op.__class__.__name__ in stopped_ops:
+                            continue
+                        if (
+                            base_size is not None
+                            and op.__class__.__name__ == "BatchRandomResize"
+                        ):
+                            op = copy(op)
+                            op.target_size = base_size
+                            op.random_size = False
+                            op.random_interp = False
+                        yield op
+
+                return stopped_transforms()
         if "transform_schedulers" in data:
 
             def is_valid(op):
@@ -90,8 +112,16 @@ class Compose(object):
 
 
 class BatchCompose(Compose):
-    def __init__(self, transforms, num_classes=80, collate_batch=True):
-        super(BatchCompose, self).__init__(transforms, num_classes)
+    def __init__(
+        self,
+        transforms,
+        num_classes=80,
+        collate_batch=True,
+        ordinary_transform_policy=None,
+    ):
+        super(BatchCompose, self).__init__(
+            transforms, num_classes, ordinary_transform_policy
+        )
         self.collate_batch = collate_batch
 
     def __call__(self, data):
@@ -167,21 +197,127 @@ class BaseDataLoader(object):
         collate_batch=True,
         use_shared_memory=False,
         seed=0,
+        ordinary_transform_policy=None,
+        dense_o2o_policy=None,
+        total_batch_size=None,
         **kwargs,
     ):
+        if ordinary_transform_policy is not None and dense_o2o_policy is not None:
+            raise ValueError("ordinary transform policy cannot construct Dense O2O")
+        ordinary_transform_policy = self._validate_ordinary_policy(
+            ordinary_transform_policy
+        )
+        dense_o2o_policy = self._validate_dense_o2o_policy(dense_o2o_policy)
+        if ordinary_transform_policy is not None:
+            configured_ops = {
+                name
+                for config in (*sample_transforms, *batch_transforms)
+                for name in config
+            }
+            forbidden = sorted(
+                name
+                for name in configured_ops
+                if "Mosaic" in name or "MixUp" in name or "Mixup" in name
+            )
+            if forbidden:
+                raise ValueError(
+                    "ordinary transform policy cannot construct Mosaic/MixUp: "
+                    + ", ".join(forbidden)
+                )
+        if dense_o2o_policy is not None:
+            mosaic = dict(dense_o2o_policy.get("mosaic", {}))
+            mosaic.update(
+                probability=dense_o2o_policy.get("mosaic_prob", 0.5),
+                policy_epochs=dense_o2o_policy["policy_epochs"],
+                seed=seed,
+            )
+            mosaic_transform = {"DEIMDenseO2OMosaic": mosaic}
+            decode_index = next(
+                (
+                    index
+                    for index, config in enumerate(sample_transforms)
+                    if "Decode" in config
+                ),
+                -1,
+            )
+            sample_transforms = list(sample_transforms)
+            sample_transforms.insert(decode_index + 1, mosaic_transform)
+            batch_transforms = [
+                {
+                    "DEIMDenseO2OCollate": {
+                        "mixup_prob": dense_o2o_policy.get("mixup_prob", 0.5),
+                        "mixup_epochs": dense_o2o_policy["mixup_epochs"],
+                        "multiscale_stop_epoch": dense_o2o_policy[
+                            "multiscale_stop_epoch"
+                        ],
+                        "multiscale_sizes": dense_o2o_policy.get("multiscale_sizes"),
+                        "seed": seed,
+                    }
+                },
+                *batch_transforms,
+            ]
         # sample transform
-        self._sample_transforms = Compose(sample_transforms, num_classes=num_classes)
+        self._sample_transforms = Compose(
+            sample_transforms, num_classes, ordinary_transform_policy
+        )
 
         # batch transfrom
         self._batch_transforms = BatchCompose(
-            batch_transforms, num_classes, collate_batch
+            batch_transforms, num_classes, collate_batch, ordinary_transform_policy
         )
+        if total_batch_size is not None:
+            world_size = dist.get_world_size() if dist.is_initialized() else 1
+            if total_batch_size <= 0 or total_batch_size % world_size:
+                raise ValueError(
+                    "total_batch_size must be positive and divisible by world size"
+                )
+            batch_size = total_batch_size // world_size
         self.batch_size = batch_size
+        self.total_batch_size = total_batch_size
         self.shuffle = shuffle
         self.drop_last = drop_last
         self.pin_memory = bool(use_shared_memory)
         self.seed = int(seed)
+        self.dense_o2o_policy = dense_o2o_policy
         self.kwargs = kwargs
+
+    @staticmethod
+    def _validate_ordinary_policy(policy):
+        if policy is None:
+            return None
+        if not isinstance(policy.get("stop_epoch"), int) or policy["stop_epoch"] < 0:
+            raise ValueError(
+                "ordinary_transform_policy.stop_epoch must be non-negative"
+            )
+        if not isinstance(policy.get("ops"), list):
+            raise ValueError("ordinary_transform_policy.ops must be a list")
+        base_size = policy.get("base_size")
+        if base_size is not None and (not isinstance(base_size, int) or base_size <= 0):
+            raise ValueError("ordinary_transform_policy.base_size must be positive")
+        return deepcopy(policy)
+
+    @staticmethod
+    def _validate_dense_o2o_policy(policy):
+        if policy is None:
+            return None
+        policy = deepcopy(policy)
+        epochs = policy.get("policy_epochs")
+        if (
+            not isinstance(epochs, list)
+            or len(epochs) != 3
+            or any(not isinstance(epoch, int) for epoch in epochs)
+            or not epochs[0] < epochs[1] < epochs[2]
+        ):
+            raise ValueError(
+                "policy_epochs must contain three strictly increasing integers"
+            )
+        mixup = policy.get("mixup_epochs")
+        if not isinstance(mixup, list) or len(mixup) != 2 or mixup != epochs[:2]:
+            raise ValueError("mixup_epochs must equal the first two policy_epochs")
+        stop = policy.get("multiscale_stop_epoch")
+        if stop != epochs[-1]:
+            raise ValueError("multiscale_stop_epoch must equal the final policy epoch")
+        return policy
 
     def __call__(self, dataset, worker_num, batch_sampler=None, return_list=False):
         # Kept for compatibility with Paddle-style reader configuration.
@@ -194,6 +330,12 @@ class BaseDataLoader(object):
         self.dataset.set_transform(self._sample_transforms)
         # set kwargs
         self.dataset.set_kwargs(**self.kwargs)
+        if self.dense_o2o_policy is not None:
+            self.dataset.set_kwargs(
+                **self.kwargs,
+                dense_o2o_policy=self.dense_o2o_policy,
+                dense_o2o_seed=self.seed,
+            )
         # batch sampler
         if batch_sampler is None:
             self._batch_sampler = DistributedBatchSampler(
@@ -232,6 +374,10 @@ class BaseDataLoader(object):
             self._batch_sampler.set_epoch(epoch)
         if hasattr(self.dataset, "set_epoch"):
             self.dataset.set_epoch(epoch)
+        for compose in (self._sample_transforms, self._batch_transforms):
+            for op in compose.transforms_cls:
+                if hasattr(op, "set_epoch"):
+                    op.set_epoch(epoch, rank=getattr(self, "_rank", 0))
         self._seed_worker_generator(epoch)
         self.loader = None
 

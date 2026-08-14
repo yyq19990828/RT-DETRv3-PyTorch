@@ -4,7 +4,7 @@ RT-DETRv3 的 PyTorch 迁移实现。仓库当前仍处于迁移与数值对齐�
 
 ## 环境安装
 
-项目支持 Python 3.9–3.12，推荐用 `uv` 0.11.29.x 创建和管理虚拟环境；该版本范围与锁文件和 CI 一致。当前
+项目支持 Python 3.9–3.12，支持用 `uv` 0.11.29 至 0.12.x 创建和管理虚拟环境；CI 固定使用 0.11.29 验证锁文件兼容性。当前
 `torch`/`torchvision` 从 PyTorch 官方 CUDA 12.1 索引安装，默认面向 Linux x86_64 或
 Windows amd64；CPU、macOS 和 ARM 环境需要改用与平台匹配的 PyTorch 索引。
 
@@ -29,7 +29,24 @@ uv sync --extra test
 
 # 仅增加 Ruff/Mypy 质量工具
 uv sync --extra quality
+
+# 仅增加训练专用 DINOv3 teacher 依赖
+uv sync --extra teacher
 ```
+
+中国大陆网络可选择从阿里云（默认）或上海交大镜像预载锁定的
+PyTorch CUDA 12.1 wheels，再执行正常的 locked sync：
+
+```bash
+python3 scripts/sync_china.py --extra test
+# 或：python3 scripts/sync_china.py --mirror sjtug --extra dev
+```
+
+该脚本仅支持 Linux x86_64，并按当前 Python ABI 从镜像下载
+`torch`/`torchvision`。每个 wheel 都必须通过 `uv.lock` 中官方
+PyTorch SHA-256 后才会安装；默认 `uv sync`、锁文件和 CI 仍使用官方源。
+阿里/上交的 PyTorch 页面是大型 flat wheel 列表，不建议直接设为全局
+`index-url`，否则 uv 会长时间扫描或因不完整的通用包集合改变解析行为。
 
 如果仓库已克隆但缺少 Paddle 参考实现：
 
@@ -42,6 +59,34 @@ Linux x86_64 的 `dev` extra 固定使用 PaddlePaddle GPU 3.3.0/cu118；
 该构建可用 `paddle.set_device("cpu")` 显式回退到 CPU。`export`/`test` 使用
 CPU `onnxruntime`；`export-gpu`/`dev` 使用同时包含 CUDA 和 CPU provider 的
 `onnxruntime-gpu`。两类 ORT distribution 不应共装，UV 会拒绝冲突的 extra 组合。
+训练专用 DINOv3 teacher 的官方 Python 依赖位于 `teacher` extra；默认 student
+训练、评估、推理和导出均不依赖该 extra。
+
+## 模型族
+
+当前可安装包保留六个 `rtdetrv3-*` 命令，并支持以下 Models family。19 个新增
+COCO 变体已完成官方 checkpoint、完整 val2017、训练恢复与部署验收，但其权重
+仍由上游托管，不属于本项目 `v0.1.0` Release。
+
+| Models family | 变体 | 配置 | checkpoint manifest |
+|---|---|---|---|
+| `rtdetrv3` | R18/R34/R50 | [`configs/rtdetrv3`](configs/rtdetrv3/) | [`rtdetrv3_coco.yml`](configs/checkpoints/rtdetrv3_coco.yml) |
+| `dfine` | N/S/M/L/X | [`configs/dfine`](configs/dfine/) | [`dfine_coco.yml`](configs/checkpoints/dfine_coco.yml) |
+| `deim-dfine` | N/S/M/L/X | [`configs/deim/dfine`](configs/deim/dfine/) | [`deim_dfine_coco.yml`](configs/checkpoints/deim_dfine_coco.yml) |
+| `deim-rtdetrv2` | S/M/M*/L/X | [`configs/deim/rtdetrv2`](configs/deim/rtdetrv2/) | [`deim_rtdetrv2_coco.yml`](configs/checkpoints/deim_rtdetrv2_coco.yml) |
+| `rtdetrv4` | S/M/L/X | [`configs/rtdetrv4`](configs/rtdetrv4/) | [`rtdetrv4_coco.yml`](configs/checkpoints/rtdetrv4_coco.yml) |
+
+```bash
+uv run rtdetrv3-models --family dfine list
+uv run rtdetrv3-models --family deim-dfine list --json
+uv run rtdetrv3-models --family rtdetrv4 verify rtdetrv4-s /path/to/RTv4-S-hgnet.pth
+```
+
+`--manifest` 的优先级高于 `--family`。D-FINE 的固定 GitHub release asset 可由
+CLI 原子下载；Google Drive 托管的 DEIM/RT-DETRv4 资产只支持 list 和本地
+verify，download 会返回 manifest 中的官方来源 URL。RT-DETRv4 的 DINOv3
+ViT-B/16 teacher 只在训练构造；student eval/infer/export 不需要 DINOv3 checkout、
+授权权重或 `teacher` extra。模型级数值与限制见[模型文档](docs/models/README.md)。
 
 ## 常用命令
 
@@ -206,7 +251,7 @@ uv run python scripts/check_release.py --verify-release-dir "$release_dir"
 ├── tools/dev/               # 仅开发期使用的 Paddle 对齐工具
 ├── docs/
 │   ├── migrations/        # 跨模型复用的迁移经验
-│   ├── models/rtdetrv3/   # RT-DETRv3 模型专属合同
+│   ├── models/            # 按模型族组织的当前合同与支持状态
 │   ├── plans/             # 活动计划与计划模板
 │   └── archive/           # 已完成版本的计划、报告与证据
 ├── ROADMAP.md              # 未完成迁移大纲
@@ -216,7 +261,7 @@ uv run python scripts/check_release.py --verify-release-dir "$release_dir"
 
 当前 Paddle 子模块固定在官方仓库提交 `349e7d99a5065e7b684118912e6a74178d4f4625`，与本仓库此前内置的 Paddle 源码快照内容一致。
 
-共享迁移经验见 [`docs/migrations`](docs/migrations/README.md)，RT-DETRv3 模型合同见
-[`docs/models/rtdetrv3`](docs/models/rtdetrv3/README.md)，活动计划见
+共享迁移经验见 [`docs/migrations`](docs/migrations/README.md)，各模型族合同与当前支持状态见
+[`docs/models`](docs/models/README.md)，活动计划见
 [`docs/plans`](docs/plans/README.md)，已完成证据见
 [`docs/archive`](docs/archive/README.md)；未完成工作以 [`ROADMAP.md`](ROADMAP.md) 为准。

@@ -4,11 +4,13 @@ Checkpoint save/load utilities for RT-DETRv3 PyTorch
 Handles model checkpoints, optimizer states, and training resumption.
 """
 
+import hashlib
 import logging
 import os
 import random
 import tempfile
 from collections.abc import Mapping
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -76,6 +78,7 @@ def save_checkpoint(
     ema: Optional[Any] = None,
     sampler_epoch: Optional[int] = None,
     gather_distributed_rng: bool = False,
+    training_state: Optional[Dict[str, Any]] = None,
     **kwargs,
 ):
     """
@@ -96,6 +99,7 @@ def save_checkpoint(
         gather_distributed_rng: Collect every rank's RNG state before rank 0
             writes the checkpoint. All ranks must call this function when it
             is enabled.
+        training_state: Optional family-independent training protocol state
         **kwargs: Additional items to save
     """
     local_rng_state = capture_rng_state()
@@ -117,6 +121,7 @@ def save_checkpoint(
     model_state = (
         model.module.state_dict() if hasattr(model, "module") else model.state_dict()
     )
+    _validate_no_teacher_state(model_state, path="model")
 
     checkpoint = {
         "format_version": CHECKPOINT_FORMAT_VERSION,
@@ -151,6 +156,11 @@ def save_checkpoint(
     if best_metric is not None:
         checkpoint["best_metric"] = best_metric
 
+    if training_state is not None:
+        _validate_no_teacher_state(training_state)
+        checkpoint["training_state"] = deepcopy(training_state)
+
+    _validate_no_teacher_state(kwargs, path="checkpoint")
     # Add any additional items
     checkpoint.update(kwargs)
 
@@ -188,6 +198,8 @@ def load_checkpoint(
     restore_rng: bool = False,
     strict: bool = True,
     map_location: Optional[str] = None,
+    protocol: Optional[Any] = None,
+    expected_model_identity: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Load checkpoint and restore model/optimizer states.
@@ -213,15 +225,20 @@ def load_checkpoint(
 
     logger.info(f"Loading checkpoint from {checkpoint_file}")
 
-    # Load checkpoint
-    if map_location is None:
-        map_location = f"cuda:{get_rank()}" if torch.cuda.is_available() else "cpu"
-
+    # Deserialization and all validation happen on CPU before live state changes.
     checkpoint = torch.load(
         checkpoint_file,
-        map_location=map_location,
+        map_location="cpu",
         weights_only=False,
     )
+
+    if not isinstance(checkpoint, Mapping):
+        raise TypeError("checkpoint must contain a mapping")
+    format_version = checkpoint.get("format_version")
+    if format_version is not None and format_version != CHECKPOINT_FORMAT_VERSION:
+        raise ValueError(
+            "Unsupported checkpoint format_version: {}".format(format_version)
+        )
 
     # Load model state
     if "model" in checkpoint:
@@ -234,50 +251,37 @@ def load_checkpoint(
         # Assume entire checkpoint is model state
         model_state = checkpoint
 
-    # Handle DDP wrapped model
-    if hasattr(model, "module"):
-        model.module.load_state_dict(model_state, strict=strict)
-    else:
-        model.load_state_dict(model_state, strict=strict)
-
-    logger.info("Loaded model weights")
-
-    # Load optimizer state
+    target_model = model.module if hasattr(model, "module") else model
     optimizer_state = checkpoint.get(
         "optimizer", checkpoint.get("optimizer_state_dict")
     )
-    if optimizer is not None and optimizer_state is not None:
-        optimizer.load_state_dict(optimizer_state)
-        logger.info("Loaded optimizer state")
-
-    # Load scheduler state
     scheduler_state = checkpoint.get(
         "scheduler", checkpoint.get("scheduler_state_dict")
     )
-    if scheduler is not None and scheduler_state is not None:
-        scheduler.load_state_dict(scheduler_state)
-        logger.info("Loaded scheduler state")
-
     scaler_state = checkpoint.get("scaler", checkpoint.get("scaler_state_dict"))
-    if scaler is not None and scaler_state is not None:
-        scaler.load_state_dict(scaler_state)
-        logger.info("Loaded scaler state")
+    ema_state = checkpoint.get("ema")
+    training_state = checkpoint.get("training_state")
 
-    if ema is not None and "ema" in checkpoint:
-        ema_state = checkpoint["ema"]
-        if isinstance(ema_state, dict) and "ema_state_dict" in ema_state:
-            ema.load_state_dict(ema_state)
-        else:
-            ema.resume(ema_state, checkpoint.get("global_step", 0))
-        logger.info("Loaded EMA state")
+    _preflight_checkpoint(
+        checkpoint_file,
+        checkpoint,
+        target_model,
+        model_state,
+        optimizer,
+        optimizer_state,
+        scheduler,
+        scheduler_state,
+        scaler,
+        scaler_state,
+        ema,
+        ema_state,
+        protocol,
+        training_state,
+        expected_model_identity,
+        strict,
+        restore_rng,
+    )
 
-    if restore_rng:
-        rng_state = _select_rng_state(checkpoint)
-        if rng_state is not None:
-            restore_rng_state(rng_state)
-            logger.info("Restored RNG state")
-
-    # Extract metadata
     metadata = {
         "epoch": checkpoint.get("epoch", 0),
         "iteration": checkpoint.get("iteration", 0),
@@ -287,8 +291,219 @@ def load_checkpoint(
         "best_metric": checkpoint.get("best_metric", None),
         "config": checkpoint.get("config", None),
     }
+    if training_state is not None:
+        metadata["training_state"] = training_state
+
+    snapshots = {
+        "model": deepcopy(target_model.state_dict()),
+        "optimizer": deepcopy(optimizer.state_dict())
+        if optimizer is not None
+        else None,
+        "scheduler": deepcopy(scheduler.state_dict())
+        if scheduler is not None
+        else None,
+        "scaler": deepcopy(scaler.state_dict()) if scaler is not None else None,
+        "ema": deepcopy(ema.state_dict_for_save()) if ema is not None else None,
+        "protocol": deepcopy(protocol.state_dict()) if protocol is not None else None,
+        "rng": capture_rng_state() if restore_rng else None,
+    }
+    try:
+        target_model.load_state_dict(model_state, strict=strict)
+        if optimizer is not None and optimizer_state is not None:
+            optimizer.load_state_dict(optimizer_state)
+        if scheduler is not None and scheduler_state is not None:
+            scheduler.load_state_dict(scheduler_state)
+        if scaler is not None and scaler_state is not None:
+            scaler.load_state_dict(scaler_state)
+        if ema is not None and ema_state is not None:
+            _load_ema_state(ema, ema_state, checkpoint.get("global_step", 0))
+        if protocol is not None and training_state is not None:
+            protocol.load_state_dict(training_state["protocol_state"])
+        if restore_rng:
+            rng_state = _select_rng_state(dict(checkpoint))
+            if rng_state is not None:
+                restore_rng_state(rng_state)
+        if protocol is not None and training_state is not None:
+            protocol.after_load(training_state, metadata)
+    except Exception:
+        model_snapshot = snapshots["model"]
+        if not isinstance(model_snapshot, Mapping):
+            raise TypeError("model snapshot must contain a mapping")
+        target_model.load_state_dict(model_snapshot)
+        if optimizer is not None:
+            optimizer.load_state_dict(snapshots["optimizer"])
+        if scheduler is not None:
+            scheduler.load_state_dict(snapshots["scheduler"])
+        if scaler is not None:
+            scaler.load_state_dict(snapshots["scaler"])
+        if ema is not None:
+            ema_snapshot = snapshots["ema"]
+            if not isinstance(ema_snapshot, Mapping):
+                raise TypeError("EMA snapshot must contain a mapping")
+            _load_ema_state(ema, ema_snapshot, checkpoint.get("global_step", 0))
+        if protocol is not None:
+            protocol.load_state_dict(snapshots["protocol"])
+        if restore_rng:
+            rng_snapshot = snapshots["rng"]
+            if not isinstance(rng_snapshot, dict):
+                raise TypeError("RNG snapshot must contain a dictionary")
+            restore_rng_state(rng_snapshot)
+        raise
 
     return metadata
+
+
+def _validate_no_teacher_state(value: Any, path: str = "training_state") -> None:
+    if isinstance(value, nn.Module):
+        raise ValueError(
+            "module serialization is forbidden in checkpoints: {}".format(path)
+        )
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            key_path = "{}.{}".format(path, key)
+            if "teacher" in str(key).lower():
+                raise ValueError(
+                    "teacher state is forbidden in checkpoints: {}".format(key_path)
+                )
+            _validate_no_teacher_state(item, key_path)
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _validate_no_teacher_state(item, "{}[{}]".format(path, index))
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as checkpoint_file:
+        for chunk in iter(lambda: checkpoint_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_ema_state(ema: Any, state: Mapping[str, Any], global_step: int) -> None:
+    if isinstance(state, Mapping) and "ema_state_dict" in state:
+        ema.load_state_dict(state)
+    else:
+        ema.resume(state, global_step)
+
+
+def _validate_component_state(component: Any, state: Any, name: str) -> None:
+    if component is None:
+        return
+    if state is None:
+        raise ValueError("checkpoint is missing required {} state".format(name))
+    candidate = deepcopy(component)
+    candidate.load_state_dict(deepcopy(state))
+
+
+def _validate_optimizer_scheduler_state(
+    optimizer: Any,
+    optimizer_state: Any,
+    scheduler: Any,
+    scheduler_state: Any,
+) -> None:
+    if optimizer is None and scheduler is None:
+        return
+    if optimizer is None:
+        _validate_component_state(scheduler, scheduler_state, "scheduler")
+        return
+    if optimizer_state is None:
+        raise ValueError("checkpoint is missing required optimizer state")
+    if scheduler is None:
+        _validate_component_state(optimizer, optimizer_state, "optimizer")
+        return
+    if scheduler_state is None:
+        raise ValueError("checkpoint is missing required scheduler state")
+
+    # Preserve the optimizer reference held by stateful schedulers while
+    # rehearsing the same load order used for live components.
+    candidate_optimizer, candidate_scheduler = deepcopy((optimizer, scheduler))
+    candidate_optimizer.load_state_dict(deepcopy(optimizer_state))
+    candidate_scheduler.load_state_dict(deepcopy(scheduler_state))
+
+
+def _preflight_checkpoint(
+    checkpoint_file: Path,
+    checkpoint: Mapping[str, Any],
+    model: nn.Module,
+    model_state: Mapping[str, Any],
+    optimizer: Optional[Any],
+    optimizer_state: Any,
+    scheduler: Optional[Any],
+    scheduler_state: Any,
+    scaler: Optional[Any],
+    scaler_state: Any,
+    ema: Optional[Any],
+    ema_state: Any,
+    protocol: Optional[Any],
+    training_state: Any,
+    expected_model_identity: Optional[str],
+    strict: bool,
+    restore_rng: bool,
+) -> None:
+    deepcopy(model).load_state_dict(deepcopy(model_state), strict=strict)
+    protocol_checkpoint = training_state is not None or protocol is not None
+    if protocol_checkpoint:
+        if training_state is None or not isinstance(training_state, Mapping):
+            raise ValueError("checkpoint is missing required training_state")
+        _validate_no_teacher_state(training_state)
+        required = {
+            "model_identity",
+            "protocol_identity",
+            "protocol_stage",
+            "protocol_state",
+        }
+        missing = sorted(required - set(training_state))
+        if missing:
+            raise ValueError("training_state is missing: {}".format(", ".join(missing)))
+        if protocol is None:
+            raise ValueError("checkpoint training_state requires a configured protocol")
+        if training_state["protocol_identity"] != protocol.identity:
+            raise ValueError("training protocol identity mismatch")
+        protocol.validate_checkpoint_stage(training_state["protocol_stage"])
+        if (
+            expected_model_identity is not None
+            and training_state["model_identity"] != expected_model_identity
+        ):
+            raise ValueError("checkpoint model identity mismatch")
+        protocol.validate_state_dict(
+            training_state["protocol_state"], str(checkpoint_file)
+        )
+        candidate_protocol = deepcopy(protocol)
+        candidate_protocol.load_state_dict(deepcopy(training_state["protocol_state"]))
+        if candidate_protocol.checkpoint_stage != training_state["protocol_stage"]:
+            raise ValueError("training protocol stage mismatch")
+        protocol_state = training_state["protocol_state"]
+        companion_name = protocol_state.get("companion_basename")
+        companion_sha = protocol_state.get("companion_sha256")
+        if companion_name is not None or companion_sha is not None:
+            if not companion_name or not companion_sha:
+                raise ValueError("companion basename and SHA-256 must both be present")
+            if Path(companion_name).name != companion_name:
+                raise ValueError("companion_basename must not contain a path")
+            companion_path = checkpoint_file.parent / companion_name
+            if not companion_path.is_file():
+                raise FileNotFoundError(
+                    "checkpoint companion not found: {}".format(companion_path)
+                )
+            actual_sha = _sha256(companion_path)
+            if actual_sha != companion_sha:
+                raise ValueError("checkpoint companion SHA-256 mismatch")
+
+    _validate_optimizer_scheduler_state(
+        optimizer, optimizer_state, scheduler, scheduler_state
+    )
+    _validate_component_state(scaler, scaler_state, "scaler")
+    if ema is not None:
+        if ema_state is None:
+            raise ValueError("checkpoint is missing required EMA state")
+        candidate_ema = deepcopy(ema)
+        _load_ema_state(
+            candidate_ema, deepcopy(ema_state), checkpoint.get("global_step", 0)
+        )
+    if restore_rng:
+        rng_state = _select_rng_state(dict(checkpoint))
+        if rng_state is None:
+            raise ValueError("checkpoint is missing required RNG state")
 
 
 def load_pretrained_weights(
@@ -564,7 +779,7 @@ def load_pretrain_weight(model, pretrain_weight, ARSL_eval=False):
     logger.info(f"Loading pretrained weights from: {pretrain_weight}")
 
     # Load checkpoint
-    checkpoint = torch.load(pretrain_weight, map_location="cpu")
+    checkpoint = torch.load(pretrain_weight, map_location="cpu", weights_only=False)
 
     # Extract model state
     if "model" in checkpoint:
@@ -574,11 +789,29 @@ def load_pretrain_weight(model, pretrain_weight, ARSL_eval=False):
     else:
         state_dict = checkpoint
 
+    target = model.module if hasattr(model, "module") else model
+    target_keys = set(target.state_dict())
+    state_keys = set(state_dict)
+    prefixed_keys = {"backbone." + key for key in state_keys}
+    backbone_keys = {
+        key.removeprefix("backbone.")
+        for key in target_keys
+        if key.startswith("backbone.")
+    }
+    missing_backbone_keys = backbone_keys - state_keys
+    if (
+        state_keys
+        and state_keys <= backbone_keys
+        and all(key.endswith(".num_batches_tracked") for key in missing_backbone_keys)
+    ):
+        state_dict = {"backbone." + key: value for key, value in state_dict.items()}
+    elif prefixed_keys & target_keys:
+        raise ValueError(
+            "Backbone pretrained weight keys only partially match the model"
+        )
+
     # Load weights with non-strict mode
-    if hasattr(model, "module"):
-        incompatible = model.module.load_state_dict(state_dict, strict=False)
-    else:
-        incompatible = model.load_state_dict(state_dict, strict=False)
+    incompatible = target.load_state_dict(state_dict, strict=False)
 
     if incompatible.missing_keys:
         logger.info("Missing keys when loading pretrained weights:")

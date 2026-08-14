@@ -1,0 +1,116 @@
+_BASE_: [
+  '../../../datasets/coco_detection.yml',
+  '../../../runtime.yml',
+  '../../../dfine/_base_/reader.yml',
+  '../../../dfine/_base_/optimizer.yml',
+]
+
+architecture: DEIM
+validate: true
+eval_spatial_size: [640, 640]
+
+DEIM:
+  backbone: PResNet
+  encoder: RTDETRV2HybridEncoder
+  decoder: RTDETRTransformerv2
+  criterion: DEIMCriterion
+  post_process: DETRPostProcess
+
+PResNet:
+  variant: d
+  num_stages: 4
+  return_idx: [1, 2, 3]
+  freeze_at: -1
+  freeze_norm: false
+  pretrained: false
+
+RTDETRV2HybridEncoder:
+  feat_strides: [8, 16, 32]
+  hidden_dim: 256
+  use_encoder_idx: [2]
+  num_encoder_layers: 1
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.0
+  enc_act: gelu
+  expansion: 1.0
+  depth_mult: 1
+  act: silu
+  version: rt_detrv2
+
+RTDETRTransformerv2:
+  feat_channels: [256, 256, 256]
+  feat_strides: [8, 16, 32]
+  hidden_dim: 256
+  num_levels: 3
+  num_queries: 300
+  num_denoising: 100
+  label_noise_ratio: 0.5
+  box_noise_scale: 1.0
+  num_points: [4, 4, 4]
+  nhead: 8
+  dim_feedforward: 1024
+  dropout: 0.0
+  activation: silu
+  eval_idx: -1
+  cross_attn_method: default
+  query_select_method: default
+  value_shape: reshape
+  mlp_act: silu
+  query_pos_method: as_reg
+
+DEIMCriterion:
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2}
+  losses: [mal, boxes]
+  alpha: 0.75
+  gamma: 1.5
+  use_uni_set: false
+  matcher:
+    name: DFINEHungarianMatcher
+    weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+    alpha: 0.25
+    gamma: 2.0
+
+DETRPostProcess:
+  num_top_queries: 300
+  use_focal_loss: true
+
+LearningRate:
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 60
+      warmup_iter: 2000
+      flat_epochs: 34
+      no_aug_epochs: 2
+      lr_gamma: 0.5
+
+TrainReader:
+  ordinary_transform_policy: null
+  sample_transforms:
+    - Decode: {}
+    - RandomDistort: {prob: 0.5}
+    - RandomExpand: {fill_value: [0, 0, 0]}
+    - RandomCrop: {prob: 0.8}
+    - RandomFlip: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false}
+  batch_transforms:
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - NormalizeBox: {}
+    - BboxXYXY2XYWH: {}
+    - Permute: {}
+  dense_o2o_policy:
+    policy_epochs: [4, 34, 58]
+    mixup_epochs: [4, 34]
+    multiscale_stop_epoch: 58
+    mosaic_prob: 0.5
+    mixup_prob: 0.5
+    multiscale_sizes: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+    mosaic:
+      output_size: 320
+      rotation_range: 10
+      translation_range: [0.1, 0.1]
+      scaling_range: [0.5, 1.5]
+      fill_value: 0
+      use_cache: false
+      max_cached_images: 50
+      random_pop: true

@@ -13,10 +13,19 @@ All components are registered using ppdet_pytorch.core.workspace.register decora
 """
 
 # Import all submodules to trigger registration
-from . import architectures, backbones, heads, losses, necks, post_process, transformers
+from . import (
+    architectures,
+    backbones,
+    heads,
+    losses,
+    necks,
+    post_process,
+    teachers,
+    transformers,
+)
 
 # Import main model
-from .architectures.rtdetrv3 import RTDETRV3
+from .architectures import DEIM, DFINE, RTDETRV3, RTDETRV4
 
 __all__ = [
     "backbones",
@@ -26,5 +35,9 @@ __all__ = [
     "losses",
     "post_process",
     "architectures",
+    "teachers",
     "RTDETRV3",
+    "DEIM",
+    "DFINE",
+    "RTDETRV4",
 ]

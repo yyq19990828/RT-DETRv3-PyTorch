@@ -9,8 +9,10 @@ This test validates that Trainer can:
 5. Configure optimizer and learning rate scheduler from config
 """
 
+import math
 from pathlib import Path
 
+import pytest
 import torch
 import torch.nn as nn
 import yaml
@@ -269,6 +271,39 @@ def test_ema_decay_types():
     ema_normal = ModelEMA(model, decay=0.9999, ema_decay_type="normal", device="cpu")
     assert hasattr(ema_normal, "step"), "Normal decay should track steps"
     print("✅ Normal decay EMA created")
+
+
+def test_ema_exponential_warmup_is_configurable():
+    model = nn.Linear(2, 2)
+    ema = ModelEMA(
+        model,
+        decay=0.9999,
+        ema_decay_type="exponential",
+        warmups=1000,
+        device="cpu",
+    )
+    ema.update(model)
+    expected = 0.9999 * (1 - math.exp(-1 / 1000))
+
+    assert ema.warmups == 1000
+    assert ema._decay == pytest.approx(expected)
+
+
+def test_ema_exponential_starts_from_model_state():
+    model = nn.Sequential(nn.Linear(2, 2), nn.BatchNorm1d(2))
+    ema = ModelEMA(
+        model,
+        decay=0.9999,
+        ema_decay_type="exponential",
+        device="cpu",
+    )
+
+    for key, value in model.state_dict().items():
+        torch.testing.assert_close(ema.state_dict[key], value)
+
+    model[1].num_batches_tracked.add_(1)
+    ema.update(model)
+    assert ema.state_dict["1.num_batches_tracked"].item() == 0
 
 
 def test_config_toggle_strategies():

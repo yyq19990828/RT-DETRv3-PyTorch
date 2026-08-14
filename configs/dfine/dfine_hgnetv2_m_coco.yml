@@ -1,0 +1,57 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  '_base_/reader.yml',
+  '_base_/optimizer.yml',
+  '_base_/dfine_hgnetv2.yml',
+]
+
+save_dir: output/dfine_hgnetv2_m_coco
+epoch: 132
+base_lr: 0.0002
+ema_restart_decay: 0.9999
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: dfine
+  stop_epoch: 120
+  ema_restart_decay: 0.9999
+
+HGNetv2:
+  name: B2
+  freeze_at: -1
+  freeze_norm: false
+  use_lab: true
+
+DFINEHybridEncoder:
+  hidden_dim: 256
+  depth_mult: 0.67
+
+DFINETransformer:
+  num_layers: 4
+  reg_scale: 4.0
+
+LearningRate:
+  base_lr: 0.0002
+
+OptimizerBuilder:
+  optimizer:
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.00002
+      - params: ['^backbone\..*(?:norm|bn).*$']
+        lr: 0.00002
+        weight_decay: 0.0
+      - params: ['^(?:encoder|decoder)\..*(?:norm|bn|bias).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  ordinary_transform_policy:
+    stop_epoch: 120
+  batch_transforms:
+    - BatchRandomResize: {target_size: [480, 512, 544, 576, 608, 640, 640, 640, 640, 640, 640, 672, 704, 736, 768, 800], random_size: true, random_interp: false, keep_ratio: false}
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - NormalizeBox: {}
+    - BboxXYXY2XYWH: {}
+    - Permute: {}

@@ -1,0 +1,70 @@
+architecture: DEIM
+validate: true
+
+DEIM:
+  backbone: HGNetv2
+  encoder: DFINEHybridEncoder
+  decoder: DFINETransformer
+  criterion: DEIMCriterion
+  post_process: DETRPostProcess
+
+HGNetv2:
+  freeze_at: -1
+  freeze_norm: false
+
+DFINETransformer:
+  activation: silu
+  mlp_act: silu
+
+DEIMCriterion:
+  weight_dict: {loss_mal: 1, loss_bbox: 5, loss_giou: 2, loss_fgl: 0.15, loss_ddf: 1.5}
+  losses: [mal, boxes, local]
+  alpha: 0.2
+  gamma: 1.5
+  reg_max: 32
+  use_uni_set: true
+  matcher:
+    name: DFINEHungarianMatcher
+    weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+    alpha: 0.25
+    gamma: 2.0
+
+LearningRate:
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 80
+      warmup_iter: 2000
+      flat_epochs: 29
+      no_aug_epochs: 8
+      lr_gamma: 0.5
+
+TrainReader:
+  ordinary_transform_policy: null
+  sample_transforms:
+    - Decode: {}
+    - RandomDistort: {prob: 0.5}
+    - RandomExpand: {fill_value: [0, 0, 0]}
+    - RandomCrop: {prob: 0.8}
+    - RandomFlip: {}
+    - Resize: {target_size: [640, 640], keep_ratio: false}
+  batch_transforms:
+    - NormalizeImage: {mean: [0.0, 0.0, 0.0], std: [1.0, 1.0, 1.0], is_scale: true}
+    - NormalizeBox: {}
+    - BboxXYXY2XYWH: {}
+    - Permute: {}
+  dense_o2o_policy:
+    policy_epochs: [4, 29, 50]
+    mixup_epochs: [4, 29]
+    multiscale_stop_epoch: 50
+    mosaic_prob: 0.5
+    mixup_prob: 0.5
+    multiscale_sizes: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+    mosaic:
+      output_size: 320
+      rotation_range: 10
+      translation_range: [0.1, 0.1]
+      scaling_range: [0.5, 1.5]
+      fill_value: 0
+      use_cache: false
+      max_cached_images: 50
+      random_pop: true

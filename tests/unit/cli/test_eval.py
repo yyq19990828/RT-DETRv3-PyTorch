@@ -84,6 +84,28 @@ def test_get_ema_state_dict_corrects_non_exponential_weights():
     assert state_dict["frozen"].item() == pytest.approx(7.0)
 
 
+def test_load_evaluation_weights_selects_upstream_ema_module(tmp_path):
+    checkpoint_path = tmp_path / "weights.pth"
+    torch.save(
+        {
+            "model": {"weight": torch.tensor(2.0)},
+            "ema": {"module": {"weight": torch.tensor(6.0)}, "updates": 12},
+        },
+        checkpoint_path,
+    )
+    model = _EvalModel()
+
+    eval_cli.load_evaluation_weights(model, checkpoint_path, use_ema=True)
+
+    assert model.weight.item() == pytest.approx(6.0)
+
+
+@pytest.mark.parametrize("module", [None, {}, {"weight": "not-a-tensor"}])
+def test_rejects_malformed_upstream_ema_module(module):
+    with pytest.raises(RuntimeError, match="EMA module must be a tensor state dict"):
+        eval_cli._get_ema_state_dict({"ema": {"module": module, "updates": 1}})
+
+
 def test_load_evaluation_weights_requires_requested_ema(tmp_path):
     checkpoint_path = tmp_path / "weights.pth"
     torch.save({"model": {"weight": torch.tensor(2.0)}}, checkpoint_path)

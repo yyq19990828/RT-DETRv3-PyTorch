@@ -23,12 +23,13 @@ Contains training and evaluation components:
 
 # from . import trainer_cot
 # from .trainer_cot import *
-from . import callbacks, env, trainer
+from . import callbacks, env, trainer, training_protocol
 from .callbacks import *
 from .env import *
 from .trainer import *
+from .training_protocol import *
 
-__all__ = trainer.__all__ + callbacks.__all__ + env.__all__
+__all__ = trainer.__all__ + callbacks.__all__ + env.__all__ + training_protocol.__all__
 
 # from . import tracker
 # from .tracker import *

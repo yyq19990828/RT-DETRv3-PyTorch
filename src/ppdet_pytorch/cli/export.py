@@ -1,4 +1,4 @@
-"""Export RT-DETRv3 checkpoints to ONNX and TorchScript."""
+"""Export supported detection checkpoints to ONNX and TorchScript."""
 
 import argparse
 from pathlib import Path
@@ -23,7 +23,7 @@ logger = setup_logger("export")
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description="Export RT-DETRv3 for deployment")
+    parser = argparse.ArgumentParser(description="Export a detector for deployment")
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument(
@@ -64,8 +64,8 @@ def parse_args(argv=None):
         parser.error("--batch-size must be at least 1")
     if args.input_size and min(args.input_size) < 1:
         parser.error("--input-size values must be positive")
-    if args.opset_version < 17:
-        parser.error("--opset-version must be at least 17")
+    if args.opset_version != 17:
+        parser.error("--opset-version must be 17")
     return args
 
 
@@ -109,6 +109,7 @@ def main(argv=None):
     apply_overrides(cfg, args.override)
     height, width = _input_size(cfg, args.input_size)
     cfg.eval_size = [height, width]
+    cfg.eval_spatial_size = [height, width]
     paths = _output_paths(cfg, args.output_dir, args.format)
     existing = [path for path in paths.values() if path.exists()]
     if existing and not args.force:
@@ -122,35 +123,49 @@ def main(argv=None):
         torch.device("cpu"),
         use_ema=args.use_ema,
     )
+    if hasattr(model, "deploy"):
+        model.deploy()
     adapter = DetectionExportAdapter(model).eval()
     inputs = make_example_inputs(args.batch_size, height, width)
     with torch.inference_mode():
         reference = adapter(*inputs)
 
     if "onnx" in paths:
+        validate = None
+        if not args.no_verify:
+
+            def validate(path):
+                logger.info(
+                    "ONNX verification: %s",
+                    validate_detection_outputs(reference, run_onnx(path, inputs)),
+                )
+
         export_onnx(
             adapter,
             inputs,
             paths["onnx"],
             opset_version=args.opset_version,
             dynamic_batch=not args.fixed_batch,
+            validate=validate,
         )
         logger.info("Exported ONNX model to %s", paths["onnx"])
-        if not args.no_verify:
-            metrics = validate_detection_outputs(
-                reference, run_onnx(paths["onnx"], inputs)
-            )
-            logger.info("ONNX verification: %s", metrics)
 
     if "torchscript" in paths:
-        export_torchscript(adapter, inputs, paths["torchscript"])
-        logger.info("Exported TorchScript model to %s", paths["torchscript"])
+        validate_torchscript = None
         if not args.no_verify:
-            metrics = validate_detection_outputs(
-                reference,
-                run_torchscript(paths["torchscript"], inputs),
-            )
-            logger.info("TorchScript verification: %s", metrics)
+
+            def validate_torchscript(path):
+                logger.info(
+                    "TorchScript verification: %s",
+                    validate_detection_outputs(
+                        reference, run_torchscript(path, inputs)
+                    ),
+                )
+
+        export_torchscript(
+            adapter, inputs, paths["torchscript"], validate=validate_torchscript
+        )
+        logger.info("Exported TorchScript model to %s", paths["torchscript"])
     return 0
 
 

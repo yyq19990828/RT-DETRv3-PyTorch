@@ -1,0 +1,50 @@
+_BASE_: ['_base_/deim_rtdetrv2.yml']
+
+save_dir: output/deim_rtdetrv2_r34vd_120e_coco
+pretrain_weights: pretrained_models/deim-rtdetrv2/ResNet34_vd_pretrained_from_paddle.pth
+epoch: 120
+base_lr: 0.0002
+ema_restart_decay: 0.9999
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: deim
+  stop_epoch: 117
+  ema_restart_decay: 0.9999
+
+PResNet:
+  depth: 34
+
+RTDETRV2HybridEncoder:
+  hidden_dim: 256
+  expansion: 0.5
+
+RTDETRTransformerv2:
+  variant: r34vd
+  num_layers: 4
+
+LearningRate:
+  base_lr: 0.0002
+  schedulers:
+    - name: FlatCosineLRScheduler
+      total_epochs: 120
+      warmup_iter: 2000
+      flat_epochs: 64
+      no_aug_epochs: 3
+      lr_gamma: 0.5
+
+OptimizerBuilder:
+  optimizer:
+    weight_decay: 0.0001
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.0001
+      - params: ['^(?=.*(?:norm|bn)).*$']
+        weight_decay: 0.0
+
+TrainReader:
+  total_batch_size: 16
+  dense_o2o_policy:
+    policy_epochs: [4, 64, 117]
+    mixup_epochs: [4, 64]
+    multiscale_stop_epoch: 117

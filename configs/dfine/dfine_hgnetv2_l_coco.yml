@@ -1,0 +1,19 @@
+_BASE_: [
+  '../datasets/coco_detection.yml',
+  '../runtime.yml',
+  '_base_/reader.yml',
+  '_base_/optimizer.yml',
+  '_base_/dfine_hgnetv2.yml',
+]
+
+save_dir: output/dfine_hgnetv2_l_coco
+ema_restart_decay: 0.9999
+
+TrainingProtocol:
+  name: TwoStageDetectionProtocol
+  family: dfine
+  stop_epoch: 72
+  ema_restart_decay: 0.9999
+
+DFINETransformer:
+  reg_scale: 4.0

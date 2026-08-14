@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from . import detr_loss, iou_loss
+from . import deim_loss, detr_loss, dfine_loss, iou_loss, rtdetrv4_loss
+from .deim_loss import *
 from .detr_loss import *
+from .dfine_loss import *
 from .iou_loss import *
+from .rtdetrv4_loss import *

@@ -33,7 +33,7 @@ from ppdet_pytorch.core.workspace import register, serializable
 
 from .adamw import build_adamwdl
 
-__all__ = ["LearningRate", "OptimizerBuilder"]
+__all__ = ["FlatCosineLRScheduler", "LearningRate", "OptimizerBuilder"]
 
 from ppdet_pytorch.utils.logger import setup_logger
 
@@ -291,6 +291,161 @@ class ExpWarmup(object):
         warmup_steps = max(warmup_steps, 1)
 
         return PolynomialLR(optimizer, total_iters=warmup_steps, power=self.power)
+
+
+class _FlatCosineScheduler:
+    def __init__(
+        self,
+        optimizer,
+        *,
+        total_iter,
+        warmup_iter,
+        flat_iter,
+        no_aug_iter,
+        lr_gamma,
+    ):
+        self.optimizer = optimizer
+        self.total_iter = total_iter
+        self.warmup_iter = warmup_iter
+        self.flat_iter = flat_iter
+        self.no_aug_iter = no_aug_iter
+        self.lr_gamma = lr_gamma
+        self.current_iter = -1
+        self.base_lrs = []
+        for group in optimizer.param_groups:
+            group.setdefault("initial_lr", group["lr"])
+            self.base_lrs.append(group["initial_lr"])
+        self.min_lrs = [base_lr * lr_gamma for base_lr in self.base_lrs]
+        self.last_lrs = [group["lr"] for group in optimizer.param_groups]
+
+    def _lr_at(self, current_iter, base_lr, min_lr):
+        if self.warmup_iter > 0 and current_iter <= self.warmup_iter:
+            return base_lr * (current_iter / float(self.warmup_iter)) ** 2
+        if current_iter <= self.flat_iter:
+            return base_lr
+        if current_iter >= self.total_iter - self.no_aug_iter:
+            return min_lr
+        cosine_decay = 0.5 * (
+            1
+            + math.cos(
+                math.pi
+                * (current_iter - self.flat_iter)
+                / (self.total_iter - self.flat_iter - self.no_aug_iter)
+            )
+        )
+        return min_lr + (base_lr - min_lr) * cosine_decay
+
+    def step(self):
+        self.current_iter += 1
+        self.last_lrs = [
+            self._lr_at(self.current_iter, base_lr, min_lr)
+            for base_lr, min_lr in zip(self.base_lrs, self.min_lrs)
+        ]
+        for group, lr in zip(self.optimizer.param_groups, self.last_lrs):
+            group["lr"] = lr
+
+    def get_last_lr(self):
+        return list(self.last_lrs)
+
+    def state_dict(self):
+        return {
+            "total_iter": self.total_iter,
+            "warmup_iter": self.warmup_iter,
+            "flat_iter": self.flat_iter,
+            "no_aug_iter": self.no_aug_iter,
+            "lr_gamma": self.lr_gamma,
+            "current_iter": self.current_iter,
+            "base_lrs": list(self.base_lrs),
+            "min_lrs": list(self.min_lrs),
+            "last_lrs": list(self.last_lrs),
+        }
+
+    def load_state_dict(self, state_dict):
+        expected = {
+            "total_iter": self.total_iter,
+            "warmup_iter": self.warmup_iter,
+            "flat_iter": self.flat_iter,
+            "no_aug_iter": self.no_aug_iter,
+            "lr_gamma": self.lr_gamma,
+            "base_lrs": self.base_lrs,
+            "min_lrs": self.min_lrs,
+        }
+        for field, value in expected.items():
+            if state_dict.get(field) != value:
+                raise ValueError(
+                    "FlatCosineLRScheduler state {!r} does not match configuration".format(
+                        field
+                    )
+                )
+
+        optimizer_lrs = [group["lr"] for group in self.optimizer.param_groups]
+        if optimizer_lrs != state_dict.get("last_lrs"):
+            raise ValueError(
+                "FlatCosineLRScheduler step drift: optimizer LR does not match "
+                "scheduler state"
+            )
+        self.current_iter = state_dict["current_iter"]
+        self.last_lrs = list(state_dict["last_lrs"])
+
+
+@register
+@serializable
+class FlatCosineLRScheduler:
+    """DEIM flat-cosine schedule, advanced once per optimizer update."""
+
+    use_warmup = False
+
+    def __init__(
+        self,
+        total_epochs,
+        warmup_iter,
+        flat_epochs,
+        no_aug_epochs,
+        lr_gamma=0.5,
+    ):
+        self.total_epochs = total_epochs
+        self.warmup_iter = warmup_iter
+        self.flat_epochs = flat_epochs
+        self.no_aug_epochs = no_aug_epochs
+        self.lr_gamma = lr_gamma
+
+    def build_scheduler(self, optimizer, step_per_epoch):
+        fields = {
+            "total_epochs": self.total_epochs,
+            "warmup_iter": self.warmup_iter,
+            "flat_epochs": self.flat_epochs,
+            "no_aug_epochs": self.no_aug_epochs,
+        }
+        for field, value in fields.items():
+            if value < 0:
+                raise ValueError("{} must be non-negative".format(field))
+        if self.total_epochs == 0:
+            raise ValueError("total_epochs must be positive")
+        if step_per_epoch <= 0:
+            raise ValueError("step_per_epoch must be positive")
+        if not 0.0 <= self.lr_gamma <= 1.0:
+            raise ValueError("lr_gamma must be between 0 and 1")
+
+        total_iter = int(step_per_epoch * self.total_epochs)
+        flat_iter = int(step_per_epoch * self.flat_epochs)
+        no_aug_iter = int(step_per_epoch * self.no_aug_epochs)
+        if self.warmup_iter > flat_iter:
+            raise ValueError("warmup_iter must not exceed flat_epochs iterations")
+        phases_overlap = flat_iter + no_aug_iter > total_iter
+        is_constant_after_warmup = self.lr_gamma == 1.0 and flat_iter >= total_iter
+        if phases_overlap and not is_constant_after_warmup:
+            raise ValueError(
+                "flat_epochs and no_aug_epochs must fit within total_epochs"
+            )
+
+        return _FlatCosineScheduler(
+            optimizer,
+            total_iter=total_iter,
+            warmup_iter=int(self.warmup_iter),
+            flat_iter=flat_iter,
+            no_aug_iter=no_aug_iter,
+            lr_gamma=float(self.lr_gamma),
+        )
 
 
 @register

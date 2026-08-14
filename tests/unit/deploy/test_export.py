@@ -46,6 +46,19 @@ def test_make_example_inputs_rejects_non_positive_shapes():
         make_example_inputs(0, 8, 8)
 
 
+def test_make_example_inputs_are_deterministic_without_changing_global_rng():
+    torch.manual_seed(7)
+    expected_next = torch.rand(1)
+    torch.manual_seed(7)
+
+    first = make_example_inputs(2, 8, 12)
+    second = make_example_inputs(2, 8, 12)
+
+    assert torch.equal(first[0], second[0])
+    assert torch.equal(torch.rand(1), expected_next)
+    assert first[0].std() > 0
+
+
 def test_torchscript_export_reloads_with_another_batch_size(tmp_path):
     adapter = _adapter()
     example = make_example_inputs(1, 8, 12)
@@ -96,6 +109,26 @@ def test_onnx_export_failure_preserves_existing_output(tmp_path, monkeypatch):
             _adapter(),
             make_example_inputs(1, 8, 12),
             output_path,
+        )
+
+    assert output_path.read_bytes() == b"previous"
+    assert not list(tmp_path.glob(".*.tmp"))
+
+
+def test_torchscript_validation_failure_preserves_existing_output(tmp_path):
+    output_path = tmp_path / "model.pt"
+    output_path.write_bytes(b"previous")
+
+    def fail_validation(path):
+        assert path != output_path
+        raise AssertionError("parity failed")
+
+    with pytest.raises(AssertionError, match="parity failed"):
+        export_torchscript(
+            _adapter(),
+            make_example_inputs(1, 8, 12),
+            output_path,
+            validate=fail_validation,
         )
 
     assert output_path.read_bytes() == b"previous"

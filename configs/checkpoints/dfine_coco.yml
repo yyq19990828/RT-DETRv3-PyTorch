@@ -1,0 +1,84 @@
+schema_version: 2
+family: dfine
+hosting: upstream
+source_repository:
+  url: https://github.com/Peterande/D-FINE
+  revision: 267a6da6d04c8ad52e54120692896515b9e55981
+  release: https://github.com/Peterande/storage/releases/tag/dfinev1.0
+  license: Apache-2.0
+
+models:
+  n:
+    alias: dfine-n
+    config: configs/dfine/dfine_hgnetv2_n_coco.yml
+    official_bbox_ap: 0.428
+    filename: dfine_n_coco.pth
+    path: pretrained_models/upstream/dfine/dfine_n_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://api.github.com/repos/Peterande/storage/releases/assets/204585647
+    download_url: https://api.github.com/repos/Peterande/storage/releases/assets/204585647
+    source_size_bytes: 15489558
+    source_sha256: 41973938d2784d38a9836990d805b8392855ebf611aba55f0f7add90e110744c
+    container_keys: [model]
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  s:
+    alias: dfine-s
+    config: configs/dfine/dfine_hgnetv2_s_coco.yml
+    official_bbox_ap: 0.485
+    filename: dfine_s_coco.pth
+    path: pretrained_models/upstream/dfine/dfine_s_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374453
+    download_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374453
+    source_size_bytes: 41841422
+    source_sha256: 48a6c8cc43eb57186843f752e2e8461ddd3326e0d3c575e71e6e960844683e89
+    container_keys: [model]
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m:
+    alias: dfine-m
+    config: configs/dfine/dfine_hgnetv2_m_coco.yml
+    official_bbox_ap: 0.523
+    filename: dfine_m_coco.pth
+    path: pretrained_models/upstream/dfine/dfine_m_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374780
+    download_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374780
+    source_size_bytes: 79108938
+    source_sha256: b44a7586bf490858c7b8bce9e44bd025cb88724df9a07a8deb3ae1c12e608195
+    container_keys: [model]
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  l:
+    alias: dfine-l
+    config: configs/dfine/dfine_hgnetv2_l_coco.yml
+    official_bbox_ap: 0.540
+    filename: dfine_l_coco.pth
+    path: pretrained_models/upstream/dfine/dfine_l_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374701
+    download_url: https://api.github.com/repos/Peterande/storage/releases/assets/196374701
+    source_size_bytes: 126059754
+    source_sha256: f1d76b20c06610e03fa833ac9524337635e5e74204f22f4f8721174f19303d78
+    container_keys: [model]
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  x:
+    alias: dfine-x
+    config: configs/dfine/dfine_hgnetv2_x_coco.yml
+    official_bbox_ap: 0.558
+    filename: dfine_x_coco.pth
+    path: pretrained_models/upstream/dfine/dfine_x_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://api.github.com/repos/Peterande/storage/releases/assets/197882752
+    download_url: https://api.github.com/repos/Peterande/storage/releases/assets/197882752
+    source_size_bytes: 252128986
+    source_sha256: 9a82252f2d0426b2c24e99905c36c33a4ea850f247c247bda76fb5f76daea123
+    container_keys: [model]
+    key_mapping: identity
+    tensor_layout: pytorch-native
+
+numerical_tolerance:
+  rtol: 1.0e-5
+  atol: 1.0e-6

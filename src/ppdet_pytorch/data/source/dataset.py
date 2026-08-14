@@ -76,6 +76,8 @@ class DetDataset(Dataset):
         self.mosaic_epoch = -1
         self.pre_img_epoch = -1  # For CenterTrack (multi-object tracking)
         self.transform_schedulers = None
+        self.dense_o2o_policy = None
+        self.dense_o2o_seed = 0
 
         # Transform function (set by Trainer/Reader)
         self.transform = None
@@ -136,6 +138,19 @@ class DetDataset(Dataset):
                 idx_pre = idx + 1
             roidb = [roidb, copy.deepcopy(self.roidbs[idx_pre])]
 
+        if self.dense_o2o_policy is not None:
+            start, stop, _ = self.dense_o2o_policy["policy_epochs"]
+            mosaic_config = self.dense_o2o_policy.get("mosaic", {})
+            if start <= self._epoch < stop and not mosaic_config.get(
+                "use_cache", False
+            ):
+                rng = np.random.default_rng(
+                    self.dense_o2o_seed + self._epoch * max(n, 1) + idx
+                )
+                roidb = [roidb] + [
+                    copy.deepcopy(self.roidbs[int(rng.integers(n))]) for _ in range(3)
+                ]
+
         # Inject iteration and epoch info into records
         if isinstance(roidb, Sequence):
             for r in roidb:
@@ -183,6 +198,8 @@ class DetDataset(Dataset):
         self.mosaic_epoch = kwargs.get("mosaic_epoch", -1)
         self.pre_img_epoch = kwargs.get("pre_img_epoch", -1)
         self.transform_schedulers = kwargs.get("transform_schedulers", None)
+        self.dense_o2o_policy = kwargs.get("dense_o2o_policy", None)
+        self.dense_o2o_seed = int(kwargs.get("dense_o2o_seed", 0))
 
     def set_transform(self, transform):
         """Set transform function."""

@@ -1,0 +1,37 @@
+amp: true
+use_ema: true
+ema_decay: 0.9999
+ema_decay_type: exponential
+ema_warmups: 1000
+ema_filter_no_grad: false
+norm_type: sync_bn
+find_unused_parameters: false
+log_iter: 100
+snapshot_epoch: 12
+
+epoch: 80
+base_lr: 0.00025
+
+LearningRate:
+  base_lr: 0.00025
+  schedulers:
+    - name: PiecewiseDecay
+      gamma: 0.1
+      milestones: [500]
+      use_warmup: true
+    - name: LinearWarmup
+      steps: 500
+      start_factor: 0.002
+
+OptimizerBuilder:
+  clip_grad_by_norm: 0.1
+  regularizer: false
+  optimizer:
+    type: AdamW
+    betas: [0.9, 0.999]
+    weight_decay: 0.000125
+    param_groups:
+      - params: ['^backbone\.(?!.*(?:norm|bn)).*$']
+        lr: 0.0000125
+      - params: ['^(?:encoder|decoder)\..*(?:norm|bn).*$']
+        weight_decay: 0.0

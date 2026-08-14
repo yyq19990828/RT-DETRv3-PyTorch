@@ -144,6 +144,16 @@ class SchemaDict(dict):
         return mismatch_keys
 
     def validate(self):
+        self.validate_structure()
+        mismatch_keys = self.find_mismatch_keys()
+        if mismatch_keys:
+            raise TypeError(
+                "Wrong param type for class<{}>: {}".format(
+                    self.name, ", ".join(mismatch_keys)
+                )
+            )
+
+    def validate_structure(self):
         missing_keys = self.find_missing_keys()
         if missing_keys:
             raise ValueError(
@@ -156,13 +166,6 @@ class SchemaDict(dict):
             raise ValueError(
                 "Extraneous param for class<{}>: {}".format(
                     self.name, ", ".join(extra_keys)
-                )
-            )
-        mismatch_keys = self.find_mismatch_keys()
-        if mismatch_keys:
-            raise TypeError(
-                "Wrong param type for class<{}>: {}".format(
-                    self.name, ", ".join(mismatch_keys)
                 )
             )
 

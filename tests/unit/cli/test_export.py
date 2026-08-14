@@ -13,6 +13,7 @@ def test_parse_args_validates_export_boundaries(capsys):
         ["--batch-size", "0"],
         ["--input-size", "640", "0"],
         ["--opset-version", "16"],
+        ["--opset-version", "18"],
     ):
         with pytest.raises(SystemExit):
             export_cli.parse_args(base + invalid)
@@ -100,14 +101,17 @@ def test_main_wires_both_export_formats_and_verification(monkeypatch, tmp_path):
     monkeypatch.setattr(
         export_cli,
         "export_onnx",
-        lambda adapter, inputs, path, opset_version, dynamic_batch: observed.append(
-            ("export_onnx", path, opset_version, dynamic_batch)
+        lambda adapter, inputs, path, opset_version, dynamic_batch, validate: (
+            observed.append(("export_onnx", path, opset_version, dynamic_batch))
+            or validate(path)
         ),
     )
     monkeypatch.setattr(
         export_cli,
         "export_torchscript",
-        lambda adapter, inputs, path: observed.append(("export_torchscript", path)),
+        lambda adapter, inputs, path, validate: (
+            observed.append(("export_torchscript", path)) or validate(path)
+        ),
     )
     monkeypatch.setattr(
         export_cli,
@@ -151,6 +155,7 @@ def test_main_wires_both_export_formats_and_verification(monkeypatch, tmp_path):
 
     assert result == 0
     assert cfg.eval_size == [320, 480]
+    assert cfg.eval_spatial_size == [320, 480]
     assert ("model", cfg, "model.pth", "cpu", True) in observed
     assert ("export_onnx", tmp_path / "fixture.onnx", 17, False) in observed
     assert (

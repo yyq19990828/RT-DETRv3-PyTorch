@@ -1,0 +1,74 @@
+schema_version: 2
+family: rtdetrv4
+hosting: upstream
+source_repository:
+  url: https://github.com/RT-DETRs/RT-DETRv4
+  revision: 55fefaaed7efe2a5f72d0a18fd4e05965e35c292
+  model_zoo: https://github.com/RT-DETRs/RT-DETRv4#-performance
+  license: Apache-2.0
+
+models:
+  s:
+    alias: rtdetrv4-s
+    config: configs/rtdetrv4/rtdetrv4_hgnetv2_s_coco.yml
+    official_bbox_ap: 0.498
+    filename: RTv4-S-hgnet.pth
+    path: pretrained_models/upstream/rtdetrv4/RTv4-S-hgnet.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1jDAVxblqRPEWed7Hxm6GwcEl7zn72U6z
+    source_size_bytes: 169278400
+    source_sha256: 238a3f6537bf3b75b55e73f91f9d4cec8d21259b4908b3f21896f3e038b5a3ee
+    container_keys: [date, last_epoch, model, criterion, postprocessor, ema, scaler, optimizer, lr_warmup_scheduler]
+    evaluation_state: ema.module
+    state_tensor_count: 796
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m:
+    alias: rtdetrv4-m
+    config: configs/rtdetrv4/rtdetrv4_hgnetv2_m_coco.yml
+    official_bbox_ap: 0.537
+    filename: RTv4-M-hgnet.pth
+    path: pretrained_models/upstream/rtdetrv4/RTv4-M-hgnet.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1O-YpP4X-quuOXbi96y2TKkztbjroP5mX
+    source_size_bytes: 317911052
+    source_sha256: 8f1bd54437e9a227dc41ff3f65986f15097a4aab27e6a4e944c845e441f27501
+    container_keys: [date, last_epoch, model, criterion, postprocessor, ema, scaler, optimizer, lr_warmup_scheduler]
+    evaluation_state: ema.module
+    state_tensor_count: 1055
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  l:
+    alias: rtdetrv4-l
+    config: configs/rtdetrv4/rtdetrv4_hgnetv2_l_coco.yml
+    official_bbox_ap: 0.554
+    filename: RTv4-L-hgnet.pth
+    path: pretrained_models/upstream/rtdetrv4/RTv4-L-hgnet.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1shO9EzZvXZyKedE2urLsN4dwEv8Jqa_8
+    source_size_bytes: 505400981
+    source_sha256: 935c691dbd4f282a6a4ba59a57d77f13ad6963411dbb1b29615a72af2452f6e1
+    container_keys: [date, last_epoch, model, criterion, postprocessor, ema, scaler, optimizer, lr_warmup_scheduler]
+    evaluation_state: ema.module
+    state_tensor_count: 1255
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  x:
+    alias: rtdetrv4-x
+    config: configs/rtdetrv4/rtdetrv4_hgnetv2_x_coco.yml
+    official_bbox_ap: 0.570
+    filename: RTv4-X-hgnet.pth
+    path: pretrained_models/upstream/rtdetrv4/RTv4-X-hgnet.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/19gnkMTgFveJsrOvSmEPQXCTG6v9oQHN3
+    source_size_bytes: 1010474984
+    source_sha256: 2925ec2e53d48e6141db8601c8656566219e696cd63bf8d6955190cae6bfd3f9
+    container_keys: [date, last_epoch, model, criterion, postprocessor, ema, scaler, optimizer, lr_warmup_scheduler]
+    evaluation_state: ema.module
+    state_tensor_count: 1573
+    key_mapping: identity
+    tensor_layout: pytorch-native
+
+numerical_tolerance:
+  rtol: 1.0e-5
+  atol: 1.0e-6

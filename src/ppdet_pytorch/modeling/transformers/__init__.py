@@ -16,6 +16,16 @@ Available components:
 """
 
 from .attention import MSDeformableAttention, deformable_attention_core_func
+from .dfine_decoder import (
+    LQE,
+    DFINETransformer,
+    Integral,
+)
+from .dfine_decoder import (
+    TransformerDecoder as DFINETransformerDecoder,
+)
+from .dfine_hybrid_encoder import DFINEHybridEncoder, RTDETRV2HybridEncoder
+from .dfine_utils import bbox2distance, distance2bbox, weighting_function
 from .hybrid_encoder import (
     CSPRepLayer,
     HybridEncoder,
@@ -24,6 +34,7 @@ from .hybrid_encoder import (
 )
 from .matchers import HungarianMatcher
 from .position_encoding import PositionEmbedding
+from .rtdetr_transformerv2 import RTDETRTransformerv2
 from .rtdetr_transformerv3 import PPMSDeformableAttention, RTDETRTransformerv3
 from .utils import MLP, bbox_cxcywh_to_xyxy, get_sine_pos_embed, inverse_sigmoid
 
@@ -39,10 +50,20 @@ __all__ = [
     "TransformerDecoder",
     "MultiHeadAttention",
     "RTDETRTransformerv3",
+    "RTDETRTransformerv2",
     "PPMSDeformableAttention",
     "HybridEncoder",
     "MaskHybridEncoder",
     "TransformerLayer",
     "CSPRepLayer",
     "HungarianMatcher",
+    "Integral",
+    "LQE",
+    "DFINETransformerDecoder",
+    "DFINETransformer",
+    "DFINEHybridEncoder",
+    "RTDETRV2HybridEncoder",
+    "weighting_function",
+    "distance2bbox",
+    "bbox2distance",
 ]

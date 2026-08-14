@@ -69,6 +69,7 @@ class ModelEMA:
         cycle_epoch: int = -1,
         ema_black_list: Optional[Union[Set, List, tuple]] = None,
         ema_filter_no_grad: bool = False,
+        warmups: int = 2000,
         device: str = "cuda",
     ):
         self.step = 0
@@ -77,6 +78,9 @@ class ModelEMA:
         self.ema_decay_type = ema_decay_type
         self.cycle_epoch = cycle_epoch
         self.device = device
+        if warmups < 0:
+            raise ValueError("EMA warmups must be non-negative")
+        self.warmups = warmups
 
         # Build EMA black list (parameters that won't participate in EMA)
         model_state_keys = set(model.state_dict().keys())
@@ -96,7 +100,7 @@ class ModelEMA:
         # Initialize EMA state dict
         self.state_dict = {}
         for k, v in model.state_dict().items():
-            if k in self.ema_black_list:
+            if k in self.ema_black_list or self.ema_decay_type == "exponential":
                 # For blacklisted parameters, just copy the reference
                 self.state_dict[k] = v.clone().to(device)
             else:
@@ -144,7 +148,11 @@ class ModelEMA:
         if self.ema_decay_type == "threshold":
             decay = min(self.decay, (1 + self.step) / (10 + self.step))
         elif self.ema_decay_type == "exponential":
-            decay = self.decay * (1 - math.exp(-(self.step + 1) / 2000))
+            decay = (
+                self.decay * (1 - math.exp(-(self.step + 1) / self.warmups))
+                if self.warmups
+                else self.decay
+            )
         else:  # 'normal'
             decay = self.decay
 
@@ -157,6 +165,8 @@ class ModelEMA:
         with torch.no_grad():
             for k, v in self.state_dict.items():
                 if k not in self.ema_black_list:
+                    if not v.dtype.is_floating_point:
+                        continue
                     # EMA update: ema = decay * ema + (1 - decay) * current
                     model_param = model_dict[k].to(
                         dtype=torch.float32, device=self.device
@@ -175,24 +185,7 @@ class ModelEMA:
         Returns:
             EMA state dict with bias correction applied
         """
-        if self.step == 0:
-            return self.state_dict
-
-        state_dict = {}
-
-        with torch.no_grad():
-            for k, v in self.state_dict.items():
-                if k in self.ema_black_list:
-                    # For blacklisted parameters, return as-is
-                    state_dict[k] = v.clone()
-                else:
-                    # Apply bias correction for non-exponential types
-                    if self.ema_decay_type != "exponential":
-                        # Bias correction: ema / (1 - decay^step)
-                        corrected_v = v / (1 - self._decay**self.step)
-                        state_dict[k] = corrected_v
-                    else:
-                        state_dict[k] = v.clone()
+        state_dict = self.evaluation_state_dict()
 
         self.epoch += 1
 
@@ -200,6 +193,20 @@ class ModelEMA:
         if self.cycle_epoch > 0 and self.epoch == self.cycle_epoch:
             self.reset()
 
+        return state_dict
+
+    def evaluation_state_dict(self) -> dict:
+        """Return evaluation weights without advancing EMA lifecycle state."""
+        if self.step == 0:
+            return {key: value.clone() for key, value in self.state_dict.items()}
+
+        state_dict = {}
+        with torch.no_grad():
+            for key, value in self.state_dict.items():
+                if key in self.ema_black_list or self.ema_decay_type == "exponential":
+                    state_dict[key] = value.clone()
+                else:
+                    state_dict[key] = value / (1 - self._decay**self.step)
         return state_dict
 
     def _match_ema_black_list(
@@ -239,6 +246,7 @@ class ModelEMA:
             "decay": self.decay,
             "current_decay": self._decay,
             "ema_decay_type": self.ema_decay_type,
+            "warmups": self.warmups,
             "ema_black_list": sorted(self.ema_black_list),
         }
 
@@ -255,3 +263,4 @@ class ModelEMA:
             self.decay = checkpoint.get("decay", self.decay)
             self._decay = checkpoint.get("current_decay", self.decay)
             self.ema_decay_type = checkpoint.get("ema_decay_type", self.ema_decay_type)
+            self.warmups = checkpoint.get("warmups", self.warmups)

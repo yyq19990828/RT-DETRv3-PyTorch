@@ -95,8 +95,23 @@ def _resolve_config_path(file_path):
 
 
 # parse and load _BASE_ recursively
-def _load_config_with_base(file_path):
-    with open(file_path) as f:
+def _load_config_with_base(file_path, config_root=None, include_stack=()):
+    file_path = Path(file_path).resolve()
+    if config_root is None:
+        known_roots = (
+            root.resolve() for root in (_PACKAGE_CONFIG_ROOT, _REPOSITORY_CONFIG_ROOT)
+        )
+        config_root = next(
+            (root for root in known_roots if file_path.is_relative_to(root)),
+            next(
+                (parent for parent in file_path.parents if parent.name == "configs"),
+                file_path.parent,
+            ),
+        )
+    if file_path in include_stack:
+        cycle = " -> ".join(path.name for path in (*include_stack, file_path))
+        raise ValueError("Config include cycle: {}".format(cycle))
+    with file_path.open() as f:
         file_cfg = yaml.load(f, Loader=yaml.Loader)
 
     # NOTE: cfgs outside have higher priority than cfgs in _BASE_
@@ -104,14 +119,19 @@ def _load_config_with_base(file_path):
         all_base_cfg = AttrDict()
         base_ymls = list(file_cfg[BASE_KEY])
         for base_yml in base_ymls:
+            if Path(base_yml).is_absolute():
+                raise ValueError("Absolute config includes are not allowed")
             if base_yml.startswith("~"):
-                base_yml = os.path.expanduser(base_yml)
-            if not base_yml.startswith("/"):
-                base_yml = os.path.join(os.path.dirname(file_path), base_yml)
-
-            with open(base_yml) as f:
-                base_cfg = _load_config_with_base(base_yml)
-                all_base_cfg = merge_config(base_cfg, all_base_cfg)
+                raise ValueError("Home-relative config includes are not allowed")
+            base_yml = (file_path.parent / base_yml).resolve()
+            if not base_yml.is_relative_to(config_root):
+                raise ValueError("Config include escapes the config root")
+            base_cfg = _load_config_with_base(
+                base_yml,
+                config_root=config_root,
+                include_stack=(*include_stack, file_path),
+            )
+            all_base_cfg = merge_config(base_cfg, all_base_cfg)
 
         del file_cfg[BASE_KEY]
         return merge_config(file_cfg, all_base_cfg)
@@ -291,6 +311,9 @@ def create(cls_or_name, **kwargs):
     explicit_constructor_kwargs = {
         key: value for key, value in kwargs.items() if key in config.schema
     }
+    validation_config = config.copy()
+    validation_config.update(explicit_constructor_kwargs)
+    validation_config.validate_structure()
     from_config_context = {
         key: value for key, value in kwargs.items() if key not in config.schema
     }

@@ -39,7 +39,7 @@ def _write_manifest(
     path.write_text(yaml.safe_dump(manifest), encoding="utf-8")
 
 
-def test_default_manifest_lists_v010_models_as_published(capsys):
+def test_schema_v1_default_manifest_lists_v010_models_as_published(capsys):
     assert models_cli.main(["list", "--json"]) == 0
 
     records = json.loads(capsys.readouterr().out)

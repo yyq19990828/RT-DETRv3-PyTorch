@@ -622,13 +622,17 @@ def validate_sdist(path: Path) -> None:
         _require(len(roots) == 1, "sdist must have one root directory")
         root = next(iter(roots))
         name_set = set(names)
+        packaged_configs = {
+            f"{root}/{path.relative_to(REPO_ROOT).as_posix()}"
+            for path in (REPO_ROOT / "configs").rglob("*")
+            if path.is_file()
+        }
         required = {
             f"{root}/LICENSE",
             f"{root}/NOTICE",
             f"{root}/README.md",
             f"{root}/pyproject.toml",
-            f"{root}/configs/checkpoints/rtdetrv3_coco.yml",
-        }
+        } | packaged_configs
         _require(
             required <= name_set, f"sdist files are missing: {required - name_set}"
         )

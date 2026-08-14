@@ -23,6 +23,7 @@ Configuration-driven trainer compatible with Paddle's Trainer API.
 
 from __future__ import absolute_import, division, print_function
 
+import hashlib
 import os
 import sys
 import time
@@ -45,14 +46,17 @@ from .. import data as _data  # noqa: F401 - trigger component registration
 from .. import modeling as _modeling  # noqa: F401 - trigger component registration
 from ..core.config.schema import SchemaDict
 from ..core.workspace import create
+from ..metrics import COCOMetric
 from ..optimizer import ModelEMA
 from ..utils.checkpoint import (
     convert_to_dict,
     load_checkpoint,
     load_pretrain_weight,
+    save_checkpoint,
 )
 from ..utils.logger import setup_logger
 from .callbacks import Callback, Checkpointer, ComposeCallback, LogPrinter
+from .training_protocol import TrainingProtocol
 
 MOT_ARCH = ["JDE", "FairMOT", "DeepSORT", "ByteTrack", "CenterTrack"]
 logger = setup_logger("rtdetrv3.engine")
@@ -92,6 +96,8 @@ class Trainer:
         self.lr: Any = None
         self.scaler: Optional[GradScaler] = None
         self.ema: Optional[ModelEMA] = None
+        self.teacher_model: Optional[nn.Module] = None
+        self.training_protocol: Optional[TrainingProtocol] = None
         self._callbacks: List[Callback] = []
         self._compose_callback: Optional[ComposeCallback] = None
         self._metrics: List[Any] = []
@@ -105,6 +111,21 @@ class Trainer:
         )
         self.mode = mode.lower()
         self.log_interval = cfg.get("log_iter", 50)
+
+        protocol_config = self.cfg.get("TrainingProtocol")
+        if self.mode == "train" and protocol_config:
+            self.training_protocol = create(protocol_config)
+            if not isinstance(self.training_protocol, TrainingProtocol):
+                raise TypeError(
+                    "TrainingProtocol config must create a TrainingProtocol"
+                )
+            if type(
+                self.training_protocol
+            ).__name__ == "TwoStageDetectionProtocol" and not self.cfg.get(
+                "validate", False
+            ):
+                raise ValueError("two-stage training protocol requires validation")
+            self.training_protocol.preflight()
 
         # Training flags
         self.is_loaded_weights = False
@@ -146,6 +167,18 @@ class Trainer:
 
         # Build model (using create() factory)
         self._build_model(self.cfg)
+        if (
+            self.mode == "train"
+            and not self.is_loaded_weights
+            and self.cfg.get("pretrain_weights")
+        ):
+            load_pretrain_weight(self.model, self.cfg.pretrain_weights)
+            self.is_loaded_weights = True
+
+        if self.mode == "train" and self.cfg.get("teacher_model"):
+            self._build_teacher(self.cfg["teacher_model"])
+        if self.mode == "train":
+            self._synchronize_gam_weight(require_equal=True)
 
         # Build optimizer and scheduler (only in train mode)
         if self.mode == "train":
@@ -179,6 +212,7 @@ class Trainer:
             cycle_epoch = cfg.get("cycle_epoch", -1)
             ema_black_list = cfg.get("ema_black_list", None)
             ema_filter_no_grad = cfg.get("ema_filter_no_grad", False)
+            ema_warmups = cfg.get("ema_warmups", 2000)
 
             # Get the underlying model (not DDP wrapper)
             base_model = (
@@ -192,6 +226,7 @@ class Trainer:
                 cycle_epoch=cycle_epoch,
                 ema_black_list=ema_black_list,
                 ema_filter_no_grad=ema_filter_no_grad,
+                warmups=ema_warmups,
                 device=str(next(base_model.parameters()).device),
             )
             logger.info(f"EMA enabled with decay={ema_decay}, type={ema_decay_type}")
@@ -214,6 +249,10 @@ class Trainer:
         # Initialize metrics
         self._init_metrics()
         self._reset_metrics()
+        self._validation_loader = None
+        self._validation_metric = None
+        if self.mode == "train" and self.cfg.get("validate", False):
+            self._build_validation()
 
         logger.info(f"Trainer initialized in '{self.mode}' mode")
 
@@ -343,6 +382,69 @@ class Trainer:
             )  # exclude BatchNorm running status
             logger.info("Model Params : {} M.".format(params / 1e6))
 
+    def _build_teacher(self, teacher_config):
+        """Build the external training-only teacher before optimizer creation."""
+        teacher = create(dict(teacher_config))
+        if not isinstance(teacher, nn.Module):
+            raise TypeError("teacher_model config must create a torch.nn.Module")
+        device = next(self.model.parameters()).device
+        teacher.to(device)
+        teacher.eval()
+        for parameter in teacher.parameters():
+            parameter.requires_grad_(False)
+        self.teacher_model = teacher
+
+    def _build_validation(self):
+        """Build the training-time validation path only when requested."""
+        dataset = create(self.cfg["EvalDataset"])
+        reader_config = dict(self.cfg["EvalReader"])
+        reader_config["seed"] = self.cfg.get("seed", 0) or 0
+        self._validation_loader = create(reader_config)(dataset, self.cfg.worker_num)
+        annotation_path = os.path.join(dataset.dataset_dir, dataset.anno_path)
+        self._validation_metric = COCOMetric(annotation_path, output_eval=self.save_dir)
+
+    @torch.no_grad()
+    def _validate_epoch(self) -> Mapping[str, float]:
+        if self._validation_loader is None or self._validation_metric is None:
+            return {}
+        target_model = self.model.module if isinstance(self.model, DDP) else self.model
+        evaluation_model = target_model
+        if self.use_ema and self.ema is not None:
+            evaluation_model = deepcopy(target_model)
+            evaluation_model.load_state_dict(
+                self.ema.evaluation_state_dict(), strict=True
+            )
+        evaluation_model.eval()
+        self._validation_metric.reset()
+        for batch in self._validation_loader:
+            batch = self._prepare_batch(batch)
+            self._validation_metric.update(batch, evaluation_model(batch))
+        bbox_value = None
+        if dist.is_initialized():
+            gathered = [None] * dist.get_world_size() if dist.get_rank() == 0 else None
+            dist.gather_object(self._validation_metric.results, gathered, dst=0)
+            if dist.get_rank() == 0:
+                assert gathered is not None
+                self._validation_metric.reset()
+                for rank_results in gathered:
+                    if rank_results is None:
+                        raise RuntimeError("validation rank did not provide results")
+                    for name, values in rank_results.items():
+                        self._validation_metric.results[name].extend(values)
+                self._validation_metric.accumulate()
+                bbox = self._validation_metric.get_results().get("bbox")
+                bbox_value = float(bbox[0]) if bbox is not None and len(bbox) else None
+            values = [bbox_value]
+            dist.broadcast_object_list(values, src=0)
+            bbox_value = values[0]
+        else:
+            self._validation_metric.accumulate()
+            bbox = self._validation_metric.get_results().get("bbox")
+            bbox_value = float(bbox[0]) if bbox is not None and len(bbox) else None
+        if bbox_value is None:
+            raise ValueError("validation did not produce a bbox metric")
+        return {"bbox": bbox_value}
+
     def parse_mot_images(self, cfg) -> List[str]:
         """Collect FairMOT evaluation images in deterministic sequence order."""
         dataset_config = cfg["EvalMOTDataset"]
@@ -443,6 +545,106 @@ class Trainer:
         for metric in self._metrics:
             metric.reset()
 
+    def notify_validation(self, metrics: Mapping[str, Any]) -> None:
+        """Forward completed validation metrics to an optional training protocol."""
+        if self.training_protocol is not None:
+            self.training_protocol.after_validation(dict(metrics))
+            self._execute_protocol_actions()
+
+    @staticmethod
+    def _checkpoint_sha256(path: str) -> str:
+        digest = hashlib.sha256()
+        with open(path, "rb") as checkpoint_file:
+            for chunk in iter(lambda: checkpoint_file.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+
+    def _protocol_training_state(self):
+        protocol = self.training_protocol
+        if protocol is None:
+            raise RuntimeError("protocol checkpoint requires a training protocol")
+        return protocol.checkpoint_state(str(self.cfg.get("architecture")))
+
+    def _save_protocol_checkpoint(self, path: str, best_metric=None) -> bool:
+        return save_checkpoint(
+            model=self.model,
+            optimizer=self.optimizer,
+            epoch=self.status.get("epoch_id", -1) + 1,
+            iteration=self.global_step,
+            save_path=path,
+            config=self._convert_cfg_to_dict(self.cfg),
+            best_metric=best_metric,
+            scheduler=self.lr,
+            scaler=self.scaler,
+            ema=self.ema if self.use_ema else None,
+            sampler_epoch=self.status.get("epoch_id", -1) + 1,
+            gather_distributed_rng=True,
+            training_state=self._protocol_training_state(),
+        )
+
+    def _execute_protocol_actions(self) -> None:
+        protocol = self.training_protocol
+        if protocol is None:
+            return
+        actions = protocol.pop_actions()
+        for index, action in enumerate(actions):
+            try:
+                action_name = action["name"]
+                if action_name == "set_gam_weight":
+                    values = [action.get("weight")]
+                    if dist.is_initialized():
+                        dist.broadcast_object_list(values, src=0)
+                    protocol.complete_action(action, weight=values[0])
+                    self._synchronize_gam_weight(require_equal=True)
+                elif action_name == "save_best":
+                    path = os.path.join(self.save_dir, action["path"])
+                    saved = self._save_protocol_checkpoint(path, action["metric"])
+                    companion: list[Any] = [None]
+                    if saved:
+                        companion[0] = (
+                            os.path.basename(path),
+                            self._checkpoint_sha256(path),
+                        )
+                    if dist.is_initialized():
+                        dist.broadcast_object_list(companion, src=0)
+                    if companion[0] is not None:
+                        protocol.complete_action(
+                            action, basename=companion[0][0], sha256=companion[0][1]
+                        )
+                elif action_name in {"transition", "restart"}:
+                    path = os.path.join(self.save_dir, action["path"])
+                    if self._checkpoint_sha256(path) != action["sha256"]:
+                        raise ValueError("checkpoint companion SHA-256 mismatch")
+                    companion_name = getattr(protocol, "companion_basename", None)
+                    companion_sha = getattr(protocol, "companion_sha256", None)
+                    metadata = load_checkpoint(
+                        path,
+                        self.model,
+                        optimizer=self.optimizer,
+                        scheduler=self.lr,
+                        scaler=self.scaler,
+                        ema=self.ema if self.use_ema else None,
+                        protocol=protocol,
+                        expected_model_identity=str(self.cfg.get("architecture")),
+                        restore_rng=True,
+                    )
+                    self.global_step = metadata["global_step"]
+                    self.status["global_step"] = self.global_step
+                    setattr(protocol, "companion_basename", companion_name)
+                    setattr(protocol, "companion_sha256", companion_sha)
+                    protocol.complete_action(action)
+                    self._synchronize_gam_weight(require_equal=True)
+                    if self.ema is not None:
+                        self.ema.decay = float(action["decay"])
+                else:
+                    raise ValueError(
+                        "unknown training protocol action: {}".format(action_name)
+                    )
+            except Exception:
+                remaining: list[Mapping[str, Any]] = list(actions[index:])
+                protocol.restore_actions(remaining)
+                raise
+
     def _convert_cfg_to_dict(self, cfg) -> dict:
         """Convert config object to dictionary for YAML saving"""
         return convert_to_dict(cfg)
@@ -473,6 +675,10 @@ class Trainer:
             self.status["epoch_id"] = epoch_id
             self.status["mode"] = "train"
 
+            if self.training_protocol is not None:
+                self.training_protocol.before_epoch(epoch_id, dict(self.status))
+                self._execute_protocol_actions()
+
             # Epoch begin callback
             if self._compose_callback:
                 self._compose_callback.on_epoch_begin(self.status)
@@ -480,7 +686,13 @@ class Trainer:
             # Train one epoch
             self._train_epoch(epoch_id)
 
+            if self._validation_loader is not None:
+                self.notify_validation(self._validate_epoch())
+
             # Epoch end callback
+            if self.training_protocol is not None:
+                self.training_protocol.after_epoch(epoch_id, dict(self.status))
+                self._execute_protocol_actions()
             if self._compose_callback:
                 self._compose_callback.on_epoch_end(self.status)
 
@@ -529,6 +741,7 @@ class Trainer:
 
             # Move data to GPU
             batch = self._prepare_batch(batch)
+            batch = self._attach_teacher_features(batch)
             if isinstance(batch, dict):
                 batch["epoch_id"] = epoch_id
 
@@ -538,6 +751,8 @@ class Trainer:
             )
             accumulation_step = step_id - accumulation_start + 1
             should_step_optimizer = accumulation_step == accumulation_size
+            self.status["accumulation_step"] = accumulation_step
+            self.status["accumulation_steps"] = accumulation_size
 
             sync_context: ContextManager[Any] = nullcontext()
             if not should_step_optimizer and isinstance(self.model, DDP):
@@ -547,7 +762,20 @@ class Trainer:
 
             optimizer_step_skipped = False
             gradient_norm = None
+            protocol_observation = None
             with sync_context:
+                if isinstance(batch, dict):
+                    for name, value in batch.items():
+                        if (
+                            torch.is_tensor(value)
+                            and value.is_floating_point()
+                            and not torch.isfinite(value).all()
+                        ):
+                            raise FloatingPointError(
+                                "Non-finite batch tensor {} at epoch {}, step {}".format(
+                                    name, epoch_id, step_id
+                                )
+                            )
                 model_device = next(self.model.parameters()).device
                 with torch.amp.autocast(
                     device_type=model_device.type, enabled=self.use_amp
@@ -570,26 +798,30 @@ class Trainer:
                 assert scaler is not None
                 scale_before_step = scaler.get_scale()
                 scaler.unscale_(optimizer)
+                protocol_observation = self._observe_after_backward()
                 gradient_norm = self._clip_gradients()
-
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer_step_skipped = scaler.get_scale() < scale_before_step
+                if self._amp_gradients_are_finite():
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer_step_skipped = scaler.get_scale() < scale_before_step
+                else:
+                    optimizer_step_skipped = True
+                    try:
+                        scaler.update(new_scale=scale_before_step / 2)
+                    except TypeError:
+                        scaler.update()
             elif should_step_optimizer:
+                protocol_observation = self._observe_after_backward()
                 gradient_norm = self._clip_gradients()
-                optimizer.step()
-
-            if should_step_optimizer:
-                gradient_is_finite = torch.isfinite(
-                    torch.as_tensor(gradient_norm)
-                ).all()
-                if not gradient_is_finite and not optimizer_step_skipped:
+                if not torch.isfinite(torch.as_tensor(gradient_norm)).all():
                     raise FloatingPointError(
                         "Non-finite gradient norm at epoch {}, step {}".format(
                             epoch_id, step_id
                         )
                     )
+                optimizer.step()
 
+            if should_step_optimizer:
                 if optimizer_step_skipped:
                     assert scaler is not None
                     logger.warning(
@@ -617,6 +849,21 @@ class Trainer:
                         )
                         self.ema.update(base_model)
 
+                    protocol = getattr(self, "training_protocol", None)
+                    if protocol is not None:
+                        protocol_status = dict(self.status)
+                        protocol_status.update(
+                            {
+                                "epoch_id": epoch_id,
+                                "step_id": step_id,
+                                "global_step": self.global_step,
+                            }
+                        )
+                        protocol.after_successful_optimizer_step(
+                            self._reduce_protocol_observation(protocol_observation),
+                            protocol_status,
+                        )
+
                 optimizer.zero_grad()
 
             reported_loss = self._reduce_loss_for_logging(loss)
@@ -637,8 +884,6 @@ class Trainer:
                 should_step_optimizer and not optimizer_step_skipped
             )
             self.status["optimizer_step_skipped"] = optimizer_step_skipped
-            self.status["accumulation_step"] = accumulation_step
-            self.status["accumulation_steps"] = accumulation_size
             self.status["learning_rate"] = optimizer.param_groups[0]["lr"]
             self.status["batch_time"] = batch_time
             self.status["batch_size"] = self._get_batch_size(batch)
@@ -660,6 +905,47 @@ class Trainer:
             dist.all_reduce(reported_loss, op=dist.ReduceOp.SUM)
             reported_loss /= dist.get_world_size()
         return reported_loss
+
+    def _observe_after_backward(self):
+        protocol = getattr(self, "training_protocol", None)
+        if protocol is None:
+            return None
+        gradients = {
+            name: parameter.grad.detach().clone()
+            for name, parameter in self.model.named_parameters()
+            if parameter.requires_grad and parameter.grad is not None
+        }
+        return protocol.after_backward(gradients, dict(self.status))
+
+    def _amp_gradients_are_finite(self) -> bool:
+        """Synchronize overflow detection before any rank attempts an AMP step."""
+        finite = None
+        for parameter in self.model.parameters():
+            if parameter.grad is None:
+                continue
+            value = torch.isfinite(parameter.grad).all()
+            finite = value if finite is None else finite & value
+        if finite is None:
+            return True
+        flag = finite.to(dtype=torch.int32)
+        if dist.is_initialized() and dist.get_world_size() > 1:
+            dist.all_reduce(flag, op=dist.ReduceOp.MIN)
+        return bool(flag.item())
+
+    @staticmethod
+    def _reduce_protocol_observation(observation):
+        """All-reduce tensor observations after an optimizer update succeeds."""
+        if isinstance(observation, Mapping):
+            return {
+                key: Trainer._reduce_protocol_observation(value)
+                for key, value in observation.items()
+            }
+        if isinstance(observation, torch.Tensor):
+            reduced = observation.detach().clone()
+            if dist.is_initialized() and dist.get_world_size() > 1:
+                dist.all_reduce(reduced, op=dist.ReduceOp.SUM)
+            return reduced
+        return observation
 
     def _clip_gradients(self):
         """Apply the clipping policy produced by ``OptimizerBuilder``."""
@@ -725,6 +1011,47 @@ class Trainer:
 
         return prepare(batch)
 
+    def _attach_teacher_features(self, batch):
+        """Attach detached DINOv3 features without adding teacher state to the model."""
+        teacher = getattr(self, "teacher_model", None)
+        if teacher is None:
+            return batch
+        if not isinstance(batch, Mapping) or "image" not in batch:
+            raise ValueError("teacher_model requires a batch mapping with image")
+        teacher.eval()
+        with torch.no_grad():
+            features = teacher(batch["image"])
+        if not isinstance(features, torch.Tensor) or features.requires_grad:
+            raise ValueError("teacher_model must return a detached tensor")
+        result = dict(batch)
+        result["teacher_encoder_output"] = features.detach()
+        return result
+
+    def _synchronize_gam_weight(self, *, require_equal: bool) -> None:
+        protocol = getattr(self, "training_protocol", None)
+        if protocol is None or not getattr(protocol, "gam_enabled", False):
+            return
+        weight = getattr(protocol, "current_gam_weight", None)
+        if weight is None:
+            raise ValueError("enabled GAM protocol is missing current weight")
+        value = float(weight)
+        if not torch.isfinite(torch.tensor(value)) or value < 0:
+            raise ValueError("GAM weight must be finite and non-negative")
+        if dist.is_initialized() and dist.get_world_size() > 1:
+            values: list[Any] = [None] * dist.get_world_size()
+            dist.all_gather_object(values, value)
+            if require_equal and any(float(item) != value for item in values):
+                raise ValueError("GAM weights diverged across ranks")
+            canonical: list[Any] = [value if dist.get_rank() == 0 else None]
+            dist.broadcast_object_list(canonical, src=0)
+            value = float(canonical[0])
+        protocol.current_gam_weight = value
+        model = self.model.module if isinstance(self.model, DDP) else self.model
+        criterion = getattr(model, "criterion", None)
+        if criterion is None or not hasattr(criterion, "set_distillation_weight"):
+            raise TypeError("enabled GAM requires an RT-DETRv4 criterion")
+        criterion.set_distillation_weight(value)
+
     def _get_batch_size(self, batch) -> int:
         """Get batch size from batch data"""
         if isinstance(batch, dict):
@@ -772,11 +1099,14 @@ class Trainer:
             scheduler=self.lr,
             scaler=self.scaler,
             ema=self.ema if self.use_ema else None,
+            protocol=getattr(self, "training_protocol", None),
+            expected_model_identity=getattr(self, "cfg", {}).get("architecture"),
             restore_rng=True,
         )
         self.start_epoch = metadata["epoch"]
         self.global_step = metadata["global_step"]
         self.status["global_step"] = self.global_step
+        self._synchronize_gam_weight(require_equal=True)
         self.is_loaded_weights = True
         logger.debug(f"Resume weights of epoch {self.start_epoch}")
 

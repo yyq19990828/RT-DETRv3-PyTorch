@@ -1,0 +1,84 @@
+schema_version: 2
+family: deim-dfine
+hosting: upstream
+source_repository:
+  url: https://github.com/Intellindust-AI-Lab/DEIM
+  revision: 09d35d53d39ee3145a1e61e3a989b28b9468d1dd
+  model_zoo: https://github.com/Intellindust-AI-Lab/DEIM#1-model-zoo
+  license: Apache-2.0
+
+models:
+  n:
+    alias: deim-dfine-n
+    config: configs/deim/dfine/deim_hgnetv2_n_coco.yml
+    official_bbox_ap: 0.430
+    filename: deim_hgnetv2_n_coco.pth
+    path: pretrained_models/upstream/deim-dfine/deim_hgnetv2_n_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1ZPEhiU9nhW4M5jLnYOFwTSLQC1Ugf62e/view?usp=sharing
+    source_size_bytes: 15500899
+    source_sha256: 8536a97a57bad2951cb4679e8578be225e4a19db678ab568a44e538f4f0fc917
+    container_keys: [model]
+    state_tensor_count: 674
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  s:
+    alias: deim-dfine-s
+    config: configs/deim/dfine/deim_hgnetv2_s_coco.yml
+    official_bbox_ap: 0.490
+    filename: deim_hgnetv2_s_coco.pth
+    path: pretrained_models/upstream/deim-dfine/deim_hgnetv2_s_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1tB8gVJNrfb6dhFvoHJECKOF5VpkthhfC/view?usp=drive_link
+    source_size_bytes: 41867693
+    source_sha256: a089c9eb798f8a0322e05f757fe8e8188eee34aa578788a35ec253bcec8a6b38
+    container_keys: [model]
+    state_tensor_count: 794
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  m:
+    alias: deim-dfine-m
+    config: configs/deim/dfine/deim_hgnetv2_m_coco.yml
+    official_bbox_ap: 0.527
+    filename: deim_hgnetv2_m_coco.pth
+    path: pretrained_models/upstream/deim-dfine/deim_hgnetv2_m_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/18Lj2a6UN6k_n_UzqnJyiaiLGpDzQQit8/view?usp=drive_link
+    source_size_bytes: 79143599
+    source_sha256: 2b6cd0582a4aa711f583982057b7fb0f3daebdd98e4dc168824714014c3219bc
+    container_keys: [model]
+    state_tensor_count: 1053
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  l:
+    alias: deim-dfine-l
+    config: configs/deim/dfine/deim_hgnetv2_l_coco.yml
+    official_bbox_ap: 0.547
+    filename: deim_hgnetv2_l_coco.pth
+    path: pretrained_models/upstream/deim-dfine/deim_hgnetv2_l_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1PIRf02XkrA2xAD3wEiKE2FaamZgSGTAr/view?usp=drive_link
+    source_size_bytes: 126125711
+    source_sha256: a9ac1f9bf51a41a7ec02c373c85e0109f84908dde11d80759b43248dcb638baa
+    container_keys: [model]
+    state_tensor_count: 1253
+    key_mapping: identity
+    tensor_layout: pytorch-native
+  x:
+    alias: deim-dfine-x
+    config: configs/deim/dfine/deim_hgnetv2_x_coco.yml
+    official_bbox_ap: 0.565
+    filename: deim_hgnetv2_x_coco.pth
+    path: pretrained_models/upstream/deim-dfine/deim_hgnetv2_x_coco.pth
+    artifact_format: pytorch-checkpoint
+    source_url: https://drive.google.com/file/d/1dPtbgtGgq1Oa7k_LgH1GXPelg1IVeu0j/view?usp=drive_link
+    source_size_bytes: 252221511
+    source_sha256: e729436f96d95e78dbf67452bf3fb654cd5bed37de43067f5cf0aafb24d0fc7a
+    container_keys: [model]
+    state_tensor_count: 1571
+    key_mapping: identity
+    tensor_layout: pytorch-native
+
+numerical_tolerance:
+  rtol: 1.0e-5
+  atol: 1.0e-6
