@@ -4,7 +4,8 @@
 - 创建日期：`2026-08-12`
 - 最后更新：`2026-08-14`
 - 负责人：仓库维护者与后续执行代理
-- 机器执行规范：`../../.omo/plans/rtdetrv4-merge.md`
+- 执行规范：本计划的任务、验证矩阵与完成记录；模型级结果见 [`docs/models`](../models/README.md)
+- 审查记录：2026-08-12，Momus 与独立 Oracle 对同一执行计划完成双重批准；审查轮次 `rtdetrv4-merge-20260812-r6`
 
 ## 背景
 
@@ -69,7 +70,7 @@ export DINOV3_WEIGHTS=/path/to/dinov3_vitb16_pretrain_lvd1689m.pth
 export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 ```
 
-计划任务 11-13、16-17、20 统一通过新增的 `tools/dev/validate_model_family.py` 执行 checkpoint、训练恢复、COCO、推理与导出矩阵。该驱动必须在构建模型前验证上述变量、目录布局与 manifest checksum；缺失资产时非零退出并命名缺失项。逐任务测试节点、正反场景与证据文件的完整命令以同提交中的 [机器执行规范](../../.omo/plans/rtdetrv4-merge.md)为准，两份计划的 1-23 与 F1-F4 编号一一对应。
+计划中的模型矩阵统一通过 `tools/dev/validate_model_family.py` 执行 checkpoint、训练恢复、COCO、推理与导出验证。该驱动必须在构建模型前验证上述变量、目录布局与 manifest checksum；缺失资产时非零退出并命名缺失项。稳定结论、复现入口和限制已整理到各模型族的验证报告、指标记录与证据索引。
 
 ## 实施步骤
 
@@ -119,7 +120,7 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 - [x] 10. 添加 D-FINE N/S/M/L/X 官方 COCO 配置
   - 精确映射 B0/B0/B2/B4/B5、feature levels、hidden dims、decoder layers、schedule、optimizer、EMA、augment stop 和 top-300。
   - 五个 YAML 连续重复加载、构建、train/eval forward 均通过，无 Registry 状态泄漏。
-  - 2026-08-13：五变体参数量为 `3,782,693 / 10,321,877 / 19,590,064 / 31,244,152 / 62,621,560`；官方 global batch、多尺度重复概率、stop epoch、500-step warmup、EMA warmup 1000 和 runtime 字段已映射到仓库合同。两阶段 `best_stg1` reload 与 stop-epoch EMA restart 仍属于 Task 15。
+  - 2026-08-13：五变体参数量为 `3,782,693 / 10,321,877 / 19,590,064 / 31,244,152 / 62,621,560`；官方 global batch、多尺度重复概率、stop epoch、500-step warmup、EMA warmup 1000 和 runtime 字段已映射到仓库合同。两阶段 `best_stg1` reload 与 stop-epoch EMA restart 由后续训练协议验证覆盖。
 
 - [x] 11. 验证五个 D-FINE 官方 checkpoint
   - 记录不可变 URL、大小、SHA-256、container keys、映射和 layout；要求零未知 key。
@@ -139,7 +140,7 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 - [x] 14. 实现 `DEIM(BaseArch)` 与 DEIM MAL/GO criterion
   - 配置选择 D-FINE 或 RT-DETRv2 decoder；实现 MAL `gamma=1.5`、union-set box/local、FGL/DDF（仅 D-FINE）及 CDN/aux/encoder loss。
   - 同权重 eval 必须与对应非 DEIM graph 一致，DEIM 不新增推理分支。
-  - 2026-08-13：`DEIM` 直接继承共享 `DFINE(BaseArch)` adapter，不复制模型图或增加 eval 分支。pinned DEIM 对照覆盖 MAL `mal_alpha=None/0.5`、RT-DETRv2 main/aux/encoder/CDN、D-FINE main/aux/pre/encoder/CDN/FGL/DDF、union on/off、IoU weighting 的全部 loss key、值和 prediction gradient；实际两类 decoder 也完成 batch-2（含空 GT）一步反传。额外修复 class-agnostic encoder 在匹配前归零 labels、MAL fractional gamma 的负/非有限 quality、CDN metadata 与 `dn_pre_outputs` 验证；正式十模型配置/checkpoint/COCO/export 仍属于 Task 16/17。
+  - 2026-08-13：`DEIM` 直接继承共享 `DFINE(BaseArch)` adapter，不复制模型图或增加 eval 分支。pinned DEIM 对照覆盖 MAL `mal_alpha=None/0.5`、RT-DETRv2 main/aux/encoder/CDN、D-FINE main/aux/pre/encoder/CDN/FGL/DDF、union on/off、IoU weighting 的全部 loss key、值和 prediction gradient；实际两类 decoder 也完成 batch-2（含空 GT）一步反传。额外修复 class-agnostic encoder 在匹配前归零 labels、MAL fractional gamma 的负/非有限 quality、CDN metadata 与 `dn_pre_outputs` 验证；正式十模型配置/checkpoint/COCO/export 由后续模型矩阵验证覆盖。
 
 - [x] 15. 实现确定性的两阶段 validation/EMA 协议
   - 通用协议服务 D-FINE、DEIM 与 RT-DETRv4；在 stop epoch 校验并加载 `best_stg1.pth`、重启/调整 EMA decay，生成 `best_stg2.pth`，保存全部协议状态。
@@ -181,7 +182,7 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 
 - [x] 22. 扩展 package、CLI、deployment、quality 与 CI 矩阵
   - wheel/sdist 包含全部新 YAML/manifest；六个原命令不改名；CPU CI 使用 core-only extra 做配置、训练、推理、导出 smoke。
-  - `uv build`、包外 wheel smoke、Ruff/Mypy、coverage、全部变体部署矩阵通过，不降低阈值或扩大排除。记录并只保留一个已校验 wheel 及 SHA-256 到 F3，其余构建/cache/export 产物立即清理。
+  - `uv build`、包外 wheel smoke、Ruff/Mypy、coverage、全部变体部署矩阵通过，不降低阈值或扩大排除。记录已校验 wheel 及 SHA-256 供最终用户验收，其余构建/cache/export 产物立即清理。
 
 - [x] 23. 完成许可证、模型合同、迁移知识与实际验收记录
   - 更新 `NOTICE`、README、ROADMAP、计划/模型/迁移索引，并新增 D-FINE、DEIM、RT-DETRv4 模型合同。
@@ -213,12 +214,12 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 
 ### 最终验证波
 
-- [x] F1 计划合规（F2-F4 全部批准后串行）：运行 `uv run python tools/dev/audit_plan_evidence.py --plan .omo/plans/rtdetrv4-merge.md --attempt-dir "$attemptDir" --require-tasks 1-23 --require-finals F2,F3,F4 --output "$attemptDir/final-F1-plan-compliance.md"`；使用忽略 checkbox 状态、其他字节敏感的 normalized plan identity，拒绝陈旧 SHA、自报通过或缺失命令，并用 wrong-plan-identity fixture 验证失败路径。
-- [x] F2 质量与数值（并行）：顺序运行 quality、coverage、非 Paddle unit/integration、全部新增上游数值测试和 graph auditor，使用 `pipefail + tee` 保存完整日志；再用 training-node/opset16/Paddle-import/tolerance fixtures 验证 auditor 的非零失败。
-- [x] F3 真实用户 QA（并行）：先核对 Todo 22 所保留 wheel 的 SHA，使用 `python3.11 -m venv` 在仓库外创建 venv，明确安装 wheel、pytest、onnx、onnxruntime；从源码 checkout 用该 venv 解释器运行非打包 `validate_model_family.py`，并强制 `ppdet_pytorch` 只能解析到 venv site-packages。四族最小变体及全部负例通过后，flush 证据并清理 venv、wheel 和 `dist/`。
-- [x] F4 范围与 v3（并行）：检查 `git status` 与 Paddle submodule diff，运行完整非 Paddle、R18 官方数值，并对照任务 1 的 v3 eager/ONNX/TorchScript 基线；使用 submodule-diff 和 baseline-mismatch fixtures 验证失败路径。
+- [x] 最终计划合规审计：在其他最终审计批准后，使用 `tools/dev/audit_plan_evidence.py` 审计完整执行计划与机器收据；normalized plan identity 忽略 checkbox 状态但对其他字节敏感，并通过 wrong-plan-identity fixture 验证失败路径。原始收据在结论提炼后清理。
+- [x] 最终质量与数值审计：顺序运行 quality、coverage、非 Paddle unit/integration、全部新增上游数值测试和 graph auditor，使用 `pipefail + tee` 保存完整日志；再用 training-node/opset16/Paddle-import/tolerance fixtures 验证 auditor 的非零失败。
+- [x] 最终真实用户验收：核对保留 wheel 的 SHA，使用 `python3.11 -m venv` 在仓库外创建 venv，明确安装 wheel、pytest、onnx、onnxruntime；从源码 checkout 用该 venv 解释器运行非打包 `validate_model_family.py`，并强制 `ppdet_pytorch` 只能解析到 venv site-packages。四族最小变体及全部负例通过后，flush 证据并清理 venv、wheel 和 `dist/`。
+- [x] 最终范围与 v3 审计：检查 `git status` 与 Paddle submodule diff，运行完整非 Paddle、R18 官方数值，并对照已批准的 v3 eager/ONNX/TorchScript 基线；使用 submodule-diff 和 baseline-mismatch fixtures 验证失败路径。
 
-先并行运行 F2-F4，三者批准后再串行运行 F1。全部 F1-F4 必须无条件批准；任何 blocked 资产或失败门都使计划保持未完成。
+先并行运行质量、用户和兼容性审计，三者批准后再串行运行计划合规审计。全部最终审计必须无条件批准；任何 blocked 资产或失败门都使计划保持未完成。
 
 ## 决策记录
 
@@ -236,28 +237,30 @@ export DINOV3_WEIGHTS_SHA256=<authorized-file-sha256>
 
 2026-08-12 已启动 Wave 1。任务 1 的四个验证驱动、确定性 schema、计划身份、preflight、图审计与合成负例已完成首版实现；定向驱动测试 `18 passed`，完整非 Paddle 回归 `383 passed, 2 skipped, 17 deselected`，覆盖率为全包 `52.09%`、直接维护范围 `90.50%`。本机使用 `uv 0.12.1`、Python `3.12.13`、PyTorch `2.5.1+cu121`，`uv lock --check` 通过且锁文件未改变。
 
-任务 1 已于 2026-08-13 完成。`paddlepaddle-gpu==3.3.0` 的 CPython 3.12/cu118 wheel 在仓库外完成 `1,300,069,989` bytes 与 SHA-256 `c2a1f5e05c74776a7780e1c0b6a3692019f769a18f61b152837c2321bc86f6ad` 校验后安装，未绕过 TLS 校验；RTX 4090 上确认 Paddle CUDA `11.8`、cuDNN `8.9.7`、单卡可见且 GPU 矩阵运算通过。官方 R18 checkpoint 再次通过 `91,945,530` bytes 与 SHA-256 `f32dbd008bd7e5311c877d522f6d8c9e349795978c889f53823588b5e5d74a5f` 校验，CPU/FP32 官方 checkpoint 对齐测试 `1 passed`，覆盖 571 个转换权重、前向激活/输出及 384 个梯度合同。仓库全量 quality 仍被本任务未修改的 `scripts/render_prediction_comparison.py` 既有 Ruff format 差异阻塞；本次新增 Python 文件的 Ruff format/lint 通过。证据见 `.omo/evidence/rtdetrv4-merge/task-1-rtdetrv4-merge.{json,log}`；临时 checkpoint、wheel 与测试缓存已清理，`.venv` 按仓库规则保留。
+任务 1 已于 2026-08-13 完成。`paddlepaddle-gpu==3.3.0` 的 CPython 3.12/cu118 wheel 在仓库外完成 `1,300,069,989` bytes 与 SHA-256 `c2a1f5e05c74776a7780e1c0b6a3692019f769a18f61b152837c2321bc86f6ad` 校验后安装，未绕过 TLS 校验；RTX 4090 上确认 Paddle CUDA `11.8`、cuDNN `8.9.7`、单卡可见且 GPU 矩阵运算通过。官方 R18 checkpoint 再次通过 `91,945,530` bytes 与 SHA-256 `f32dbd008bd7e5311c877d522f6d8c9e349795978c889f53823588b5e5d74a5f` 校验，CPU/FP32 官方 checkpoint 对齐测试 `1 passed`，覆盖 571 个转换权重、前向激活/输出及 384 个梯度合同。仓库全量 quality 当时被 `scripts/render_prediction_comparison.py` 的既有 Ruff format 差异阻塞，最终质量审计已通过。结果已整理到 [RT-DETRv3 验证报告](../models/rtdetrv3/validation-report.md)；临时 checkpoint、wheel 与测试缓存已清理，`.venv` 按仓库规则保留。
 
-任务 2 已于 2026-08-13 完成。新增独立注册的 HGNetv2 B0/B2/B4/B5，保留 D-FINE 的非对称 stem padding、LAB/ESE/SE aggregation、stage 返回、freeze/frozen-BN 与 `ShapeSpec` 合同；显式 `load_pretrained()` 在任何状态变更前拒绝错误变体、key、shape、dtype 与非有限 tensor，不进行隐式下载。固定 `Peterande/D-FINE@267a6da6d04c8ad52e54120692896515b9e55981`，四个官方 stage-1 checkpoint 的 size/SHA-256 均校验通过，并以同一 state、CPU/FP32、seed 0、eval mode 对比 stem、四个 stage 与最终返回特征，数值门 `4 passed`；单元与 R18 定向回归 `28 passed`，完整非 Paddle 回归 `401 passed, 4 skipped, 34 deselected`（四个 skip 仅因该命令未传仓库外资产变量），覆盖率 `52.56%/90.50%`，graph auditor `APPROVE`。证据见 `.omo/evidence/rtdetrv4-merge/task-2-rtdetrv4-merge.{json,log}`。
+任务 2 已于 2026-08-13 完成。新增独立注册的 HGNetv2 B0/B2/B4/B5，保留 D-FINE 的非对称 stem padding、LAB/ESE/SE aggregation、stage 返回、freeze/frozen-BN 与 `ShapeSpec` 合同；显式 `load_pretrained()` 在任何状态变更前拒绝错误变体、key、shape、dtype 与非有限 tensor，不进行隐式下载。固定 `Peterande/D-FINE@267a6da6d04c8ad52e54120692896515b9e55981`，四个官方 stage-1 checkpoint 的 size/SHA-256 均校验通过，并以同一 state、CPU/FP32、seed 0、eval mode 对比 stem、四个 stage 与最终返回特征，数值门 `4 passed`；单元与 R18 定向回归 `28 passed`，完整非 Paddle 回归 `401 passed, 4 skipped, 34 deselected`（四个 skip 仅因该命令未传仓库外资产变量），覆盖率 `52.56%/90.50%`，graph auditor `APPROVE`。资产身份已整理到 [D-FINE 指标记录](../models/dfine/metrics.md)。
 
-任务 3-8 已于 2026-08-13 完成。D-FINE 顶层 transformer、FDR/LQE/分布数学与 family encoder 对固定 D-FINE state、真实 decoder layer、train/eval/deploy 递归输出完成直接数值比较；matcher 与 DN 使用唯一 D-FINE 支持实现，现有 postprocess 经 top-300 直接上游比较后复用。Dense O2O 覆盖全部 epoch 组、普通 D-FINE stop、Mosaic affine 像素/bbox 上游对齐与双 worker 重放。FlatCosine 的 21 点 trace、N 常量特例和 cosine 阶段 checkpoint 恢复通过；训练协议补齐 validation/save/load、成功 update observation、stage/companion 校验与事务回滚。RT-DETRv2 仅暴露五个批准 decoder profile，五组合 state、首层 activation 与输出对固定 DEIM 对齐。带齐仓库外上游与 HGNetv2 资产的非 Paddle 全量回归 `519 passed, 34 deselected`，覆盖率 `56.07%/90.59%`，全 `src/tests` Ruff 通过；详见 Task 3-8 各自机器证据。
+任务 3-8 已于 2026-08-13 完成。D-FINE 顶层 transformer、FDR/LQE/分布数学与 family encoder 对固定 D-FINE state、真实 decoder layer、train/eval/deploy 递归输出完成直接数值比较；matcher 与 DN 使用唯一 D-FINE 支持实现，现有 postprocess 经 top-300 直接上游比较后复用。Dense O2O 覆盖全部 epoch 组、普通 D-FINE stop、Mosaic affine 像素/bbox 上游对齐与双 worker 重放。FlatCosine 的 21 点 trace、N 常量特例和 cosine 阶段 checkpoint 恢复通过；训练协议补齐 validation/save/load、成功 update observation、stage/companion 校验与事务回滚。RT-DETRv2 仅暴露五个批准 decoder profile，五组合 state、首层 activation 与输出对固定 DEIM 对齐。带齐仓库外上游与 HGNetv2 资产的非 Paddle 全量回归 `519 passed, 34 deselected`，覆盖率 `56.07%/90.59%`，全 `src/tests` Ruff 通过；稳定结论已整理到模型和迁移文档。
 
-任务 9-11 已于 2026-08-13 完成。D-FINE architecture/criterion、五变体配置与全部官方 checkpoint 均完成固定上游对齐。Task 11 manifest 锁定五个 GitHub asset ID、大小与 SHA-256；官方 `{"model": state_dict}` 通过公共评估加载路径，且加载前后均验证 identity key、shape、dtype 和逐 tensor 值。N/S/M/L/X 在 CPU/FP32、固定 640 输入下的 stem/backbone/encoder/raw output 全部 APPROVE，数值测试 `7 passed`，manifest/config/backbone 定向回归 `31 passed`；机器证据见 `.omo/evidence/rtdetrv4-merge/task-11-rtdetrv4-merge.{json,log}`。该结论不包含 COCO AP、训练恢复或导出，它们仍属于后续任务。
+任务 9-11 已于 2026-08-13 完成。D-FINE architecture/criterion、五变体配置与全部官方 checkpoint 均完成固定上游对齐。Manifest 锁定五个 GitHub asset ID、大小与 SHA-256；官方 `{"model": state_dict}` 通过公共评估加载路径，且加载前后均验证 identity key、shape、dtype 和逐 tensor 值。N/S/M/L/X 在 CPU/FP32、固定 640 输入下的 stem/backbone/encoder/raw output 全部 APPROVE，数值测试 `7 passed`，manifest/config/backbone 定向回归 `31 passed`。结果见 [D-FINE 验证报告](../models/dfine/validation-report.md)和[指标记录](../models/dfine/metrics.md)。
 
-任务 15 已于 2026-08-13 完成。通用两阶段协议覆盖 D-FINE、DEIM 与 RT-DETRv4 的 stage-1 best、stop transition、stage-2 global/local improvement 和 no-improvement restart；所有 checkpoint action 由 Trainer 执行，协议保持不可直接修改 live component 的边界。companion 在任何 mutation 前校验 basename/SHA/family/stage/config，回载 model/optimizer/scheduler/scaler/EMA/RNG 但不回退主循环 epoch cursor；EMA restart/decrement 实际参与后续更新，validation snapshot 无副作用。指定 happy/negative QA 为 `12 passed`/`4 passed`，非 Paddle 全量回归 `545 passed, 36 skipped, 34 deselected`；证据见 `.omo/evidence/rtdetrv4-merge/task-15-rtdetrv4-merge.{json,log}`。
+任务 15 已于 2026-08-13 完成。通用两阶段协议覆盖 D-FINE、DEIM 与 RT-DETRv4 的 stage-1 best、stop transition、stage-2 global/local improvement 和 no-improvement restart；所有 checkpoint action 由 Trainer 执行，协议保持不可直接修改 live component 的边界。companion 在任何 mutation 前校验 basename/SHA/family/stage/config，回载 model/optimizer/scheduler/scaler/EMA/RNG 但不回退主循环 epoch cursor；EMA restart/decrement 实际参与后续更新，validation snapshot 无副作用。指定 happy/negative QA 为 `12 passed`/`4 passed`，非 Paddle 全量回归 `545 passed, 36 skipped, 34 deselected`；稳定语义已整理到各模型族验证报告。
 
-任务 16 已于 2026-08-13 完成。DEIM-D-FINE N/S/M/L/X 的正式配置、官方 checkpoint manifest、pinned activation/raw-output、reduced train/resume、两阶段 companion、eager 四图、ONNX/TorchScript 和完整 COCO val2017 全部通过。五个 AP 与官方四舍五入值的最大绝对误差为 `0.000424`；部署最大 ONNX score/box 误差为 `1.1861e-5 / 0.014901 px`，TorchScript 为零。机器证据见 `.omo/evidence/rtdetrv4-merge/task-16-rtdetrv4-merge.{json,log}`；结论不外推为完整训练 schedule 收敛。
+任务 16 已于 2026-08-13 完成。DEIM-D-FINE N/S/M/L/X 的正式配置、官方 checkpoint manifest、pinned activation/raw-output、reduced train/resume、两阶段 companion、eager 四图、ONNX/TorchScript 和完整 COCO val2017 全部通过。五个 AP 与官方四舍五入值的最大绝对误差为 `0.000424`；部署最大 ONNX score/box 误差为 `1.1861e-5 / 0.014901 px`，TorchScript 为零。结果见 [DEIM-D-FINE 文档](../models/deim-dfine/README.md)；结论不外推为完整训练 schedule 收敛。
 
-任务 17 已于 2026-08-14 完成。DEIM-RT-DETRv2 S/M/M*/L/X 的正式配置、五个官方 detector checkpoint、四个官方 PResNet-vd 初始化资产、pinned 固定输入/真实图 raw-output、reduced train/resume、stage companion、eager 四图、ONNX/TorchScript 和完整 COCO val2017 均通过。五个 AP 的最大官方四舍五入误差为 `0.000525`；错误 softmax/query TopK 路径曾使 S/M AP 降至 `0.4547 / 0.4805`，当前显式 focal sigmoid/global TopK 已通过上游逐元素测试与完整 AP 门。机器证据见 `.omo/evidence/rtdetrv4-merge/task-17-rtdetrv4-merge.{json,log}`；reduced run 不构成完整 schedule 收敛声明。
+任务 17 已于 2026-08-14 完成。DEIM-RT-DETRv2 S/M/M*/L/X 的正式配置、五个官方 detector checkpoint、四个官方 PResNet-vd 初始化资产、pinned 固定输入/真实图 raw-output、reduced train/resume、stage companion、eager 四图、ONNX/TorchScript 和完整 COCO val2017 均通过。五个 AP 的最大官方四舍五入误差为 `0.000525`；错误 softmax/query TopK 路径曾使 S/M AP 降至 `0.4547 / 0.4805`，当前显式 focal sigmoid/global TopK 已通过上游逐元素测试与完整 AP 门。结果见 [DEIM-RT-DETRv2 文档](../models/deim-rtdetrv2/README.md)；reduced run 不构成完整 schedule 收敛声明。
 
-任务 18 已于 2026-08-14 完成。`DINOv3TeacherModel` 在 optimizer/EMA 前校验 Python、干净的 `facebookresearch/dinov3@346f38fee679c56a6888f91c51670fae61d364e0` checkout、hub entry、`.pth` 文件名/size/SHA-256、`dinov3_vitb16`、768 channel 与 16x16 patch geometry；教师保持 eval/frozen，并将归一化后 2x 下采样得到的 detached `x_norm_patchtokens` 空间特征仅注入训练 batch。Trainer 不把教师注册到 student model，eval/test 忽略 teacher 配置；DINOv3 官方 requirements 隔离在 `teacher` extra。Meta 授权文件 `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` 实测为 `342,860,279` bytes、SHA-256 `73cec8be7427c8655ceced13ce62f6e20a1fa90d1b4d4a550df17a1144081a7c`，真实本地 hub 严格加载后，64x64 固定输入输出 `(1, 768, 2, 2)` 有限 detached feature，S/M/L/X 四项均 APPROVE。fake hub 定向测试 `13 passed`，训练协议/checkpoint/CLI/驱动回归 `54 passed`，非 Paddle 全量 `661 passed, 79 skipped, 34 deselected`，graph auditor `APPROVE`，锁文件、本任务 Ruff 与 Python 3.12 Mypy 通过。机器证据见 `.omo/evidence/rtdetrv4-merge/task-18-rtdetrv4-merge.{json,log}`；仓库全量质量命令仍被本任务未修改的 `scripts/render_prediction_comparison.py` 既有 Ruff format 差异阻塞。Torch Hub 生成的重复 checkpoint cache 已在验收后清理，授权原文件仅保存在仓库外。
+任务 18 已于 2026-08-14 完成。`DINOv3TeacherModel` 在 optimizer/EMA 前校验 Python、干净的 `facebookresearch/dinov3@346f38fee679c56a6888f91c51670fae61d364e0` checkout、hub entry、`.pth` 文件名/size/SHA-256、`dinov3_vitb16`、768 channel 与 16x16 patch geometry；教师保持 eval/frozen，并将归一化后 2x 下采样得到的 detached `x_norm_patchtokens` 空间特征仅注入训练 batch。Trainer 不把教师注册到 student model，eval/test 忽略 teacher 配置；DINOv3 官方 requirements 隔离在 `teacher` extra。Meta 授权文件 `dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth` 实测为 `342,860,279` bytes、SHA-256 `73cec8be7427c8655ceced13ce62f6e20a1fa90d1b4d4a550df17a1144081a7c`，真实本地 hub 严格加载后，64x64 固定输入输出 `(1, 768, 2, 2)` 有限 detached feature，S/M/L/X 四项均 APPROVE。fake hub 定向测试 `13 passed`，训练协议/checkpoint/CLI/驱动回归 `54 passed`，非 Paddle 全量 `661 passed, 79 skipped, 34 deselected`，graph auditor `APPROVE`，锁文件、本任务 Ruff 与 Python 3.12 Mypy 通过。结果见 [RT-DETRv4 验证报告](../models/rtdetrv4/validation-report.md)和[指标记录](../models/rtdetrv4/metrics.md)；Torch Hub 重复 cache 已清理，授权原文件仅保存在仓库外。
 
-任务 19 已于 2026-08-14 完成。新增 `RTDETRV4(BaseArch)` adapter 和继承 `DEIMCriterion` 的 `RTDETRV4Criterion`，DSI 对 projected AIFI F5 与 detached DINOv3 patch feature 执行上游一致的 flatten、L2 normalize、cosine mean，并在空间不同时使用 `bilinear/align_corners=False`；eval 不读取或输出 teacher/distill key。GAM 只在最终 accumulation microbatch 的 AMP unscale 后、clip 前观察 AIFI transformer 与全模型 gradient L1 raw sums，成功 step 后才跨 rank SUM 并计入 epoch；任一 rank 非有限梯度会在 step 前同步 skip。epoch 末按官方 `rho/delta/default/current` 公式由 rank 0 更新和广播，criterion 权重在 init/resume/transition/restart 后同步，分歧、缺失及非有限状态均拒绝。合同测试 `14 passed`，engine/model 定向回归 `94 passed`，非 Paddle 全量 `693 passed, 79 skipped, 34 deselected`，双进程 Gloo、graph auditor、Ruff、Python 3.12 Mypy、锁文件与 diff 检查均通过。证据见 `.omo/evidence/rtdetrv4-merge/task-19-rtdetrv4-merge.{json,log}`；该结论不包含 Task 20 的四变体正式配置、官方 student checkpoint 数值、真实 teacher reduced train、COCO 或部署验收。
+任务 19 已于 2026-08-14 完成。新增 `RTDETRV4(BaseArch)` adapter 和继承 `DEIMCriterion` 的 `RTDETRV4Criterion`，DSI 对 projected AIFI F5 与 detached DINOv3 patch feature 执行上游一致的 flatten、L2 normalize、cosine mean，并在空间不同时使用 `bilinear/align_corners=False`；eval 不读取或输出 teacher/distill key。GAM 只在最终 accumulation microbatch 的 AMP unscale 后、clip 前观察 AIFI transformer 与全模型 gradient L1 raw sums，成功 step 后才跨 rank SUM 并计入 epoch；任一 rank 非有限梯度会在 step 前同步 skip。epoch 末按官方 `rho/delta/default/current` 公式由 rank 0 更新和广播，criterion 权重在 init/resume/transition/restart 后同步，分歧、缺失及非有限状态均拒绝。合同测试 `14 passed`，engine/model 定向回归 `94 passed`，非 Paddle 全量 `693 passed, 79 skipped, 34 deselected`，双进程 Gloo、graph auditor、Ruff、Python 3.12 Mypy、锁文件与 diff 检查均通过。训练语义与限制已整理到 [RT-DETRv4 验证报告](../models/rtdetrv4/validation-report.md)。
 
 任务 20 已于 2026-08-14 完成。RT-DETRv4 S/M/L/X 官方 solver checkpoint 分别验证 `796/1055/1255/1573` 个 `ema.module` tensor，固定输入 raw output 为零误差，四张真实 COCO 图通过上游对照；完整 val2017 AP 为 `0.498371 / 0.536396 / 0.554134 / 0.570014`，最大官方四舍五入误差 `0.000604`。四变体真实 DINOv3 reduced update、DSI/GAM resume、student-only eager、ONNX opset 17 和 TorchScript 均通过，导出证据均为 `training_residue=false`。统一九阶段驱动、graph audit 与 evidence audit 均为 `APPROVE`；该 reduced run 不构成完整 schedule 收敛声明。
 
-任务 21-22 已于 2026-08-14 完成。Models CLI 保持 schema-v1 RT-DETRv3 默认行为，并增加 `dfine`、`deim-dfine`、`deim-rtdetrv2`、`rtdetrv4` schema-v2 family；23 个 artifact alias 全局唯一，`--manifest` 优先。上游 Google Drive 资产只 list/verify，download 返回准确官方 URL 且不留 partial；D-FINE 固定 GitHub asset 支持 HTTPS 原子下载。真实 wheel 在仓库外安装后加载五族 manifest 和 19 个配置，CLI/deploy/package 回归 `146 passed`；Ruff 全仓通过，Mypy `123 source files` 通过，覆盖率为全包 `59.57%`、直接维护范围 `90.30%`。Task 23 更新 NOTICE 后重建并复验的唯一 wheel 为 `dist/rtdetrv3_pytorch-0.1.0-py3-none-any.whl`，SHA-256 `7810ab5327ec0c66921f03d15aa5fe007948da3799e1432e9d03597c59ec0333`。
+任务 21-22 已于 2026-08-14 完成。Models CLI 保持 schema-v1 RT-DETRv3 默认行为，并增加 `dfine`、`deim-dfine`、`deim-rtdetrv2`、`rtdetrv4` schema-v2 family；23 个 artifact alias 全局唯一，`--manifest` 优先。上游 Google Drive 资产只 list/verify，download 返回准确官方 URL 且不留 partial；D-FINE 固定 GitHub asset 支持 HTTPS 原子下载。真实 wheel 在仓库外安装后加载五族 manifest 和 19 个配置，CLI/deploy/package 回归 `146 passed`；Ruff 全仓通过，Mypy `123 source files` 通过，覆盖率为全包 `59.57%`、直接维护范围 `90.30%`。结构化收据记录 SHA-256 `e53c3fb28bff67e6c369c6c517c92a37d1b559ed7708a3fb9ef1e10ea510cbe0`；NOTICE 更新后的重建日志另记录 `7810ab5327ec0c66921f03d15aa5fe007948da3799e1432e9d03597c59ec0333`，但没有对应的第二份结构化 artifact receipt。产物已清理，后续发布必须重新构建并生成唯一 checksum。
 
-任务 23 已于 2026-08-14 完成。`NOTICE` 分别记录 D-FINE、DEIM、RT-DETRv4 的 Apache-2.0 上游 revision，并将 DINOv3 自定义许可证、Meta 门控授权、acknowledgment 和不打包/不再分发边界独立列出；根 README、路线图、五族模型合同和迁移索引同步到 Task 1-23 当前状态。文档检查器将 manifest 的 23 个 alias、19 个新配置、相对链接、归属、工作站路径和 Task 20 四变体 student-only 图证据绑定，并覆盖 stale variant、缺失归属、绝对路径和 teacher graph contradiction 四类负例。
+任务 23 已于 2026-08-14 完成。`NOTICE` 分别记录 D-FINE、DEIM、RT-DETRv4 的 Apache-2.0 上游 revision，并将 DINOv3 自定义许可证、Meta 门控授权、acknowledgment 和不打包/不再分发边界独立列出；根 README、路线图、五族模型合同和迁移索引同步到全部实现和验证的当前状态。文档检查器将 manifest 的 23 个 alias、19 个新配置、相对链接、归属、工作站路径和四变体 student-only 图合同绑定，并覆盖 stale variant、缺失归属、绝对路径和 teacher graph contradiction 四类负例。
 
-本计划 Task 1-23 的任务级执行环境为 Python `3.12.13`、PyTorch `2.5.1+cu121`，student/core 验收覆盖 CPU/FP32，真实 DINOv3 与 Paddle 探针使用 RTX 4090；各数值任务的上游、checkpoint、COCO、seed、dtype 与容差记录在对应机器证据中。19 个新变体均完成官方 checkpoint 的完整 val2017 和固定 640 部署矩阵；reduced train/resume 只证明有限更新和确定性恢复，不证明完整 schedule 收敛。DEIM-RT-DETRv2 保留预注册的 family-specific ONNX 门槛，DINOv3 只属于 RT-DETRv4 训练，R34/R50 长训与多 seed 仍按路线图 deferred。F2-F4 与其后的 F1 均为 `APPROVE`；临时 venv、wheel、`dist/`、导出、重复 checkpoint cache、sdist 和测试 cache已清理。技术验收已完成，计划保持 `in-progress` 直到维护者明确接受最终结果。
+本计划的执行环境为 Python `3.12.13`、PyTorch `2.5.1+cu121`，student/core 验收覆盖 CPU/FP32，真实 DINOv3 与 Paddle 探针使用 RTX 4090；各数值阶段的上游、checkpoint、COCO、seed、dtype 与容差已整理到正式报告。19 个新变体均完成官方 checkpoint 的完整 val2017 和固定 640 部署矩阵；reduced train/resume 只证明有限更新和确定性恢复，不证明完整 schedule 收敛。DEIM-RT-DETRv2 保留预注册的 family-specific ONNX 门槛，DINOv3 只属于 RT-DETRv4 训练，R34/R50 长训与多 seed 仍按路线图 deferred。全部最终审计均为 `APPROVE`；临时 venv、wheel、`dist/`、导出、重复 checkpoint cache、sdist 和测试 cache 已清理。技术验收已完成，计划保持 `in-progress` 直到维护者明确接受最终结果。
+
+最终机器验收记录绑定基线 revision `41961f796dca06aee47bde01bd41a8ed807635ad` 与 normalized plan identity `60333d67db893e1b12be693d53a3873f7f028878e9f77e7e4aecb34c85613ac5`。这两个值描述验收时的代码和计划身份，不是当前 HEAD；原始机器收据、重复渲染和代理续跑状态在结论进入正式文档后清理。

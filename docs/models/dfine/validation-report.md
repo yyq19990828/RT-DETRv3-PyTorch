@@ -11,7 +11,7 @@ D-FINE N/S/M/L/X 已通过官方 checkpoint 严格加载、固定输入和四张
 ## 验证环境与范围
 
 - 主模型验收：Python `3.12.13`、PyTorch `2.5.1+cu121`、CPU/FP32、固定 640。
-- 完整 val2017：5000 图、PIL bilinear、每变体 `1,500,000` 条 top-300 prediction。
+- 完整 val2017：5000 图、PIL bilinear、每变体 `1,500,000` 条 top-300 prediction。机器收据未能读取 pycocotools 的模块版本，记录为 `unknown`；同一锁文件当前解析为 `pycocotools 2.0.10`，这是锁文件重建值而非直接观测值。
 - 安装包用户验收：Python `3.11.15`、PyTorch `2.5.1+cpu`，从 site-packages 复验最小变体 N。
 - HGNetv2 B0/B2/B4/B5 的 stage-1 state、stem 和四个 stage activation 均对齐。
 - D-FINE primitives、FDR/LQE、matcher、DN、criterion 的 loss key/数值/梯度与上游对齐。

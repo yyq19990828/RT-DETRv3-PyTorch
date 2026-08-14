@@ -10,7 +10,7 @@ RT-DETRv3 R18/R34/R50 是已发布模型。三变体的官方 Paddle checkpoint 
 
 ## 验证环境
 
-基础数值验证使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy `1.26.4`；GPU 探针为 RTX 4090，官方数值对齐本身在 CPU/FP32 下执行。最终完整非 Paddle 回归为 `761 passed, 92 skipped, 34 deselected`，官方 R18 数值测试为 `1 passed`；R34/R50 的可选 Paddle 数值用例因该命令未提供资产变量而为 `2 skipped`，不覆盖或撤销其既有归档证据。
+基础数值验证使用 Python `3.12.13`、PyTorch `2.5.1+cu121`、Paddle `3.3.0`、NumPy `1.26.4`；GPU 探针为 RTX 4090、NVIDIA driver `610.57.04`，官方数值对齐本身在 CPU/FP32 下执行。最终完整非 Paddle 回归为 `761 passed, 92 skipped, 34 deselected`，官方 R18 数值测试为 `1 passed`；R34/R50 的可选 Paddle 数值用例因该命令未提供资产变量而为 `2 skipped`，不覆盖或撤销其既有归档证据。
 
 ## 已验证范围
 

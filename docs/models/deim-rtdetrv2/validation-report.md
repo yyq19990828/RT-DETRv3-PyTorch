@@ -17,7 +17,7 @@ S/M/M*/L/X 已通过官方 detector checkpoint strict load、固定输入与四�
 
 CPU/FP32、固定 640 下，stem、backbone、encoder 和 raw outputs 对上游最大绝对误差为零；五变体四张真实图同样为零。完整 val2017 AP 与官方三位小数值最大误差 `0.000525`。
 
-Criterion 使用 MAL `gamma=1.5` 与 box loss，不启用 D-FINE local/FGL/DDF。后处理必须 focal sigmoid 后展平 `queries x classes` 做全局 TopK 300；观察到错误 softmax/query TopK 会使 S/M AP 降至 `0.4547 / 0.4805`，即使 raw-output parity 仍可能通过。
+Criterion 使用 MAL `gamma=1.5` 与 box loss，不启用 D-FINE local/FGL/DDF。Dense O2O Mosaic affine 与固定上游一致地 clamp 边界但保留零面积框。后处理必须 focal sigmoid 后展平 `queries x classes` 做全局 TopK 300；观察到错误 softmax/query TopK 会使 S/M AP 降至 `0.4547 / 0.4805`，即使 raw-output parity 仍可能通过。
 
 五变体 reduced resume 覆盖 model、optimizer、scheduler、EMA、global step、stage companion 和两阶段 restart；不证明完整 60/120 epoch 收敛或 mid-epoch resume。
 

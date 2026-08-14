@@ -14,6 +14,25 @@
 
 Annotation SHA-256：`e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c810b6f`。
 
+| 变体 | 完整 prediction JSON SHA-256 |
+|---|---|
+| N | `ebd6159f20b0dd1426ec3de2cb6d586d1197cd703ebebbf4779232f675bc4103` |
+| S | `98303a5b5434aa85830e0c0fea960b482a1327eadaaa22e409dedd48871a537c` |
+| M | `6c3002cc6fddd697eed4f7426027d66a324c06a2828e3f4048fc5e0096fb7bb4` |
+| L | `7812993c1476a5a705d6f53cdd3271149183ad2abcd7107e041a6a98a5404447` |
+| X | `1b9c97e568998fb1ad1e174a16c68cbbc8ec6049a2ea9de1514dbbb2795c8a4c` |
+
+## HGNetv2 训练初始化资产
+
+| Backbone | 大小 bytes | SHA-256 |
+|---|---:|---|
+| B0 | 7,555,621 | `70a372e8cbc59b34c5da2943261ecb633faf304a58e7e05461a27bd8d8b7f3d1` |
+| B2 | 24,362,501 | `41272985db6136ac11732b246c7ea794dcc203d0a8cbc463152c840b9d9f22d1` |
+| B4 | 54,559,385 | `a72ad8d32902c90f5fa07f642034955d0ed9149c46d4d97f0e2ec36344d24bea` |
+| B5 | 133,945,533 | `812d5cde50e415abfb1ea1dd27121fa4f861522a327e48033a3cea8d604b3545` |
+
+这些资产只作为训练初始化输入。B0/B2/B4/B5 的 state、stem 与四个 stage activation 已在 CPU/FP32、seed 0、eval mode 下对固定上游 revision 验证；错误变体、key、shape、dtype、非有限 tensor 或卷积 layout 会在状态修改前失败。
+
 ## 四图与部署
 
 | 变体 | Raw boxes/logits max | 检测数 | ONNX score max | ONNX box max px | TorchScript |
@@ -24,7 +43,7 @@ Annotation SHA-256：`e8c7f7908f1d7278341fae127d0da654f102f11bd7b21d8aeefa635b8c
 | L | 0 / 0 | 127 | 1.26660e-6 | 0.000457764 | 0 / 0 |
 | X | 0 / 0 | 119 | 5.39795e-6 | 0.01878357 | 0 / 0 |
 
-N 的 logits 绝对差高于单独 `atol`，但满足 `atol + rtol*abs(reference)`。L/X 有少量近并列候选重排，经分组一对一匹配后类别、数量和误差均通过。
+N 的 logits 绝对差高于单独 `atol`，但满足 `atol + rtol*abs(reference)`。L ONNX batch 4 重排 `2/1200`；X deploy-eager batch 1、ONNX batch 1/4 分别重排 `2/300`、`6/300`、`32/1200`；其余部署检查无重排。所有重排均为近并列候选，经分组一对一匹配后类别、数量和误差通过。ONNX advanced indexing 的实际 TopK index 均为非负；自定义负索引路径未验证，不属于支持范围。
 
 ## Schedule 记录
 

@@ -48,6 +48,7 @@ Paddle 与 PyTorch 都有 AdamW，但同名 API 不自动保证等价。需要�
 - 目标检测样本的 bbox 数可变，需要自定义 `collate_fn`；不要依赖 PyTorch 默认 collate。
 - Paddle `use_shared_memory` 与 PyTorch `pin_memory` 不是完全相同的机制。兼容参数可以映射为性能提示，但不能在文档中宣称语义等价。
 - 多 worker 验证需要记录 `worker_init_fn`、sampler epoch、shuffle 和 drop-last 设置。
+- DEIM Dense O2O 的 Mosaic affine 与固定上游一致：边界坐标会被 clamp，但零面积框仍保留。不要在 reader 中增加未经验证的面积过滤，否则会改变 target 数量、matcher 输入和随机重放轨迹。
 - FairMOT eval 的序列目录和图像文件都应确定性排序，并显式限定支持的图片扩展名；不能把文件系统遍历顺序当作稳定输入顺序。当前回归覆盖多序列及大小写扩展名。
 
 ### 可复现随机性边界

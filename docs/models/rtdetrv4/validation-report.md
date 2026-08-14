@@ -38,6 +38,9 @@ Eval 只返回 `bbox`/`bbox_num`。ONNX 为 opset 17、固定 640x640、动态 b
 ## 负例与限制
 
 - 缺失、错误 revision、脏 checkout、错误权重大小/SHA、safetensors 替代、错误 embed dim/patch geometry 均在 teacher preflight 拒绝。
-- Stale/非有限 GAM state、rank 权重分歧、错误 stage companion 和 wrong-family checkpoint 均在状态修改前拒绝。
+- Teacher feature 的 channel/batch 不匹配、非有限值，以及 teacher gradient 或 state 泄漏均被拒绝。
+- Partial GAM 配置、stale/非有限 GAM state、rank 间权重分歧和错误 stage companion 均在状态修改前拒绝。
+- Wrong-family checkpoint 在状态修改前拒绝。
 - 未运行完整官方 schedule、多 seed、FP16/BF16、TensorRT、动态高宽或性能基准。
 - 官方 student checkpoint 由上游托管；本项目不发布，也不对门控 URL执行自动下载。
+- 完整 COCO 收据没有成功读取 pycocotools 版本，字段为 `unknown`，也未记录独立 seed；这些缺失不能从 AP 结果反推。

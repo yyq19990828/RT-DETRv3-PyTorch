@@ -4,7 +4,7 @@
 **Last updated**: 2026-08-14
 **Current evidence snapshot**: [`docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-18-migration-status.md)
 **Latest completed execution plan**: [`M12——R34/R50 导出后端设备矩阵计划`](docs/archive/rtdetrv3-v0.1.0/plans/2026-07-19-m12-variant-export-device-matrix.md)
-**Current execution plan**: [`D-FINE、DEIM 与 RT-DETRv4 集成计划`](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（in-progress，Task 1-23 与 F1-F4 均已通过，等待维护者明确接受）；M4 长训保持 deferred
+**Current execution plan**: [`D-FINE、DEIM 与 RT-DETRv4 集成计划`](docs/plans/2026-08-12-dfine-deim-rtdetrv4-integration.md)（in-progress，全部实现阶段与最终审计均已通过，等待维护者明确接受）；M4 长训保持 deferred
 
 本路线图以未完成的迁移大纲为主，并保留已完成里程碑的验收摘要。“完成”必须有当前代码、可复现命令和实际验收结果，不以历史 `specs/` 勾选状态为准。
 
@@ -232,9 +232,9 @@ M4–M5 ──> M6 性能与发布 ──> M7 公开模型运行时矩阵 ──
 - [x] 完成 D-FINE 与 DEIM-D-FINE 共 10 个变体的官方 checkpoint、上游激活/输出、训练恢复、COCO、推理和部署验收。
 - [x] 完成 DEIM-RT-DETRv2 S/M/M*/L/X 的官方 checkpoint、PResNet 初始化、上游激活/输出、训练恢复、COCO、推理和部署验收。
 - [x] 完成 19 个变体的官方 checkpoint、上游激活/输出、训练恢复、COCO、推理和部署验收。
-- [x] 完成模型目录、打包、许可与模型/迁移文档；全部 RT-DETRv3 最终回归属于 F2-F4。
+- [x] 完成模型目录、打包、许可与模型/迁移文档；RT-DETRv3 最终兼容性回归已通过。
 
-**当前状态**：任务 1-23 与 F1-F4 均已通过。19 个变体通过官方 checkpoint、pinned activation/raw-output、reduced train/resume、四图 eager、ONNX/TorchScript 和完整 COCO val2017 门；五族 Models CLI、wheel/sdist、质量、覆盖率、文档和 RT-DETRv3 无回归合同均获批准。RT-DETRv4 S/M/L/X 使用官方 EMA 的 AP 为 `0.498371 / 0.536396 / 0.554134 / 0.570014`，真实 DINOv3 teacher reduced update 与 DSI/GAM 恢复已通过。技术验收已完成，等待维护者明确接受后再把计划状态改为 `completed`。
+**当前状态**：全部实现阶段与最终审计均已通过。19 个变体通过官方 checkpoint、pinned activation/raw-output、reduced train/resume、四图 eager、ONNX/TorchScript 和完整 COCO val2017 门；五族 Models CLI、wheel/sdist、质量、覆盖率、文档和 RT-DETRv3 无回归合同均获批准。RT-DETRv4 S/M/L/X 使用官方 EMA 的 AP 为 `0.498371 / 0.536396 / 0.554134 / 0.570014`，真实 DINOv3 teacher reduced update 与 DSI/GAM 恢复已通过。技术验收已完成，等待维护者明确接受后再把计划状态改为 `completed`。
 
 ## 不作为当前阻塞的延伸项
 

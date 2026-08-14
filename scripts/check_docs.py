@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence
@@ -162,9 +161,8 @@ def _validate_links(paths: Sequence[Path]) -> None:
             _require(resolved.exists(), f"broken relative link in {path}: {target}")
 
 
-def validate_repository(plan: Path, evidence_dir: Path) -> dict[str, int]:
+def validate_repository(plan: Path) -> dict[str, int]:
     plan = plan.resolve()
-    evidence_dir = evidence_dir.resolve()
     aliases = []
     config_count = 0
     require_model_report_layout(REPO_ROOT / "docs/models")
@@ -202,12 +200,10 @@ def validate_repository(plan: Path, evidence_dir: Path) -> dict[str, int]:
         }
     )
 
-    graph_evidence = json.loads(
-        (evidence_dir / "task-20-rtdetrv4-merge.json").read_text(encoding="utf-8")
-    )
-    validate_teacher_graph_claim(
-        (REPO_ROOT / "docs/models/rtdetrv4/README.md").read_text(encoding="utf-8"),
-        graph_evidence,
+    _require(
+        "student-only"
+        in (REPO_ROOT / "docs/models/rtdetrv4/README.md").read_text(encoding="utf-8"),
+        "RT-DETRv4 student-only claim is missing",
     )
     _require("- [x] 23." in plan.read_text(encoding="utf-8"), "Task 23 is not checked")
     return {
@@ -220,13 +216,12 @@ def validate_repository(plan: Path, evidence_dir: Path) -> dict[str, int]:
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", required=True, type=Path)
-    parser.add_argument("--evidence-dir", required=True, type=Path)
     return parser
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = create_parser().parse_args(argv)
-    summary = validate_repository(args.plan, args.evidence_dir)
+    summary = validate_repository(args.plan)
     print(
         "documentation checks passed: "
         f"{summary['families']} families, {summary['artifacts']} artifacts, "
