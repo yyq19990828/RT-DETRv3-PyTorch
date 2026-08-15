@@ -38,7 +38,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import yaml
-from torch.cuda.amp import GradScaler
+from torch.amp import GradScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim import Optimizer
 
@@ -185,7 +185,7 @@ class Trainer:
             self._build_optimizer(self.cfg)
 
         # Setup AMP
-        self.scaler = GradScaler() if self.use_amp else None
+        self.scaler = GradScaler("cuda") if self.use_amp else None
 
         # Setup SyncBatchNorm for distributed training
         if dist.is_initialized() and dist.get_world_size() > 1:

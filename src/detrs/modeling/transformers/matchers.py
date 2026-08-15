@@ -179,7 +179,7 @@ class HungarianMatcher(nn.Module):
                 tgt_mask, sample_points, align_corners=False
             ).squeeze([1, 2])
 
-            with torch.cuda.amp.autocast(enabled=False):
+            with torch.amp.autocast(device_type="cuda", enabled=False):
                 # binary cross entropy cost
                 pos_cost_mask = F.binary_cross_entropy_with_logits(
                     out_mask, torch.ones_like(out_mask), reduction="none"
