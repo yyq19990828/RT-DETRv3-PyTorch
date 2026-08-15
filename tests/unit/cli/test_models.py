@@ -61,6 +61,20 @@ def test_schema_v1_default_manifest_lists_v010_models_as_published(capsys):
     assert records[-1]["config"].endswith("rtdetrv3_r18vd_6x_coco.yml")
 
 
+def test_plain_list_renders_aliases_without_ansi(capsys, monkeypatch):
+    import detrs.utils.console as console_module
+
+    monkeypatch.setattr(console_module, "_console", None)
+
+    assert models_cli.main(["list"]) == 0
+
+    captured = capsys.readouterr().out
+    for alias in ("r18", "r34", "r50", "r18-backbone"):
+        assert alias in captured
+    assert "published" in captured
+    assert "\x1b[" not in captured
+
+
 @pytest.mark.parametrize(
     "argv",
     [

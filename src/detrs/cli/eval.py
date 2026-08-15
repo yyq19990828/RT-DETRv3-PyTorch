@@ -8,12 +8,21 @@ from pathlib import Path
 from typing import ContextManager
 
 import torch
-from tqdm import tqdm
+from rich import box
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
+from rich.table import Table
 
 from detrs.core.workspace import load_config
 from detrs.engine import Trainer
 from detrs.metrics import COCOMetric, Metric, YOLOMetric
 from detrs.utils.config import apply_overrides
+from detrs.utils.console import get_console
 from detrs.utils.logger import setup_logger
 
 logger = setup_logger("eval")
@@ -170,10 +179,20 @@ def evaluate(model, data_loader, metric, prepare_batch, device):
         len(data_loader),
         device,
     )
-    for batch in tqdm(data_loader, total=len(data_loader), desc="Evaluating"):
-        batch = prepare_batch(batch)
-        outputs = model(batch)
-        metric.update(batch, outputs)
+    progress = Progress(
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(compact=True),
+        console=get_console(),
+    )
+    with progress:
+        task = progress.add_task("Evaluating", total=len(data_loader))
+        for batch in data_loader:
+            batch = prepare_batch(batch)
+            outputs = model(batch)
+            metric.update(batch, outputs)
+            progress.advance(task)
 
     metric.accumulate()
     return metric.get_results()
@@ -280,9 +299,12 @@ def main(argv=None):
 
     results = _format_results(raw_results)
     for metric_type, values in results.items():
-        logger.info("%s metrics:", metric_type.upper())
+        table = Table(title="{} metrics".format(metric_type.upper()), box=box.SIMPLE)
+        table.add_column("metric", style="bold")
+        table.add_column("value", justify="right")
         for name, value in values.items():
-            logger.info("  %-5s: %.6f", name, value)
+            table.add_row(name, "{:.6f}".format(value))
+        get_console().print(table)
     return 0
 
 

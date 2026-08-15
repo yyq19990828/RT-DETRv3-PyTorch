@@ -17,9 +17,7 @@ from detrs.deploy import (
     validate_detection_outputs,
 )
 from detrs.utils.config import apply_overrides
-from detrs.utils.logger import setup_logger
-
-logger = setup_logger("export")
+from detrs.utils.console import get_console
 
 
 def create_argument_parser():
@@ -135,9 +133,10 @@ def main(argv=None):
         if not args.no_verify:
 
             def validate(path):
-                logger.info(
-                    "ONNX verification: %s",
-                    validate_detection_outputs(reference, run_onnx(path, inputs)),
+                get_console().print(
+                    "ONNX verification: {}".format(
+                        validate_detection_outputs(reference, run_onnx(path, inputs))
+                    )
                 )
 
         export_onnx(
@@ -148,24 +147,33 @@ def main(argv=None):
             dynamic_batch=not args.fixed_batch,
             validate=validate,
         )
-        logger.info("Exported ONNX model to %s", paths["onnx"])
+        get_console().print(
+            "[green]Exported[/green] ONNX model to [bold]{}[/bold]".format(
+                paths["onnx"]
+            )
+        )
 
     if "torchscript" in paths:
         validate_torchscript = None
         if not args.no_verify:
 
             def validate_torchscript(path):
-                logger.info(
-                    "TorchScript verification: %s",
-                    validate_detection_outputs(
-                        reference, run_torchscript(path, inputs)
-                    ),
+                get_console().print(
+                    "TorchScript verification: {}".format(
+                        validate_detection_outputs(
+                            reference, run_torchscript(path, inputs)
+                        )
+                    )
                 )
 
         export_torchscript(
             adapter, inputs, paths["torchscript"], validate=validate_torchscript
         )
-        logger.info("Exported TorchScript model to %s", paths["torchscript"])
+        get_console().print(
+            "[green]Exported[/green] TorchScript model to [bold]{}[/bold]".format(
+                paths["torchscript"]
+            )
+        )
     return 0
 
 

@@ -14,6 +14,10 @@ from pathlib import Path
 from typing import Any, Optional, Sequence, cast
 
 import yaml
+from rich import box
+from rich.table import Table
+
+from detrs.utils.console import get_console
 
 DEFAULT_FAMILY = "rtdetrv3"
 FAMILY_MANIFESTS = {
@@ -386,12 +390,21 @@ def _list_artifacts(artifacts: dict[str, ModelArtifact], as_json: bool) -> None:
     if as_json:
         print(json.dumps([asdict(item) for item in ordered], indent=2))
         return
-    print("MODEL  STATUS       SIZE (BYTES)  SHA-256")
+    table = Table(box=box.SIMPLE)
+    table.add_column("MODEL", style="bold")
+    table.add_column("STATUS")
+    table.add_column("SIZE (BYTES)", justify="right")
+    table.add_column("SHA-256", style="dim")
     for artifact in ordered:
-        print(
-            f"{artifact.alias:<13} {artifact.distribution_status:<12} "
-            f"{artifact.size_bytes:<13} {artifact.sha256}"
+        status = artifact.distribution_status
+        style = "green" if status == "published" else "yellow"
+        table.add_row(
+            artifact.alias,
+            f"[{style}]{status}[/]",
+            str(artifact.size_bytes),
+            artifact.sha256,
         )
+    get_console().print(table)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

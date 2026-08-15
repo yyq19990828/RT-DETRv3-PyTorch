@@ -25,6 +25,7 @@ cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
 
 import torch
+from rich.panel import Panel
 
 import detrs.utils.check as check
 from detrs.core.workspace import load_config, merge_config
@@ -38,6 +39,7 @@ from detrs.engine import (
 # from detrs.engine.trainer_ssod import Trainer_DenseTeacher, Trainer_ARSL, Trainer_Semi_RTDETR
 # from detrs.slim import build_slim_model
 from detrs.utils.cli import ArgsParser, merge_args
+from detrs.utils.console import get_console
 from detrs.utils.logger import setup_logger
 
 logger = setup_logger("train")
@@ -167,8 +169,10 @@ def run(FLAGS, cfg):
         rank = torch.distributed.get_rank() if torch.distributed.is_initialized() else 0
         set_random_seed(seed + rank)
         cfg["seed"] = seed
-        logger.info(
-            "Using base seed %s (process seed %s on rank %s)", seed, seed + rank, rank
+        get_console().print(
+            "Using base seed [cyan]{}[/cyan] (process seed {} on rank {})".format(
+                seed, seed + rank, rank
+            )
         )
 
     has_semi_supervised_weights = (
@@ -240,13 +244,26 @@ def main(argv=None):
     # Set PyTorch device
     if cfg.use_gpu:
         device = torch.device("cuda")
-        logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        device_label = "GPU ({})".format(torch.cuda.get_device_name(0))
     else:
         device = torch.device("cpu")
-        logger.info("Using CPU")
+        device_label = "CPU"
 
     # Store device in config for later use
     cfg.device = device
+
+    seed_label = getattr(FLAGS, "seed", None)
+    get_console().print(
+        Panel.fit(
+            "[bold]detrs train[/bold] · config=[cyan]{}[/cyan]\n"
+            "device=[cyan]{}[/cyan] · seed={}".format(
+                FLAGS.config,
+                device_label,
+                seed_label if seed_label is not None else "auto",
+            ),
+            border_style="blue",
+        )
+    )
 
     # Check for special devices (warn if enabled)
     if cfg.use_npu or cfg.use_xpu or cfg.use_mlu:

@@ -17,6 +17,7 @@ from detrs.data.reader import BatchCompose, Compose
 from detrs.data.source.category import get_categories
 from detrs.deploy import TORCHSCRIPT_METADATA_FILE
 from detrs.utils.config import apply_overrides
+from detrs.utils.console import get_console
 from detrs.utils.logger import setup_logger
 
 logger = setup_logger("infer")
@@ -626,17 +627,21 @@ def main(argv=None):
         else ("onnx" if args.onnx_model is not None else "torchscript")
     )
 
-    logger.info(
-        "Running %s inference on %d image(s), batch_size=%d, device=%s%s",
-        backend,
-        len(image_paths),
-        args.batch_size,
-        device,
-        (
-            ", providers={}".format(",".join(model.providers))
-            if isinstance(model, OnnxInferenceRunner)
-            else ""
-        ),
+    provider_note = (
+        ", providers={}".format(",".join(model.providers))
+        if isinstance(model, OnnxInferenceRunner)
+        else ""
+    )
+    console = get_console()
+    console.print(
+        "[bold]detrs infer[/bold] · backend=[cyan]{}[/cyan] · {} image(s) · "
+        "batch_size={} · device=[cyan]{}[/cyan]{}".format(
+            backend,
+            len(image_paths),
+            args.batch_size,
+            device,
+            provider_note,
+        )
     )
     preprocessing_device = (
         torch.device("cpu") if args.onnx_model is not None else device
@@ -667,11 +672,10 @@ def main(argv=None):
             raise RuntimeError(
                 "Failed to write inference image: {}".format(output_path)
             )
-        logger.info(
-            "Processed %s: %d detection(s) -> %s",
-            image_path,
-            len(image_detections["boxes"]),
-            output_path,
+        console.print(
+            "Processed [bold]{}[/bold]: [green]{}[/green] detection(s) -> {}".format(
+                image_path, len(image_detections["boxes"]), output_path
+            )
         )
 
     if args.save_results:
@@ -686,9 +690,15 @@ def main(argv=None):
             json.dumps(records, indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
-        logger.info("Saved %d detection record(s) to %s", len(records), results_path)
+        console.print(
+            "Saved {} detection record(s) to {}".format(len(records), results_path)
+        )
 
-    logger.info("Inference complete. Results saved to %s", output_directory)
+    console.print(
+        "[green]Inference complete.[/green] Results saved to {}".format(
+            output_directory
+        )
+    )
     return 0
 
 

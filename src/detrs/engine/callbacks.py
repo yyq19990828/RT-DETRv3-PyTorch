@@ -27,8 +27,16 @@ from typing import Dict, List
 
 import torch
 import torch.distributed as dist
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from ..utils.checkpoint import save_checkpoint
+from ..utils.console import get_console
 from ..utils.logger import setup_logger
 
 logger = setup_logger("rtdetrv3.engine.callbacks")
@@ -152,11 +160,21 @@ class LogPrinter(Callback):
         self.log_iter = getattr(trainer, "log_interval", 50)
         self._batch_time_total = 0.0
         self._batch_time_count = 0
+        self._progress = None
+        self._task_id = None
+
+    def _stop_progress(self):
+        """Stop the rich progress bar so plain logs regain the console."""
+        if self._progress is not None:
+            self._progress.stop()
+            self._progress = None
+            self._task_id = None
 
     def on_train_begin(self, status: Dict):
         """Reset ETA timing when a new training run starts."""
         self._batch_time_total = 0.0
         self._batch_time_count = 0
+        self._stop_progress()
 
     def on_step_end(self, status: Dict):
         """Print training logs at specified intervals"""
@@ -197,10 +215,12 @@ class LogPrinter(Callback):
 
                 # Memory info
                 max_mem_str = ""
+                mem_short = ""
                 if torch.cuda.is_available():
                     max_mem_reserved = torch.cuda.max_memory_reserved() // (1024**2)
                     max_mem_allocated = torch.cuda.max_memory_allocated() // (1024**2)
                     max_mem_str = f", max_mem_reserved: {max_mem_reserved} MB, max_mem_allocated: {max_mem_allocated} MB"
+                    mem_short = f" · mem {max_mem_allocated}/{max_mem_reserved} MB"
 
                 # Format log message (compatible with Paddle format)
                 space_fmt = ":" + str(len(str(steps_per_epoch))) + "d"
@@ -215,9 +235,43 @@ class LogPrinter(Callback):
                     f"ips: {ips:.4f} images/s"
                     f"{max_mem_str}"
                 )
-                logger.info(fmt)
+
+                console = get_console()
+                if console.is_terminal:
+                    # Interactive terminals render a live progress bar with the
+                    # same fields; piped or CI output keeps the Paddle-style
+                    # logger line (also the log-file and test contract).
+                    stats = (
+                        f"lr {learning_rate:.6f} · loss {loss:.4f} · "
+                        f"eta {eta_str} · ips {ips:.2f}{mem_short}"
+                    )
+                    if self._progress is None:
+                        self._progress = Progress(
+                            TextColumn("[bold blue]{task.description}"),
+                            BarColumn(),
+                            TaskProgressColumn(),
+                            TimeRemainingColumn(compact=True),
+                            TextColumn("{task.fields[stats]}"),
+                            console=console,
+                        )
+                        self._progress.start()
+                        self._task_id = self._progress.add_task(
+                            f"Epoch {epoch_id}",
+                            total=steps_per_epoch,
+                            stats=stats,
+                        )
+                    assert self._task_id is not None
+                    self._progress.update(
+                        self._task_id,
+                        description=f"Epoch {epoch_id}",
+                        completed=min(step_id + 1, steps_per_epoch),
+                        stats=stats,
+                    )
+                else:
+                    logger.info(fmt)
 
         elif mode == "eval":
+            self._stop_progress()
             step_id = status.get("step_id", 0)
             if step_id % 100 == 0:
                 logger.info(f"Eval iter: {step_id}")
@@ -229,7 +283,9 @@ class LogPrinter(Callback):
 
         mode = status.get("mode", "train")
 
-        if mode == "eval":
+        if mode == "train":
+            self._stop_progress()
+        elif mode == "eval":
             sample_num = status.get("sample_num", 0)
             cost_time = status.get("cost_time", 1)
             fps = sample_num / cost_time if cost_time > 0 else 0
