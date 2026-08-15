@@ -18,6 +18,7 @@ MYPY_TARGETS = (
     "scripts/check_quality.py",
     "scripts/check_release.py",
     "scripts/docs_hooks.py",
+    "scripts/generate_cli_reference.py",
     "scripts/render_prediction_comparison.py",
     "scripts/run_framework_benchmark.py",
     "scripts/run_stability_experiment.py",

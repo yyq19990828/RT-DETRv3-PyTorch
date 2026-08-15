@@ -7,6 +7,7 @@ on:
       - docs/**
       - src/detrs/**
       - scripts/docs_hooks.py
+      - scripts/generate_cli_reference.py
       - mkdocs.yml
       - pyproject.toml
       - uv.lock
@@ -17,6 +18,7 @@ on:
       - docs/**
       - src/detrs/**
       - scripts/docs_hooks.py
+      - scripts/generate_cli_reference.py
       - mkdocs.yml
       - pyproject.toml
       - uv.lock
@@ -47,6 +49,10 @@ jobs:
 
       - name: Install docs dependencies
         run: uv sync --locked --extra docs
+
+      - name: Check CLI reference freshness
+        run: >-
+          uv run --no-sync python scripts/generate_cli_reference.py --check
 
       - name: Build site (strict)
         run: uv run --no-sync mkdocs build --strict

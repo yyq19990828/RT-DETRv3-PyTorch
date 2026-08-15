@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   arguments are described on the base class of each wrapper hierarchy,
   turning the site's API reference into a usable configuration reference.
   Docstring-only change with no behavioral impact.
+- Beautified CLI and training output with rich: model listing renders a
+  styled table, inference/export/train print structured banners, training
+  shows a live progress bar, and evaluation shows a progress bar plus a
+  metrics table on interactive terminals. Piped or CI output automatically
+  degrades to plain text; JSON outputs and the Paddle-style log line for
+  non-terminal runs are unchanged.
+- Auto-generated CLI reference page: `scripts/generate_cli_reference.py`
+  renders the live `--help` output of `detrs` and every subcommand into
+  `docs/guides/cli-reference.md` (committed), and the Docs workflow fails
+  when the page drifts from the actual parsers.
 - Split the single-page user guide into a landing overview plus six topic
   pages (install, model assets, training/evaluation, inference,
   conversion/export, CLI boundaries) with matching site navigation; content

@@ -27,6 +27,7 @@ nav:
       - 推理: guides/inference.md
       - 权重转换与导出: guides/conversion-export.md
       - CLI 与配置边界: guides/cli-config.md
+      - CLI 参考: guides/cli-reference.md
   - 模型文档:
       - 模型总览: models/README.md
       - RT-DETRv3:
