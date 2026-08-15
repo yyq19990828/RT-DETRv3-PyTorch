@@ -101,7 +101,32 @@ class TrainingProtocol:
 
 @register
 class TwoStageDetectionProtocol(TrainingProtocol):
-    """Deterministic best-checkpoint and EMA restart state machine."""
+    """Deterministic best-checkpoint and EMA restart state machine.
+
+    Tracks the best evaluation metric in stage one; from `stop_epoch` the
+    EMA is restarted from the best student weights and its decay is stepped
+    down by `decay_decrement` on every subsequent improvement. For
+    `rtdetrv4` it can additionally run GAM, adapting a loss weight from the
+    observed encoder/total gradient-L1 percentage toward the
+    [`gam_rho` - `gam_delta`, `gam_rho` + `gam_delta`] band.
+
+    Args:
+        family (str): One of `dfine`, `deim`, `deimv2`, `rtdetrv4`.
+        stop_epoch (int): Epoch (1-based) at which stage two starts.
+        ema_restart_decay (float): Initial EMA decay used after restart,
+            between 0 and 1.
+        metric_name (str): Evaluation metric tracked for best checkpoints,
+            e.g. `bbox`.
+        decay_decrement (float): EMA decay decrement applied per
+            improvement; must stay below `ema_restart_decay`.
+        current_gam_weight (float|None): Current GAM loss weight; required
+            when GAM is enabled.
+        gam_rho (float|None): Target band center (percent) of the
+            encoder/total gradient-L1 ratio.
+        gam_delta (float|None): Half-width of the GAM target band.
+        gam_default_weight (float|None): GAM weight applied once training
+            reaches `stop_epoch` or the ratio degenerates.
+    """
 
     FAMILIES = {"dfine", "deim", "deimv2", "rtdetrv4"}
 

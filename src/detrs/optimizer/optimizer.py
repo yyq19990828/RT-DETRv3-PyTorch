@@ -391,7 +391,21 @@ class _FlatCosineScheduler:
 @register
 @serializable
 class FlatCosineLRScheduler:
-    """DEIM flat-cosine schedule, advanced once per optimizer update."""
+    """DEIM flat-cosine schedule, advanced once per optimizer update.
+
+    Learning rate stays flat for `flat_epochs`, then decays following a
+    cosine curve until the last `no_aug_epochs`; an optional warmup ramps
+    the rate for the first `warmup_iter` updates.
+
+    Args:
+        total_epochs (int): Total number of training epochs.
+        warmup_iter (int): Number of warmup updates (0 disables warmup).
+        flat_epochs (int): Epochs kept at the initial learning rate.
+        no_aug_epochs (int): Final epochs without augmentation, ending the
+            cosine decay early.
+        lr_gamma (float): Multiplicative decay factor used by the flat
+            fallback after the cosine phase.
+    """
 
     use_warmup = False
 

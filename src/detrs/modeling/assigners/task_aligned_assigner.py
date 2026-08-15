@@ -73,7 +73,18 @@ def is_close_gt(anchor, gt, stride_lst, max_dist=2.0, alpha=2.0):
 
 @register
 class TaskAlignedAssigner(nn.Module):
-    """TOOD: Task-aligned One-stage Object Detection"""
+    """TOOD: Task-aligned One-stage Object Detection
+
+    Assigns anchors by the aligned metric `score^alpha * IoU^beta`.
+
+    Args:
+        topk (int): Candidate anchors kept per ground truth.
+        alpha (float): Exponent of the classification score.
+        beta (float): Exponent of the IoU.
+        eps (float): Numerical epsilon.
+        is_close_gt (bool): Require the anchor center to lie inside the
+            ground-truth box.
+    """
 
     def __init__(self, topk=13, alpha=1.0, beta=6.0, eps=1e-9, is_close_gt=False):
         super(TaskAlignedAssigner, self).__init__()

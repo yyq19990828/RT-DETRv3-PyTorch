@@ -40,6 +40,23 @@ __all__ = ["HungarianMatcher"]
 @register
 @serializable
 class HungarianMatcher(nn.Module):
+    """Hungarian matcher assigning predictions to ground-truth targets.
+
+    Computes classification, L1 and GIoU cost terms (plus mask/dice costs
+    when enabled) and solves the optimal one-to-one assignment with
+    `scipy.optimize.linear_sum_assignment`.
+
+    Args:
+        matcher_coeff (dict): Weights of the cost terms: `class`, `bbox`,
+            `giou`, and optionally `mask`/`dice`.
+        use_focal_loss (bool): Use focal-style classification cost (sigmoid
+            probabilities) instead of softmax CE.
+        with_mask (bool): Include point-sampled mask/dice costs.
+        num_sample_points (int): Mask points sampled for the mask costs.
+        alpha (float): Alpha of the focal cost.
+        gamma (float): Gamma of the focal cost.
+    """
+
     __shared__ = ["use_focal_loss", "with_mask", "num_sample_points"]
 
     def __init__(
@@ -51,10 +68,6 @@ class HungarianMatcher(nn.Module):
         alpha=0.25,
         gamma=2.0,
     ):
-        r"""
-        Args:
-            matcher_coeff (dict): The coefficient of hungarian matcher cost.
-        """
         super(HungarianMatcher, self).__init__()
         self.matcher_coeff = matcher_coeff
         self.use_focal_loss = use_focal_loss

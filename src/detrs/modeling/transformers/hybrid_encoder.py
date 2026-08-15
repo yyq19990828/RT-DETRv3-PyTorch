@@ -381,6 +381,23 @@ class MaskHybridEncoder(HybridEncoder):
 
     This is an extension of HybridEncoder that also produces mask features
     for instance segmentation tasks.
+
+    Args:
+        in_channels (list): Channels of the input feature levels.
+        feat_strides (list): Strides of the input feature levels.
+        hidden_dim (int): Output embedding dimension.
+        use_encoder_idx (list): Feature levels processed by the transformer
+            encoder.
+        num_encoder_layers (int): Transformer layers per selected level.
+        encoder_layer (str): Registry name of the encoder layer.
+        num_prototypes (int): Number of mask prototypes produced.
+        pe_temperature (float): Temperature of the sine positional encoding.
+        expansion (float): Width multiplier of the fusion blocks.
+        depth_mult (float): Depth multiplier of the CSP blocks.
+        mask_feat_channels (list): Channels of the mask feature pyramid.
+        act (str): Activation of the fusion blocks.
+        trt (bool): TensorRT-compatible mode.
+        eval_size (tuple|None): Fixed input size for export.
     """
 
     __shared__ = ["depth_mult", "act", "trt", "eval_size", "num_prototypes"]

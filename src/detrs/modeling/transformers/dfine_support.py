@@ -127,7 +127,15 @@ def repository_batch_to_dfine_targets(
 @register
 @serializable
 class DFINEHungarianMatcher(nn.Module):
-    """Pinned D-FINE matcher contract backed by the official cost equations."""
+    """Pinned D-FINE matcher contract backed by the official cost equations.
+
+    Args:
+        weight_dict (dict): Cost weights; requires `cost_class`,
+            `cost_bbox` and `cost_giou` keys, not all zero.
+        use_focal_loss (bool): Use focal-style classification cost.
+        alpha (float): Alpha of the focal cost.
+        gamma (float): Gamma of the focal cost.
+    """
 
     __shared__ = ["use_focal_loss"]
 
@@ -220,6 +228,17 @@ class DEIMv2HungarianMatcher(DFINEHungarianMatcher):
     From the switch epoch on, the cost becomes the product of the target-class
     score and the IoU raised to ``iou_order_alpha`` (upstream
     ``change_matcher`` semantics, DEIMv2@add5bcd engine/deim/matcher.py).
+
+    Args:
+        weight_dict (dict): Cost weights, as in `DFINEHungarianMatcher`.
+        use_focal_loss (bool): Use focal-style classification cost.
+        alpha (float): Alpha of the focal cost.
+        gamma (float): Gamma of the focal cost.
+        change_matcher (bool): Enable the epoch-triggered IoU-ordered cost.
+        iou_order_alpha (float): Exponent applied to the IoU term of the
+            switched cost.
+        matcher_change_epoch (int): Epoch (1-based) at which the cost
+            switches.
     """
 
     def __init__(

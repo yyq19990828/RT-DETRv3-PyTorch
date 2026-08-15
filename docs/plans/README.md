@@ -17,6 +17,7 @@
 
 ## 已完成记录
 
+- [API docstring 全量补全计划](2026-08-15-api-docstring-coverage.md)：2026-08-15 完成 68 个注册组件的类 docstring 与参数说明全覆盖(44 个对象新增、10 处合并),文档站 API 参考从裸签名升级为配置参考;纯 docstring 改动,零行为变化。
 - [GitHub Pages 文档站计划](2026-08-15-github-pages-docs.md)：2026-08-15 完成 MkDocs Material 中文站点、mkdocstrings 自动 API 参考、`Docs` 部署 workflow 与构建期逃逸链接改写;`mkdocs build --strict` 零警告。
 - [多文件夹数据集支持计划](2026-08-15-multi-folder-datasets.md)：2026-08-15 完成 YOLO 格式数据集(多文件夹)、COCO/LVIS `anno_path` 列表逻辑合并与 `YOLOMetric`(pycocotools 口径)接入;复用结论沉淀于 `docs/migrations/dataset-extension.md`。
 - [包与 CLI 重命名计划](2026-08-15-rename-to-detrs.md)：2026-08-15 完成 `ppdet_pytorch` → `detrs` 包名/项目名切换,六个 `rtdetrv3-*` 命令收敛为单 `detrs` 入口 + 子命令;TorchScript 跨设备修复与 CI 恢复另见后续提交。

@@ -139,6 +139,26 @@ class Blocks(nn.Module):
 
 @register
 class PResNet(nn.Module):
+    """PResNet backbone used by RT-DETR series (DETR-style ResNet variant).
+
+    Builds the depth/variant matrix from the official RT-DETR layouts and
+    returns the selected stage outputs as multi-scale features. Pretrained
+    weights are never downloaded implicitly; pass an explicit path via
+    `load_checkpoint` instead (`pretrained` must stay unset).
+
+    Args:
+        depth (int): Network depth, one of 18/34/50/101/152.
+        variant (str): ResNet downsample variant, one of `a`/`b`/`c`/`d`.
+        num_stages (int): Number of stages to build, 1 to 4.
+        return_idx (tuple): Stage indices whose outputs are returned.
+        act (str): Activation used in blocks.
+        freeze_at (int): Freeze stages up to this index; `-1` freezes nothing.
+        freeze_norm (bool): Whether to freeze normalization parameters.
+        pretrained: Must be `None`/`False`; implicit pretrained loading is
+            rejected to keep weight provenance explicit.
+        local_model_dir: Legacy Paddle option, accepted and ignored.
+    """
+
     def __init__(
         self,
         depth,

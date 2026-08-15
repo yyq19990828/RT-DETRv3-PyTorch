@@ -316,6 +316,37 @@ class RTDETRTransformerv3(nn.Module):
     - Contrastive denoising training
     - One-to-many (O2M) branch
     - Multiple noise groups
+
+    Args:
+        num_classes (int): Number of foreground classes.
+        hidden_dim (int): Embedding dimension of queries and transformer.
+        num_queries (int): Number of one-to-one object queries.
+        position_embed_type (str): Positional encoding type (`sine` or
+            `learned`).
+        backbone_feat_channels (list): Channels of the backbone features.
+        feat_strides (list): Strides of the input feature levels.
+        num_levels (int): Number of feature levels used.
+        num_decoder_points (int): Sampling points per level for deformable
+            attention.
+        nhead (int): Attention heads.
+        num_decoder_layers (int): Decoder layers.
+        dim_feedforward (int): Width of the decoder FFN.
+        dropout (float): Dropout rate.
+        activation (str): FFN activation.
+        num_denoising (int): Number of contrastive denoising queries.
+        label_noise_ratio (float): Label noise ratio for denoising.
+        box_noise_scale (float): Box noise scale for denoising.
+        learnt_init_query (bool): Learn the initial query embeddings.
+        query_pos_head_inv_sig (bool): Use inverse-sigmoid query positional
+            head.
+        eval_size (tuple|None): Fixed input size for export.
+        eval_idx (int): Decoder layer returned at inference.
+        num_noises (int): Number of extra noise groups.
+        num_noise_queries (list): Query counts of the noise groups.
+        num_noise_denoising (int): Denoising queries per noise group.
+        o2m_branch (bool): Enable the one-to-many training branch.
+        num_queries_o2m (int): Query count of the one-to-many branch.
+        eps (float): Numerical epsilon.
     """
 
     __shared__ = [

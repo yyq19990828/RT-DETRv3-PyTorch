@@ -25,6 +25,28 @@ __all__ = ["RTDETRV3"]
 
 @register
 class RTDETRV3(BaseArch):
+    """RT-DETRv3 detection architecture.
+
+    Composes the RT-DETRv3 backbone, transformer (encoder/decoder with
+    contrastive denoising and the one-to-many branch) and DETR head, and
+    applies `DETRPostProcess` to produce final detections. Also used as the
+    architecture shell for DETR/DINO-style variants sharing the same graph.
+
+    Args:
+        backbone: Backbone config or module producing multi-scale features.
+        transformer (str): Transformer registry name, e.g. `RTDETRTransformerv3`.
+        detr_head (str): Head registry name, e.g. `DETRHead`.
+        neck (str|None): Optional neck inserted between backbone and transformer.
+        aux_o2m_head (str|None): Optional auxiliary one-to-many training head.
+        post_process (str|object): `DETRPostProcess` config or instance.
+        post_process_semi (str|object|None): Post-process used by the
+            semi-supervised branch.
+        with_mask (bool): Whether mask outputs are produced (segmentation
+            variants).
+        exclude_post_process (bool): If true, forward returns raw
+            `bbox`/`bbox_num` outputs without decoding.
+    """
+
     __category__ = "architecture"
     __inject__ = ["post_process", "post_process_semi"]
     __shared__ = ["with_mask", "exclude_post_process"]

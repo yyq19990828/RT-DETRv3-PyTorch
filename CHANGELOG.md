@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `uv sync --extra docs` and `mkdocs build --strict`, and `scripts/docs_hooks.py`
   rewrites docs links that escape `docs/` into absolute GitHub URLs at build
   time so existing documents remain unchanged.
+- Docstring coverage for the entire registered (YAML-facing) API surface:
+  all 68 registered components now document their purpose, and constructor
+  arguments are described on the base class of each wrapper hierarchy,
+  turning the site's API reference into a usable configuration reference.
+  Docstring-only change with no behavioral impact.
 
 ## [1.0.0] - 2026-08-15
 

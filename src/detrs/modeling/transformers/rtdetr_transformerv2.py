@@ -483,7 +483,44 @@ def _denoising_group(
 
 @register
 class RTDETRTransformerv2(nn.Module):
-    """Pinned DEIM RT-DETRv2 decoder, restricted to the five planned variants."""
+    """Pinned DEIM RT-DETRv2 decoder, restricted to the five planned variants.
+
+    Standard RT-DETR decoder (no D-FINE distribution refinement); channel,
+    depth and FFN defaults resolve from `variant` when not set explicitly.
+
+    Args:
+        variant (str): One of the pinned sizes `s`, `m`, `m-star`, `l`, `x`.
+        num_classes (int): Number of foreground classes.
+        hidden_dim (int|None): Embedding dimension; derived from `variant`
+            when omitted.
+        num_queries (int): Number of object queries.
+        feat_channels (tuple|None): Input channels; derived from `variant`
+            when omitted.
+        feat_strides (tuple): Strides of the input feature levels.
+        num_levels (int): Number of feature levels used.
+        num_points (tuple): Sampling points per level for deformable
+            attention.
+        nhead (int): Attention heads.
+        num_layers (int|None): Decoder layers; derived from `variant` when
+            omitted.
+        dim_feedforward (int|None): FFN width; derived from `variant` when
+            omitted.
+        dropout (float): Dropout rate.
+        activation (str): FFN activation.
+        num_denoising (int): Number of contrastive denoising queries.
+        label_noise_ratio (float): Label noise ratio for denoising.
+        box_noise_scale (float): Box noise scale for denoising.
+        learn_query_content (bool): Learn query content embeddings.
+        eval_spatial_size (tuple|None): Fixed input size for export.
+        eval_idx (int): Decoder layer returned at inference.
+        eps (float): Numerical epsilon.
+        aux_loss (bool): All decoder layers produce loss outputs.
+        cross_attn_method (str): Cross-attention implementation variant.
+        query_select_method (str): Top-query selection implementation.
+        value_shape (str): Reshape strategy of the value tensors.
+        mlp_act (str): Activation of the box MLP.
+        query_pos_method (str): Query positional encoding method.
+    """
 
     __shared__ = ["num_classes", "eval_spatial_size"]
 

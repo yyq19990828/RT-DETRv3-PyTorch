@@ -19,7 +19,25 @@ __all__ = ["DEIMCriterion"]
 @register
 @serializable
 class DEIMCriterion(DFINECriterion):
-    """Compute DEIM MAL and optional D-FINE localization losses."""
+    """Compute DEIM MAL and optional D-FINE localization losses.
+
+    Args:
+        matcher: Injected matcher (e.g. `DFINEHungarianMatcher`).
+        weight_dict (dict): Weights of the individual loss terms.
+        losses (list): Enabled loss names, e.g. `['mal', 'boxes', 'local']`.
+        alpha (float): Alpha of the focal/VFL classification loss.
+        gamma (float): Gamma of the focal/VFL classification loss.
+        num_classes (int): Number of foreground classes.
+        reg_max (int): Discrete bins of the box distribution used by the
+            `local` (FDR) loss.
+        boxes_weight_format (str|None): How matched box losses are weighted.
+        share_matched_indices (bool): Reuse one set of matching indices for
+            all loss terms.
+        mal_alpha (float|None): Separate alpha of the MAL loss; `None`
+            reuses `alpha`.
+        use_uni_set (bool): Use the unified set matching shared across
+            Dense O2O branches.
+    """
 
     def __init__(
         self,

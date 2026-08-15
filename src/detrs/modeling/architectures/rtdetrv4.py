@@ -18,7 +18,11 @@ __all__ = ["RTDETRV4"]
 
 @register
 class RTDETRV4(DFINE):
-    """Attach training-only DSI features without changing student inference."""
+    """Attach training-only DSI features without changing student inference.
+
+    Wiring and constructor arguments are shared with `DFINE`; DSI
+    (teacher feature distillation) only participates in training.
+    """
 
     def _forward(self):
         if not self.training:

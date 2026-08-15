@@ -374,6 +374,46 @@ class TransformerDecoder(nn.Module):
 
 @register
 class DFINETransformer(nn.Module):
+    """D-FINE decoder head: fine-grained distribution refinement (FDR).
+
+    Selects top encoder features as initial queries, then refines box
+    distributions over `num_layers` decoder layers with optional denoising
+    groups and a shared/self-scaling localization design.
+
+    Args:
+        num_classes (int): Number of foreground classes.
+        hidden_dim (int): Embedding dimension of queries and decoder.
+        num_queries (int): Number of object queries.
+        feat_channels (tuple): Channels of the input feature levels.
+        feat_strides (tuple): Strides of the input feature levels.
+        num_levels (int): Number of feature levels used.
+        num_points (int): Sampling points per level for deformable attention.
+        nhead (int): Attention heads.
+        num_layers (int): Decoder (refinement) layers.
+        dim_feedforward (int): Width of the decoder FFN.
+        dropout (float): Dropout rate.
+        activation (str): FFN activation.
+        num_denoising (int): Number of contrastive denoising queries; `0`
+            disables denoising.
+        label_noise_ratio (float): Label noise ratio for denoising.
+        box_noise_scale (float): Box noise scale for denoising.
+        learn_query_content (bool): Learn query content embeddings instead
+            of using encoder features.
+        eval_spatial_size (tuple|None): Fixed input size used to precompute
+            positional encoding for export.
+        eval_idx (int): Index of the decoder layer returned at inference;
+            `-1` uses the last layer.
+        eps (float): Numerical epsilon.
+        aux_loss (bool): Whether all decoder layers produce loss outputs.
+        cross_attn_method (str): Cross-attention implementation variant.
+        query_select_method (str): Top-query selection implementation.
+        reg_max (int): Discrete bins of the box distribution.
+        reg_scale (float): Scale factor mapping distributions to box
+            offsets.
+        layer_scale (int): Isotropic layer scaling factor.
+        mlp_act (str): Activation of the box MLP.
+    """
+
     __shared__ = ["num_classes", "eval_spatial_size"]
 
     def __init__(

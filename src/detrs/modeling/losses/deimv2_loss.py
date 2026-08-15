@@ -21,6 +21,20 @@ class DEIMv2Criterion(DEIMCriterion):
     ``gamma: 1.5`` in every published config but allows other values (class
     default 2.0), and forwards the training epoch into the matcher so the
     ``change_matcher`` IoU-ordered cost can activate at its scheduled epoch.
+
+    Args:
+        matcher: Injected matcher (e.g. `DEIMv2HungarianMatcher`).
+        weight_dict (dict): Weights of the individual loss terms.
+        losses (list): Enabled loss names (`mal`/`boxes`/`local`).
+        alpha (float): Alpha of the classification loss.
+        gamma (float): Gamma of the classification loss; upstream configs
+            pin 1.5 while the class default stays 2.0.
+        num_classes (int): Number of foreground classes.
+        reg_max (int): Discrete bins of the box distribution.
+        boxes_weight_format (str|None): How matched box losses are weighted.
+        share_matched_indices (bool): Reuse one set of matching indices.
+        mal_alpha (float|None): Separate alpha of the MAL loss.
+        use_uni_set (bool): Use unified set matching.
     """
 
     def __init__(

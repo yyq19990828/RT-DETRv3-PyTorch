@@ -33,6 +33,28 @@ __all__ = ["DETRLoss", "DINOLoss", "DINOv3Loss"]
 
 @register
 class DETRLoss(nn.Module):
+    """DETR training criterion: classification plus box regression losses.
+
+    Matches predictions to ground truth through the injected matcher, then
+    computes class (focal/VFL/softmax CE), L1 and GIoU losses, including
+    auxiliary decoder-layer losses and optional uni-match selection.
+
+    Args:
+        num_classes (int): The number of classes.
+        matcher (HungarianMatcher): It computes an assignment between the targets
+            and the predictions of the network.
+        loss_coeff (dict): The coefficient of loss.
+        aux_loss (bool): If 'aux_loss = True', loss at each decoder layer are to be used.
+        use_focal_loss (bool): Use focal loss or not.
+        use_vfl (bool): Use varifocal loss instead of focal loss.
+        vfl_iou_type (str): IoU type used to weight VFL targets (`bbox` or
+            `rotated`).
+        use_uni_match (bool): Reuse one fixed decoder layer's matching
+            indices for all auxiliary layers (uni-match).
+        uni_match_ind (int): Index of the decoder layer providing the shared
+            matching when `use_uni_match` is enabled.
+    """
+
     __shared__ = ["num_classes", "use_focal_loss"]
     __inject__ = ["matcher"]
 
@@ -55,15 +77,6 @@ class DETRLoss(nn.Module):
         use_uni_match=False,
         uni_match_ind=0,
     ):
-        r"""
-        Args:
-            num_classes (int): The number of classes.
-            matcher (HungarianMatcher): It computes an assignment between the targets
-                and the predictions of the network.
-            loss_coeff (dict): The coefficient of loss.
-            aux_loss (bool): If 'aux_loss = True', loss at each decoder layer are to be used.
-            use_focal_loss (bool): Use focal loss or not.
-        """
         super(DETRLoss, self).__init__()
 
         self.num_classes = num_classes
@@ -521,6 +534,14 @@ class DETRLoss(nn.Module):
 
 @register
 class DINOLoss(DETRLoss):
+    """`DETRLoss` extended with contrastive-denosing (CDN) group losses.
+
+    Reuses the DETR losses for the matching branch and additionally computes
+    losses on the denoising branch outputs using the denoising match indices
+    carried in `dn_meta`. Constructor arguments are inherited from
+    `DETRLoss`.
+    """
+
     def forward(
         self,
         boxes,
@@ -599,6 +620,14 @@ class DINOLoss(DETRLoss):
 
 @register
 class DINOv3Loss(DETRLoss):
+    """`DETRLoss` variant for the RT-DETRv3 one-to-many training scheme.
+
+    Computes losses on the last decoder layer plus auxiliary layers, scaling
+    the ground truth by the `o2m` factor so the one-to-many branch trains
+    against repeated targets. Constructor arguments are inherited from
+    `DETRLoss`.
+    """
+
     def forward(
         self,
         boxes,
@@ -710,6 +739,27 @@ class DINOv3Loss(DETRLoss):
 
 @register
 class MaskDINOLoss(DETRLoss):
+    """`DINOLoss` variant adding point-sampling mask and dice losses.
+
+    Computes segmentation losses on sampled mask points (importance-sampled
+    plus random) on top of the DETR detection losses.
+
+    Args:
+        num_classes (int): The number of classes.
+        matcher (HungarianMatcher): Matcher producing target assignments.
+        loss_coeff (dict): Loss coefficients; `mask` and `dice` weight the
+            segmentation terms.
+        aux_loss (bool): Whether to use auxiliary decoder-layer losses.
+        use_focal_loss (bool): Use focal classification loss.
+        use_vfl (bool): Use varifocal classification loss.
+        vfl_iou_type (str): IoU type used to weight VFL targets.
+        num_sample_points (int): Total mask points sampled per ground truth.
+        oversample_ratio (float): Oversampling factor when drawing candidate
+            points.
+        important_sample_ratio (float): Fraction of sampled points taken
+            from the high-loss (important) candidates.
+    """
+
     __shared__ = ["num_classes", "use_focal_loss", "num_sample_points"]
     __inject__ = ["matcher"]
 

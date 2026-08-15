@@ -29,6 +29,18 @@ __all__ = ["BaseArch"]
 
 @register
 class BaseArch(nn.Module):
+    """Base class for detection architectures.
+
+    Stores the input data format and normalization statistics extracted from
+    the transform config; subclasses implement `model` and `get_loss`/`get_pred`
+    on top of it.
+
+    Args:
+        data_format (str): Input layout, `NCHW` or `NHWC`.
+        use_extra_data (bool): Whether to forward auxiliary inputs (such as
+            semi-supervised teacher data) through `inputs`.
+    """
+
     def __init__(self, data_format="NCHW", use_extra_data=False):
         super(BaseArch, self).__init__()
         self.data_format = data_format

@@ -337,6 +337,38 @@ class TransformerEncoder(nn.Module):
 @register
 @serializable
 class DFINEHybridEncoder(nn.Module):
+    """Hybrid encoder fusing multi-scale features for D-FINE family models.
+
+    Applies intra-scale AIFI-style transformer layers to the selected levels
+    (`use_encoder_idx`), then fuses all levels through a lightweight
+    CNN/CFP path; output is a flattened token sequence for the decoder.
+
+    Args:
+        in_channels (list): Channels of the input feature levels.
+        feat_strides (list): Strides of the input feature levels.
+        hidden_dim (int): Output embedding dimension.
+        nhead (int): Attention heads of the encoder layers.
+        dim_feedforward (int): FFN width of the encoder layers.
+        dropout (float): Dropout rate of the encoder layers.
+        enc_act (str): Activation of the encoder FFN.
+        use_encoder_idx (list): Feature levels processed by the transformer
+            encoder; other levels only pass the CNN path.
+        num_encoder_layers (int): Transformer layers per selected level.
+        pe_temperature (float): Temperature of the sine positional encoding.
+        expansion (float): Width multiplier of the fusion blocks.
+        depth_mult (float): Depth multiplier of the CSP blocks.
+        act (str): Activation of the fusion blocks.
+        eval_spatial_size (tuple|None): Fixed input size used to precompute
+            positional encoding for export.
+        version (str): Family selector (`dfine` or `rt_detrv2`).
+        fuse_op (str): Fusion operator for cross-level merges.
+        csp_type (str): CSP block type (`csp`, `csp2`, `elan`...).
+        distill_teacher_dim (int|None): Teacher dimension distilled into the
+            encoder during RT-DETRv4 training.
+        project_f5 (bool): Whether to additionally project the fifth-stage
+            feature.
+    """
+
     def __init__(
         self,
         in_channels=[512, 1024, 2048],
@@ -602,6 +634,13 @@ class DFINEHybridEncoder(nn.Module):
 @register
 @serializable
 class RTDETRV2HybridEncoder(DFINEHybridEncoder):
+    """Hybrid encoder pinned to the RT-DETRv2 fusion layout.
+
+    Same graph as `DFINEHybridEncoder` with `version='rt_detrv2'`, which
+    fixes the fusion behavior of the DEIM RT-DETRv2 profile. Arguments are
+    shared with `DFINEHybridEncoder`.
+    """
+
     def __init__(
         self,
         in_channels=[512, 1024, 2048],

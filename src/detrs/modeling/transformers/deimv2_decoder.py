@@ -327,7 +327,46 @@ class DEIMv2TransformerDecoder(nn.Module):
 
 @register
 class DEIMTransformer(nn.Module):
-    """DEIMv2 decoder head with shared heads and deploy-time eval pruning."""
+    """DEIMv2 decoder head with shared heads and deploy-time eval pruning.
+
+    Refines queries like `DFINETransformer`; additionally shares box/score
+    heads across decoder layers and can drop gateway branches at eval time
+    for deployment.
+
+    Args:
+        num_classes (int): Number of foreground classes.
+        hidden_dim (int): Embedding dimension of queries and decoder.
+        num_queries (int): Number of object queries.
+        feat_channels (tuple): Channels of the input feature levels.
+        feat_strides (tuple): Strides of the input feature levels.
+        num_levels (int): Number of feature levels used.
+        num_points (int): Sampling points per level for deformable attention.
+        nhead (int): Attention heads.
+        num_layers (int): Decoder layers.
+        dim_feedforward (int): Width of the decoder FFN.
+        dropout (float): Dropout rate.
+        activation (str): FFN activation.
+        num_denoising (int): Number of contrastive denoising queries.
+        label_noise_ratio (float): Label noise ratio for denoising.
+        box_noise_scale (float): Box noise scale for denoising.
+        learn_query_content (bool): Learn query content embeddings.
+        eval_spatial_size (tuple|None): Fixed input size for export.
+        eval_idx (int): Decoder layer returned at inference.
+        eps (float): Numerical epsilon.
+        aux_loss (bool): All decoder layers produce loss outputs.
+        cross_attn_method (str): Cross-attention implementation variant.
+        query_select_method (str): Top-query selection implementation.
+        reg_max (int): Discrete bins of the box distribution.
+        reg_scale (float): Scale mapping distributions to box offsets.
+        layer_scale (int): Isotropic layer scaling factor.
+        mlp_act (str): Activation of the box MLP.
+        use_gateway (bool): Use gated attention units; the gate is pruned
+            at eval time.
+        share_bbox_head (bool): Share the box head across decoder layers.
+        share_score_head (bool): Share the score head across decoder layers.
+        input_shape (dict|None): Explicit input feature shapes overriding
+            `feat_channels`/`feat_strides`.
+    """
 
     __shared__ = ["num_classes", "eval_spatial_size"]
 

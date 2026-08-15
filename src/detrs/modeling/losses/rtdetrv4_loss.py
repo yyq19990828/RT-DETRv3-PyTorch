@@ -17,7 +17,14 @@ __all__ = ["RTDETRV4Criterion"]
 @register
 @serializable
 class RTDETRV4Criterion(DEIMCriterion):
-    """Add the official DSI cosine loss to the shared DEIM criterion."""
+    """Add the official DSI cosine loss to the shared DEIM criterion.
+
+    All arguments are shared with `DEIMCriterion`; additionally:
+
+    Args:
+        distill_adaptive_params (dict|None): Parameters of the DSI adaptive
+            distillation loss applied to teacher-predicted distributions.
+    """
 
     def __init__(
         self,

@@ -27,7 +27,22 @@ __all__ = ["DFINECriterion"]
 @register
 @serializable
 class DFINECriterion(nn.Module):
-    """Compute the official D-FINE matching and distribution losses."""
+    """Compute the official D-FINE matching and distribution losses.
+
+    Args:
+        matcher: Injected matcher (e.g. `DFINEHungarianMatcher`).
+        weight_dict (dict): Weights of the individual loss terms.
+        losses (list): Enabled loss names, e.g. `['vfl', 'boxes', 'local']`.
+        alpha (float): Alpha of the focal/VFL classification loss.
+        gamma (float): Gamma of the focal/VFL classification loss.
+        num_classes (int): Number of foreground classes.
+        reg_max (int): Discrete bins of the box distribution used by the
+            `local` (FDR) loss.
+        boxes_weight_format (str|None): How matched box losses are weighted,
+            e.g. `giou`; `None` keeps them unweighted.
+        share_matched_indices (bool): Reuse one set of matching indices for
+            all loss terms.
+    """
 
     __shared__ = ["num_classes"]
     __inject__ = ["matcher"]

@@ -422,6 +422,12 @@ class BaseDataLoader(object):
 
 @register
 class TrainReader(BaseDataLoader):
+    """Training data loader with shuffle and drop-last enabled by default.
+
+    Serves as the `TrainReader` entry of YAML configs; arguments are shared
+    with `BaseDataLoader`.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(
@@ -449,6 +455,12 @@ class TrainReader(BaseDataLoader):
 
 @register
 class EvalReader(BaseDataLoader):
+    """Evaluation data loader: deterministic order, keeps the last batch.
+
+    Serves as the `EvalReader` entry of YAML configs; arguments are shared
+    with `BaseDataLoader`.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(
@@ -474,6 +486,12 @@ class EvalReader(BaseDataLoader):
 
 @register
 class TestReader(BaseDataLoader):
+    """Inference data loader for image folders or single images.
+
+    Serves as the `TestReader` entry of YAML configs; arguments are shared
+    with `BaseDataLoader`.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(
@@ -499,6 +517,12 @@ class TestReader(BaseDataLoader):
 
 @register
 class EvalMOTReader(BaseDataLoader):
+    """Multi-object-tracking evaluation loader (`num_classes` defaults to 1).
+
+    Serves as the `EvalMOTReader` entry of YAML configs; arguments are shared
+    with `BaseDataLoader`.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(
@@ -524,6 +548,12 @@ class EvalMOTReader(BaseDataLoader):
 
 @register
 class TestMOTReader(BaseDataLoader):
+    """Multi-object-tracking inference loader (`num_classes` defaults to 1).
+
+    Serves as the `TestMOTReader` entry of YAML configs; arguments are shared
+    with `BaseDataLoader`.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(
@@ -846,6 +876,29 @@ class BaseSemiDataLoader(object):
 
 @register
 class SemiTrainReader(BaseSemiDataLoader):
+    """Semi-supervised training loader producing weak/strong augmented views.
+
+    Applies `sample_transforms` first, then derives a weak-augmentation and a
+    strong-augmentation copy of every sample; supervised and unsupervised
+    batches are collated with their own transforms and sizes.
+
+    Args:
+        sample_transforms (list): Base transforms applied to each sample
+            before the weak/strong split.
+        weak_aug (list): Weak augmentation transforms (also used for teacher
+            inputs).
+        strong_aug (list): Strong augmentation transforms (student inputs).
+        sup_batch_transforms (list): Batch transforms for supervised batches.
+        unsup_batch_transforms (list): Batch transforms for unsupervised
+            batches.
+        sup_batch_size (int): Supervised batch size.
+        unsup_batch_size (int): Unsupervised batch size.
+        shuffle (bool): Whether to shuffle samples each epoch.
+        drop_last (bool): Whether to drop the trailing incomplete batch.
+        num_classes (int): Class count, shared from the global config.
+        collate_batch (bool): Whether to collate ground truths into batches.
+    """
+
     __shared__ = ["num_classes"]
 
     def __init__(

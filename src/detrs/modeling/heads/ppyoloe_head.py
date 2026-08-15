@@ -68,7 +68,37 @@ class ESEAttn(nn.Module):
 
 @register
 class PPYOLOEHead(nn.Module):
-    """PPYOLOEHead detection head for auxiliary branch"""
+    """PPYOLOEHead detection head for auxiliary branch
+
+    Anchor-free head kept for auxiliary/distillation branches; the main
+    DETR families do not use it.
+
+    Args:
+        in_channels (list): Channels of the input feature levels.
+        num_classes (int): Number of foreground classes.
+        act (str): Activation of the head convolutions.
+        fpn_strides (tuple): Strides of the feature levels.
+        grid_cell_scale (float): Scale of the grid cell regression range.
+        grid_cell_offset (float): Offset of the grid cell anchor centers.
+        reg_max (int): Discrete bins of the distribution regression.
+        reg_range (tuple|None): Explicit `[start, end]` regression range.
+        static_assigner_epoch (int): Epochs using the static assigner before
+            switching to the task-aligned assigner.
+        use_varifocal_loss (bool): Use varifocal classification loss.
+        static_assigner (str): Registry name of the warm-up assigner
+            (e.g. `ATSSAssigner`).
+        assigner (str): Registry name of the main assigner (e.g.
+            `TaskAlignedAssigner`).
+        nms (str): Registry name of the NMS post-process.
+        eval_size (tuple|None): Fixed input size for export.
+        loss_weight (dict): Weights of the `class`, `iou` and `dfl` losses.
+        trt (bool): TensorRT-compatible mode.
+        attn_conv (str): Attention convolution type.
+        exclude_nms (bool): Skip NMS in the forward output.
+        exclude_post_process (bool): Skip the whole post-process.
+        use_shared_conv (bool): Share the stem convolutions across branches.
+        for_distill (bool): Expose intermediate tensors for distillation.
+    """
 
     __shared__ = [
         "num_classes",

@@ -44,6 +44,16 @@ __all__ = ["ATSSAssigner"]
 class ATSSAssigner(nn.Module):
     """Bridging the Gap Between Anchor-based and Anchor-free Detection
     via Adaptive Training Sample Selection
+
+    Args:
+        topk (int): Candidate anchors per feature level kept for each
+            ground truth.
+        num_classes (int): Number of foreground classes.
+        force_gt_matching (bool): Force each ground truth to match at least
+            one anchor.
+        eps (float): Numerical epsilon.
+        sm_use (bool): Use the soft-match variant of the in-GT check and
+            IoU tie-breaking.
     """
 
     __shared__ = ["num_classes"]

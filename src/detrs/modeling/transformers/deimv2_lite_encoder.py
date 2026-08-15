@@ -35,7 +35,19 @@ class GAPFusion(nn.Module):
 
 @register
 class LiteEncoder(nn.Module):
-    """Single-scale two-level FPN/PAN encoder for DEIMv2 tiny variants."""
+    """Single-scale two-level FPN/PAN encoder for DEIMv2 tiny variants.
+
+    Args:
+        in_channels (tuple): Channels of the single input feature level.
+        feat_strides (tuple): Strides of the input level.
+        hidden_dim (int): Output embedding dimension.
+        expansion (float): Width multiplier of the fusion blocks.
+        depth_mult (float): Depth multiplier of the CSP blocks.
+        act (str): Activation of the fusion blocks.
+        eval_spatial_size (tuple|None): Fixed input size used to precompute
+            positional encoding for export.
+        csp_type (str): CSP block type (`csp2`, `elan`...).
+    """
 
     __shared__ = ["eval_spatial_size"]
 

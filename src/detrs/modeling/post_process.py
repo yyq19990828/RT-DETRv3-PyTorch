@@ -115,6 +115,28 @@ def nms(dets, match_threshold=0.6, match_metric="iou"):
 
 @register
 class DETRPostProcess(object):
+    """Decode DETR head outputs into final detections (`bbox`/`bbox_num`).
+
+    Applies sigmoid or softmax over logits (depending on focal-loss usage),
+    selects top queries, converts `cxcywh` boxes to `xyxy` in the original
+    image coordinate system, and optionally decodes mask outputs.
+
+    Args:
+        num_classes (int): Number of foreground classes.
+        num_top_queries (int): Queries kept per image after scoring.
+        dual_queries (bool): Whether the head emits dual (grouped) queries.
+        dual_groups (int): Number of auxiliary groups when `dual_queries`.
+        use_focal_loss (bool): Use sigmoid scores (focal loss) instead of
+            softmax.
+        with_mask (bool): Whether to decode mask outputs.
+        mask_stride (int): Stride of the mask feature map.
+        mask_threshold (float): Binarization threshold for masks.
+        use_avg_mask_score (bool): Rescale detection scores by the average
+            mask score.
+        bbox_decode_type (str): `origin` rescales boxes to the original
+            image, `pad` keeps them in the padded input frame.
+    """
+
     __shared__ = ["num_classes", "use_focal_loss", "with_mask"]
     __inject__: list[str] = []
 

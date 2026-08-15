@@ -278,7 +278,20 @@ class HGStage(nn.Module):
 
 @register
 class HGNetv2(nn.Module):
-    """HGNetv2 B0/B2/B4/B5 with the pinned D-FINE state layout."""
+    """HGNetv2 B0/B2/B4/B5 with the pinned D-FINE state layout.
+
+    Args:
+        name (str): Variant tag such as `B0`, `B2`, `B4`, `B5` plus the
+            pruned DEIMv2 tags `Atto`/`Femto`/`Pico`/`N`.
+        use_lab (bool): Use the label-assignment (Lab) layout variant.
+        return_idx (tuple): Stage indices whose outputs are returned.
+        freeze_stem_only (bool): Freeze only the stem convolution.
+        freeze_at (int): Freeze stages up to this index; `0` freezes
+            nothing.
+        freeze_norm (bool): Whether to freeze normalization parameters.
+        pretrained: Unused; state loading stays explicit through
+            `load_checkpoint`.
+    """
 
     # Pruned DEIMv2 variants reuse the B0 stage-1 weights with partial loading.
     PRUNED_VARIANTS = ("Atto", "Femto", "Pico")

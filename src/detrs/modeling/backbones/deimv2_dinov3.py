@@ -83,7 +83,28 @@ class SpatialPriorModulev2(nn.Module):
 
 @register
 class DINOv3STAs(nn.Module):
-    """DINOv3 (or distilled ViT-Tiny) with a bi-fused spatial prior pyramid."""
+    """DINOv3 (or distilled ViT-Tiny) with a bi-fused spatial prior pyramid.
+
+    Serves as the DEIMv2 backbone: a frozen or finetuned DINOv3 ViT whose
+    selected interaction layers feed the STA spatial-prior pyramid.
+
+    Args:
+        name (str): Model name; values containing `dinov3` load the vendored
+            DINOv3 ViT, anything else builds the distilled ViT-Tiny.
+        weights_path (str|Path|None): Local checkpoint of the backbone.
+            DINOv3 weights are never bundled and must be obtained through
+            the gated upstream release; distilled ViT-Tiny weights are
+            hosted publicly.
+        interaction_indexes (tuple): Transformer blocks whose outputs feed
+            the spatial prior pyramid.
+        finetune (bool): `False` freezes the ViT for distillation-only use.
+        embed_dim (int): Embedding dimension of the distilled ViT-Tiny.
+        num_heads (int): Attention heads of the distilled ViT-Tiny.
+        patch_size (int): Patch size of the distilled ViT-Tiny.
+        use_sta (bool): Enable the spatial-token-attention pyramid.
+        conv_inplane (int): Input planes of the STA convolution stem.
+        hidden_dim (int|None): Output dimension of the pyramid projection.
+    """
 
     def __init__(
         self,

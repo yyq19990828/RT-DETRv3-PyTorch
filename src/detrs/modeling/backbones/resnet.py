@@ -802,6 +802,10 @@ class ResNet(nn.Module):
 class Res5Head(nn.Module):
     """
     ResNet Stage 5 Head for ROI feature extraction
+
+    Args:
+        depth (int): ResNet depth (18, 34, 50, 101, 152); selects the
+            block type and channel layout.
     """
 
     def __init__(self, depth=50):

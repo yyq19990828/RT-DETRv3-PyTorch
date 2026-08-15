@@ -18,7 +18,19 @@ __all__ = ["DFINE"]
 
 @register
 class DFINE(BaseArch):
-    """Compose shared D-FINE components without changing their upstream semantics."""
+    """Compose shared D-FINE components without changing their upstream semantics.
+
+    Args:
+        backbone: Backbone config or module producing multi-scale features.
+        encoder: Hybrid encoder config or module fusing the features.
+        decoder: Decoder head config or module (e.g. `DFINETransformer`).
+        criterion: Training criterion config or module (e.g.
+            `DFINECriterion`).
+        post_process: `DETRPostProcess` config or instance used to decode
+            predictions.
+        exclude_post_process (bool): If true, forward returns raw decoder
+            outputs without decoding.
+    """
 
     __category__ = "architecture"
     __shared__ = ["exclude_post_process"]

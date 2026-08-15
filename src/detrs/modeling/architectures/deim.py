@@ -9,7 +9,11 @@ __all__ = ["DEIM"]
 
 @register
 class DEIM(DFINE):
-    """Apply DEIM training losses without adding an inference-time branch."""
+    """Apply DEIM training losses without adding an inference-time branch.
+
+    Wiring and constructor arguments are shared with `DFINE`; only the
+    criterion (DEIM MAL/Dense O2O losses) differs.
+    """
 
     @classmethod
     def from_config(cls, cfg, *args, **kwargs):

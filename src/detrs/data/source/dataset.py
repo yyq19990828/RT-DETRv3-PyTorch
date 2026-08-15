@@ -264,6 +264,25 @@ def _make_dataset(dir: str) -> List[str]:
 @register
 @serializable
 class ImageFolder(DetDataset):
+    """Plain image source for inference: enumerate a folder as roidb records.
+
+    With no `anno_path`, images are listed from `image_dir` (a directory or a
+    single file, both also accepting a list). With a COCO `anno_path`, the
+    image list comes from the annotation file instead.
+
+    Args:
+        dataset_dir (str|None): Root directory prepended to `image_dir` and
+            `anno_path` when they are relative.
+        image_dir (str|list|None): Directory, file, or list of directories
+            to enumerate.
+        anno_path (str|None): Optional COCO annotation file used to select
+            the image list.
+        sample_num (int): Cap on the number of returned records; `-1` keeps
+            all images.
+        use_default_label (bool|None): VOC-only legacy option carried over
+            from Paddle configs.
+    """
+
     def __init__(
         self,
         dataset_dir=None,
@@ -428,6 +447,17 @@ class ImageFolder(DetDataset):
 
 @register
 class CommonDataset(object):
+    """Dispatching dataset wrapper for `TrainDataset`/`EvalDataset` roles.
+
+    Instantiates the concrete source class named by the `name` key (for
+    example `COCODataSet` or `YOLODataSet`) from `detrs.data.source` and
+    forwards all remaining arguments to it.
+
+    Args:
+        **dataset_args: Full dataset config, including the mandatory `name`
+            key selecting the concrete source class.
+    """
+
     def __init__(self, **dataset_args):
         super(CommonDataset, self).__init__()
         dataset_args = copy.deepcopy(dataset_args)
@@ -440,24 +470,34 @@ class CommonDataset(object):
 
 @register
 class TrainDataset(CommonDataset):
+    """Role alias selecting the dataset used by the training stage."""
+
     pass
 
 
 @register
 class EvalMOTDataset(CommonDataset):
+    """Role alias selecting the dataset used by MOT evaluation."""
+
     pass
 
 
 @register
 class TestMOTDataset(CommonDataset):
+    """Role alias selecting the dataset used by MOT inference."""
+
     pass
 
 
 @register
 class EvalDataset(CommonDataset):
+    """Role alias selecting the dataset used by the evaluation stage."""
+
     pass
 
 
 @register
 class TestDataset(CommonDataset):
+    """Role alias selecting the dataset used by the inference stage."""
+
     pass

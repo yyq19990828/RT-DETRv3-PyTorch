@@ -38,6 +38,18 @@ __all__ = [
 
 
 def dump_value(value):
+    """Serialize a config value into a YAML-safe string representation.
+
+    Composite values (objects with ``__dict__``, dicts, tuples, lists) are
+    dumped as single-line YAML; primitives are returned as ``str(value)``.
+
+    Args:
+        value: Config value to serialize.
+
+    Returns:
+        str: Quoted single-line YAML string for composite values, or the
+        plain string of a primitive.
+    """
     # XXX this is hackish, but collections.abc is not available in python 2
     if hasattr(value, "__dict__") or isinstance(value, (dict, tuple, list)):
         value = yaml.dump(value, default_flow_style=True)
@@ -211,10 +223,20 @@ def merge_config(config, another_cfg=None):
 
 
 def get_registered_modules():
+    """Return all module configs registered in the global workspace.
+
+    Returns:
+        dict: Mapping of registered names to their ``SchemaDict`` configs.
+    """
     return {k: v for k, v in global_config.items() if isinstance(v, SchemaDict)}
 
 
 def make_partial(cls):
+    """Class decorator turning an OP wrapper into a partial application.
+
+    Binds ``__call__`` to the wrapped operator so instances apply the OP
+    with their constructor arguments as defaults, overridable per call.
+    """
     op_module = importlib.import_module(cls.__op__.__module__)
     op = getattr(op_module, cls.__op__.__name__)
     cls.__category__ = getattr(cls, "__category__", None) or "op"

@@ -66,7 +66,25 @@ def _square_patch_size(model: nn.Module) -> int:
 
 @register
 class DINOv3TeacherModel(nn.Module):
-    """Load the pinned external ViT-B/16 teacher and return spatial patch features."""
+    """Load the pinned external ViT-B/16 teacher and return spatial patch features.
+
+    The teacher is a training-only asset: the gated DINOv3 checkout and
+    weights never enter the repository, wheel or Release, and students
+    never require them at eval/infer/export time.
+
+    Args:
+        dinov3_repo_path (str): Path to the locally checked out
+            `facebookresearch/dinov3` repository at the pinned revision.
+        dinov3_weights_path (str): Directory holding the authorized weights
+            file.
+        weights_filename (str): Expected weights file name.
+        weights_size_bytes (int): Expected weights file size in bytes.
+        weights_sha256 (str): Expected SHA-256 of the weights file.
+        dinov3_model_type (str): Teacher model type, pinned to ViT-B/16.
+        patch_size (int): Teacher patch size.
+        mean (tuple): Normalization mean expected by the teacher.
+        std (tuple): Normalization std expected by the teacher.
+    """
 
     def __init__(
         self,
