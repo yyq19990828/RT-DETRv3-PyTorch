@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   arguments are described on the base class of each wrapper hierarchy,
   turning the site's API reference into a usable configuration reference.
   Docstring-only change with no behavioral impact.
+- Split the single-page user guide into a landing overview plus six topic
+  pages (install, model assets, training/evaluation, inference,
+  conversion/export, CLI boundaries) with matching site navigation; content
+  is moved verbatim and all in-repo links were re-validated.
 
 ## [1.0.0] - 2026-08-15
 

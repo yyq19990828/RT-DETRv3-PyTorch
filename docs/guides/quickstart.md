@@ -12,7 +12,7 @@ cd DETR-series
 uv sync
 ```
 
-核心运行时不安装 Paddle;Paddle 权重转换和数值对齐等场景使用 `uv sync --extra dev` 等额外安装模式,详见[使用指南](README.md#安装)。
+核心运行时不安装 Paddle;Paddle 权重转换和数值对齐等场景使用 `uv sync --extra dev` 等额外安装模式,详见[安装](install.md)。
 
 ## 2. 获取模型权重
 
@@ -39,7 +39,7 @@ uv run detrs infer \
   --save-results
 ```
 
-`--infer-dir` 支持目录推理,`--infer-img` 与 `--infer-dir` 互斥。推理复用配置中的 `TestReader` 和 DETR 后处理,不额外执行 NMS。ONNX/TorchScript 推理见[使用指南](README.md#onnx-与-torchscript-推理)。
+`--infer-dir` 支持目录推理,`--infer-img` 与 `--infer-dir` 互斥。推理复用配置中的 `TestReader` 和 DETR 后处理,不额外执行 NMS。ONNX/TorchScript 推理见[ONNX 与 TorchScript 推理](inference.md#onnx-与-torchscript-推理)。
 
 ## 4. 训练
 

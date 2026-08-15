@@ -19,7 +19,14 @@ hooks:
 nav:
   - 首页: index.md
   - 快速开始: guides/quickstart.md
-  - 使用指南: guides/README.md
+  - 使用指南:
+      - 总览: guides/README.md
+      - 安装: guides/install.md
+      - 模型与 checkpoint: guides/model-assets.md
+      - 训练与评估: guides/training-evaluation.md
+      - 推理: guides/inference.md
+      - 权重转换与导出: guides/conversion-export.md
+      - CLI 与配置边界: guides/cli-config.md
   - 模型文档:
       - 模型总览: models/README.md
       - RT-DETRv3:
