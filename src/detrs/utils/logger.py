@@ -6,10 +6,12 @@ while using PyTorch's distributed training APIs.
 
 import logging
 import os
-import sys
 from typing import List, Optional, Union
 
 import torch.distributed as dist
+from rich.logging import RichHandler
+
+from detrs.utils.console import get_console
 
 __all__ = ["setup_logger"]
 
@@ -64,11 +66,18 @@ def setup_logger(
         except ValueError:
             local_rank = 0
 
-    # Console logging: only specified ranks
+    # Console logging: only specified ranks. RichHandler renders through the
+    # shared console so log lines coordinate with live progress bars; piped or
+    # CI output automatically degrades to plain text without ANSI escapes.
     if local_rank in log_ranks:
-        ch = logging.StreamHandler(stream=sys.stdout)
+        ch = RichHandler(
+            console=get_console(),
+            show_time=True,
+            show_path=True,
+            rich_tracebacks=True,
+            log_time_format="[%m/%d %H:%M:%S]",
+        )
         ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
         logger.addHandler(ch)
     elif output is None:
         # Suppress logging.lastResort on non-log ranks. Without an explicit

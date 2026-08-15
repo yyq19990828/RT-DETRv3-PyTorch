@@ -60,6 +60,7 @@ CLI 输出为朴素 print/logging 文本;`models list` 是手写定宽表,训练
 | 2026-08-15 | CLI 参考页采用提交生成文件形态 | 维护者选择;GitHub 上可读,CI `--check` 防漂移 |
 | 2026-08-15 | `--help` 保持 argparse 纯文本 | 是测试契约(`usage: detrs`)与文档页生成源,不引入 rich_argparse |
 | 2026-08-15 | 追加:引入 rich-argparse 美化 `--help`,自定义 formatter 保留小写标题 | 维护者确认期望帮助文本也美化;`DetrsHelpFormatter` 覆盖 `group_name_formatter` 保持 `usage:` 小写,测试契约与生成页格式不变 |
+| 2026-08-16 | 追加:`setup_logger` 控制台 handler 换为 `RichHandler`(共享 console,`show_path=True`,彩色回溯) | 与 Progress 共用 console 根治日志/进度条交错;文件日志保持原格式,非 TTY 自动纯文本;logger 名从控制台布局中移除由 `file:line` 补偿 |
 
 ## 完成记录
 

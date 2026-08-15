@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics table on interactive terminals. Piped or CI output automatically
   degrades to plain text; JSON outputs and the Paddle-style log line for
   non-terminal runs are unchanged.
+- Rendered logger console output through rich (`RichHandler` on the shared
+  console): colored levels, `file:line` source paths, rich tracebacks, and
+  coordinated interleaving with live progress bars. Log files keep the
+  original Paddle-style format and piped/CI output stays plain text.
 - Beautified `--help` output with rich-argparse. A custom formatter keeps
   argparse's native lowercase `usage:`/`options:` headings so tests, piped
   output, and the generated CLI reference page stay byte-compatible with the
