@@ -413,7 +413,7 @@ class WeightConverter:
                 "source_checkpoint_size_bytes": source_checkpoint.file_size_bytes,
                 "source_checkpoint_sha256": source_checkpoint.checksum,
                 "conversion_timestamp": datetime.now().isoformat(),
-                "conversion_tool_version": "0.1.0",
+                "conversion_tool_version": "1.0.0",
                 "session_id": self.session.session_id,
                 "memory_efficient_mode": self.config.memory_efficient_mode,
                 "parameter_batch_size": self.config.batch_size,

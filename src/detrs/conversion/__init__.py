@@ -1,7 +1,7 @@
 # Weight Conversion Module
 # Provides tools for converting model weights between PaddlePaddle and PyTorch formats
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 from .converter import WeightConverter
 from .models import (

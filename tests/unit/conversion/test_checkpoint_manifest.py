@@ -1,11 +1,9 @@
-import re
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 MANIFEST = ROOT / "configs/checkpoints/rtdetrv3_coco.yml"
-PYPROJECT = ROOT / "pyproject.toml"
 
 
 def test_checkpoint_manifest_references_repository_configs():
@@ -13,17 +11,11 @@ def test_checkpoint_manifest_references_repository_configs():
 
     assert manifest["schema_version"] == 1
     assert len(manifest["source_repository"]["revision"]) == 40
+    # release_tag 指向权重实际所在的 GitHub Release,与包版本解耦。
     assert manifest["distribution"] == {
         "repository": "https://github.com/yyq19990828/DETR-series",
         "release_tag": "v0.1.0",
     }
-    package_version = re.search(
-        r'^version = "([^"]+)"$',
-        PYPROJECT.read_text(encoding="utf-8"),
-        flags=re.MULTILINE,
-    )
-    assert package_version is not None
-    assert manifest["distribution"]["release_tag"] == f"v{package_version.group(1)}"
     assert set(manifest["models"]) == {
         "rtdetrv3_r18vd_6x_coco",
         "rtdetrv3_r34vd_6x_coco",
