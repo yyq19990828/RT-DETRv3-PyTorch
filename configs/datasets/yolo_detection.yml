@@ -1,0 +1,24 @@
+metric: YOLO
+num_classes: 2
+
+# Multiple YOLO folders are merged logically: image_dir/label_dir accept
+# equal-length lists paired by index; use plain strings for a single folder.
+TrainDataset:
+  name: YOLODataSet
+  dataset_dir: dataset/yolo
+  image_dir: [datasetA/images, datasetB/images]
+  label_dir: [datasetA/labels, datasetB/labels]
+  label_list: label_list.txt  # one class name per line, line number = class id
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
+
+EvalDataset:
+  name: YOLODataSet
+  dataset_dir: dataset/yolo
+  image_dir: datasetA/val_images
+  label_dir: datasetA/val_labels
+  label_list: label_list.txt
+  data_fields: ['image', 'gt_bbox', 'gt_class', 'is_crowd']
+
+TestDataset:
+  name: ImageFolder
+  anno_path: dataset/yolo/label_list.txt

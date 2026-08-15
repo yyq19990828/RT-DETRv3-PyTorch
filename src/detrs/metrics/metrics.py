@@ -36,7 +36,7 @@ from .coco_utils import cocoapi_eval, get_infer_results
 
 logger = setup_logger(__name__)
 
-__all__ = ["Metric", "COCOMetric"]
+__all__ = ["Metric", "COCOMetric", "YOLOMetric"]
 
 COCO_SIGMAS = (
     np.array(
@@ -332,3 +332,189 @@ class COCOMetric(Metric):
 
 # Additional metrics can be added here (VOCMetric, LVISMetric, etc.)
 # For now, we focus on COCOMetric which is used by RT-DETRv3
+
+
+class YOLOMetric(Metric):
+    """
+    YOLO-format evaluation metric using the pycocotools protocol.
+
+    Ground truth is built in memory from a parsed YOLODataSet (roidbs), so no
+    COCO annotation file is required. Metric values follow the COCO protocol
+    (AP50-95, AP50, AP75, AP-S/M/L), which differs numerically from the
+    ultralytics mAP implementation.
+
+    Args:
+        dataset: A YOLODataSet whose parse_dataset() has already run and whose
+            records include gt_bbox/gt_class (set data_fields accordingly).
+        clsid2catid: Mapping from class id to category id, identity by default.
+        classwise: Whether to evaluate per-class metrics
+        output_eval: Directory to save evaluation results
+        bias: Bias to add to class ids
+        save_prediction_only: Only save predictions without evaluation
+        save_threshold: Score threshold for saving predictions
+    """
+
+    def __init__(self, dataset, **kwargs):
+        self.dataset = dataset
+        self.clsid2catid = kwargs.get("clsid2catid", None)
+
+        if self.clsid2catid is None:
+            num_classes = len(getattr(dataset, "cname2cid", {}))
+            self.clsid2catid = {i: i for i in range(num_classes)}
+
+        self.classwise = kwargs.get("classwise", False)
+        self.output_eval = kwargs.get("output_eval", None)
+        self.bias = kwargs.get("bias", 0)
+        self.save_prediction_only = kwargs.get("save_prediction_only", False)
+        self.save_threshold = kwargs.get("save_threshold", 0)
+
+        if self.output_eval is not None:
+            Path(self.output_eval).mkdir(exist_ok=True, parents=True)
+
+        self.reset()
+
+    def reset(self):
+        """Reset evaluation results"""
+        self.results: Dict[str, list] = {"bbox": []}
+        self.eval_results: Dict[str, object] = {}
+
+    def update(self, inputs: Dict, outputs: Dict):
+        """
+        Update metric with new batch results.
+
+        Args:
+            inputs: Input batch data (contains im_id, im_file, etc.)
+            outputs: Model outputs (contains bbox, score, category, etc.)
+        """
+        outs = {}
+
+        # Convert PyTorch tensors to numpy
+        for k, v in outputs.items():
+            if isinstance(v, torch.Tensor):
+                outs[k] = v.cpu().numpy()
+            else:
+                outs[k] = v
+
+        # Multi-scale inputs: all inputs have same im_id
+        if isinstance(inputs, (list, tuple)):
+            im_id = inputs[0]["im_id"]
+        else:
+            im_id = inputs["im_id"]
+
+        # Convert im_id to numpy
+        if isinstance(im_id, torch.Tensor):
+            outs["im_id"] = im_id.cpu().numpy()
+        else:
+            outs["im_id"] = im_id
+
+        # Add image file path if available
+        if "im_file" in inputs:
+            outs["im_file"] = inputs["im_file"]
+
+        # Get inference results in COCO format
+        infer_results = get_infer_results(
+            outs, self.clsid2catid, bias=self.bias, save_threshold=self.save_threshold
+        )
+
+        self.results["bbox"] += infer_results.get("bbox", [])
+
+    def _build_coco_gt(self):
+        """Build an in-memory COCO ground truth from the dataset roidbs."""
+        images = []
+        annotations = []
+        ann_id = 1
+        for rec in self.dataset.roidbs:
+            if "gt_bbox" not in rec or "gt_class" not in rec:
+                raise ValueError(
+                    "YOLOMetric requires EvalDataset records with gt_bbox and "
+                    "gt_class; add them to data_fields."
+                )
+            image_id = int(rec["im_id"][0])
+            images.append(
+                {
+                    "id": image_id,
+                    "file_name": os.path.basename(rec["im_file"]),
+                    "width": int(rec["w"]),
+                    "height": int(rec["h"]),
+                }
+            )
+            for bbox, cls in zip(rec["gt_bbox"], rec["gt_class"]):
+                x1, y1, x2, y2 = (float(v) for v in bbox)
+                w = x2 - x1
+                h = y2 - y1
+                annotations.append(
+                    {
+                        "id": ann_id,
+                        "image_id": image_id,
+                        "category_id": int(cls[0]),
+                        "bbox": [x1, y1, w, h],
+                        "area": w * h,
+                        "iscrowd": 0,
+                    }
+                )
+                ann_id += 1
+
+        categories = [
+            {"id": cid, "name": name} for name, cid in self.dataset.cname2cid.items()
+        ]
+        # info/licenses are required by pycocotools loadRes even when empty
+        return {
+            "images": images,
+            "annotations": annotations,
+            "categories": categories,
+            "info": {},
+            "licenses": [],
+        }
+
+    def accumulate(self):
+        """
+        Accumulate results and perform YOLO evaluation via the COCO API.
+        """
+        if len(self.results["bbox"]) > 0:
+            output = "bbox.json"
+            if self.output_eval:
+                output = os.path.join(self.output_eval, output)
+
+            with open(output, "w") as f:
+                json.dump(self.results["bbox"], f)
+                logger.info("The bbox result is saved to bbox.json.")
+
+            if self.save_prediction_only:
+                logger.info(
+                    f"The bbox result is saved to {output} and do not evaluate the mAP."
+                )
+            else:
+                from pycocotools.coco import COCO
+
+                coco_gt = COCO()
+                coco_gt.dataset = self._build_coco_gt()
+                coco_gt.createIndex()
+                bbox_stats = cocoapi_eval(
+                    output, "bbox", coco_gt=coco_gt, classwise=self.classwise
+                )
+                self.eval_results["bbox"] = bbox_stats
+                sys.stdout.flush()
+
+    def log(self):
+        """Log evaluation results"""
+        if not self.eval_results:
+            logger.warning("No evaluation results available")
+            return
+
+        for metric_type, stats in self.eval_results.items():
+            logger.info(f"=========== {metric_type} evaluation ===========")
+            if isinstance(stats, dict):
+                for k, v in stats.items():
+                    logger.info(f"{k}: {v}")
+            elif isinstance(stats, list):
+                for stat in stats:
+                    logger.info(stat)
+
+    def get_results(self) -> Dict:
+        """
+        Get evaluation results.
+
+        Returns:
+            Dictionary containing evaluation metrics
+        """
+        return self.eval_results

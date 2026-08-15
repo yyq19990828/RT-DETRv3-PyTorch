@@ -9,7 +9,7 @@ Licensed under the Apache License, Version 2.0.
 """
 
 import os
-from typing import List, Optional
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
@@ -41,7 +41,12 @@ class LVISDataSet(DetDataset):
     Args:
         dataset_dir (str): Root directory for dataset.
         image_dir (str): Directory for images (relative to dataset_dir).
-        anno_path (str): LVIS annotation file path (JSON format).
+        anno_path (str | list): LVIS annotation file path (JSON format). A list
+            merges multiple annotation files without physically merging data:
+            each entry is either a path string (uses the global image_dir) or
+            a dict {anno_path: ..., image_dir: ...} overriding image_dir.
+            All files must share an identical category table. List form is
+            only supported for training; evaluation requires a single file.
         data_fields (list): Key names of data dictionary, at least have 'image'.
         sample_num (int): Number of samples to load, -1 means all.
         load_crowd (bool): Whether to load crowded ground-truth. False as default.
@@ -55,7 +60,7 @@ class LVISDataSet(DetDataset):
         self,
         dataset_dir: Optional[str] = None,
         image_dir: Optional[str] = None,
-        anno_path: Optional[str] = None,
+        anno_path: Optional[Any] = None,
         data_fields: Optional[List[str]] = None,
         sample_num: int = -1,
         load_crowd: bool = False,
@@ -109,17 +114,118 @@ class LVISDataSet(DetDataset):
         records = random.sample(records, sample_num)
         return records
 
+    def _normalize_anno_entries(self) -> List[Tuple[str, str]]:
+        """
+        Normalize anno_path (str or list of str/dict) into (anno_path, image_dir) pairs.
+        """
+        if isinstance(self.anno_path, (str, dict)):
+            entries: List[Any] = [self.anno_path]
+        elif isinstance(self.anno_path, (list, tuple)):
+            if len(self.anno_path) == 0:
+                raise ValueError("anno_path list must not be empty for LVISDataSet")
+            entries = list(self.anno_path)
+        else:
+            raise ValueError(
+                f"Invalid anno_path type {type(self.anno_path)} for LVISDataSet"
+            )
+
+        default_image_dir = self.image_dir if self.image_dir is not None else ""
+        normalized = []
+        for item in entries:
+            if isinstance(item, str):
+                normalized.append((item, default_image_dir))
+            elif isinstance(item, dict):
+                if "anno_path" not in item:
+                    raise ValueError(
+                        "dict anno_path entries must contain an 'anno_path' key"
+                    )
+                normalized.append(
+                    (item["anno_path"], item.get("image_dir", default_image_dir))
+                )
+            else:
+                raise ValueError(
+                    f"Invalid anno_path entry type {type(item)} for LVISDataSet"
+                )
+        return normalized
+
     def parse_dataset(self):
         """
-        Parse LVIS dataset annotations.
+        Parse LVIS dataset annotations (single file or merged list of files).
 
         Populates self.roidbs with dataset records.
         Each record is a dict containing image path, annotations, etc.
         """
         if self.anno_path is None:
             raise ValueError("anno_path is required for LVISDataSet")
-        anno_path = os.path.join(self.dataset_dir, self.anno_path)
-        image_dir = os.path.join(self.dataset_dir, self.image_dir)
+
+        entries = self._normalize_anno_entries()
+
+        records: List[dict] = []
+        empty_records: List[dict] = []
+        total_ct = 0
+        im_id_offset = 0
+        category_signature: Optional[List[Tuple[int, str]]] = None
+        reference_anno = None
+
+        for anno_rel, image_dir_rel in entries:
+            sample_limit = (
+                self.sample_num - total_ct if self.sample_num > 0 else -1
+            )
+            (
+                part_records,
+                part_empty,
+                ct,
+                catid2clsid,
+                cname2cid,
+                max_img_id,
+                signature,
+            ) = self._parse_single(anno_rel, image_dir_rel, im_id_offset, sample_limit)
+
+            if category_signature is None:
+                category_signature = signature
+                reference_anno = anno_rel
+                self.catid2clsid = catid2clsid
+                self.cname2cid = cname2cid
+            elif signature != category_signature:
+                raise ValueError(
+                    "Annotation files merged via anno_path list must share an "
+                    f"identical category table: '{anno_rel}' differs from "
+                    f"'{reference_anno}'."
+                )
+
+            records += part_records
+            empty_records += part_empty
+            total_ct += ct
+            im_id_offset += max_img_id + 1
+
+            if self.sample_num > 0 and total_ct >= self.sample_num:
+                break
+
+        assert total_ct > 0, f"Not found any LVIS record in {self.anno_path}"
+
+        # Sample and add empty records
+        if self.allow_empty and len(empty_records) > 0:
+            empty_records = self._sample_empty(empty_records, len(records))
+            records += empty_records
+
+        self.roidbs = records
+        logger.info(f"LVIS dataset loaded: {len(self.roidbs)} samples")
+
+    def _parse_single(
+        self,
+        anno_rel: str,
+        image_dir_rel: str,
+        im_id_offset: int,
+        sample_limit: int,
+    ):
+        """
+        Parse a single LVIS annotation file.
+
+        Returns (records, empty_records, ct, catid2clsid, cname2cid,
+        max_img_id, category_signature).
+        """
+        anno_path = os.path.join(self.dataset_dir, anno_rel)
+        image_dir = os.path.join(self.dataset_dir, image_dir_rel)
 
         assert anno_path.endswith(".json"), f"Invalid LVIS annotation file: {anno_path}"
 
@@ -142,14 +248,18 @@ class LVISDataSet(DetDataset):
         ct = 0
 
         # Build category mapping
-        self.catid2clsid = {catid: i for i, catid in enumerate(cat_ids)}
-        self.cname2cid = {
+        catid2clsid = {catid: i for i, catid in enumerate(cat_ids)}
+        cname2cid = {
             lvis_.load_cats([catid])[0]["name"]: clsid
-            for catid, clsid in self.catid2clsid.items()
+            for catid, clsid in catid2clsid.items()
         }
+        signature = [
+            (catid, lvis_.load_cats([catid])[0]["name"]) for catid in sorted(cat_ids)
+        ]
 
         # Check if annotations exist
-        if "annotations" not in lvis_.dataset:
+        load_image_only = "annotations" not in lvis_.dataset
+        if load_image_only:
             self.load_image_only = True
             logger.warning(
                 f"Annotation file: {anno_path} does not contain ground truth "
@@ -187,7 +297,7 @@ class LVISDataSet(DetDataset):
             coco_rec = (
                 {
                     "im_file": im_path,
-                    "im_id": np.array([img_id]),
+                    "im_id": np.array([img_id + im_id_offset]),
                     "h": im_h,
                     "w": im_w,
                 }
@@ -196,7 +306,7 @@ class LVISDataSet(DetDataset):
             )
 
             # Parse annotations if not load_image_only
-            if not self.load_image_only:
+            if not load_image_only:
                 ins_anno_ids = lvis_.get_ann_ids(img_ids=[img_id])
                 instances = lvis_.load_anns(ins_anno_ids)
 
@@ -254,7 +364,7 @@ class LVISDataSet(DetDataset):
 
                 for i, box in enumerate(bboxes):
                     catid = box["category_id"]
-                    gt_class[i][0] = self.catid2clsid[catid]
+                    gt_class[i][0] = catid2clsid[catid]
                     gt_bbox[i, :] = box["clean_bbox"]
 
                     # Note: LVIS does not have iscrowd field like COCO
@@ -308,21 +418,21 @@ class LVISDataSet(DetDataset):
 
             ct += 1
 
-            # Stop if sample_num reached
-            if self.sample_num > 0 and ct >= self.sample_num:
+            # Stop if sample_limit reached
+            if sample_limit > 0 and ct >= sample_limit:
                 break
-
-        assert ct > 0, f"Not found any LVIS record in {anno_path}"
 
         logger.info(
             f"Load [{ct} samples valid, {len(img_ids) - ct} samples invalid] "
             f"in file {anno_path}."
         )
 
-        # Sample and add empty records
-        if self.allow_empty and len(empty_records) > 0:
-            empty_records = self._sample_empty(empty_records, len(records))
-            records += empty_records
-
-        self.roidbs = records
-        logger.info(f"LVIS dataset loaded: {len(self.roidbs)} samples")
+        return (
+            records,
+            empty_records,
+            ct,
+            catid2clsid,
+            cname2cid,
+            max(img_ids) if img_ids else 0,
+            signature,
+        )

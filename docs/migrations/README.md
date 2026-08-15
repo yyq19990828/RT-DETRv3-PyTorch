@@ -10,6 +10,7 @@
 - [注册与配置迁移](registry-and-configuration.md)：`workspace`、`__inject__`、`__shared__` 和 YAML 继承的语义。
 - [训练与数值验证](training-and-validation.md)：数据、优化器、调度器、DDP、恢复及通用部署迁移方法。
 - [上游 PyTorch 数值对齐](upstream-pytorch-parity.md)：原生 PyTorch 上游的 revision/资产预检、checkpoint container/state、具名张量比较、固定容差和证据驱动合同。
+- [数据集与指标扩展模式](dataset-extension.md)：新增数据集格式的注册三要素、roidb 记录 schema、多文件夹合并语义、内存 COCO GT 评估与指标接入点。
 
 ## 编写约定
 

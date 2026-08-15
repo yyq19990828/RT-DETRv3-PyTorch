@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from detrs.core.workspace import load_config
 from detrs.engine import Trainer
-from detrs.metrics import COCOMetric
+from detrs.metrics import COCOMetric, Metric, YOLOMetric
 from detrs.utils.config import apply_overrides
 from detrs.utils.logger import setup_logger
 
@@ -180,12 +180,23 @@ def evaluate(model, data_loader, metric, prepare_batch, device):
 
 
 def _configure_dataset(cfg, anno_file=None, image_dir=None):
+    if str(cfg.get("metric", "COCO")).upper() == "YOLO":
+        logger.info("YOLO metric evaluates against the dataset labels; "
+                    "ignoring --anno-file/--image-dir overrides.")
+        return
     if anno_file is None and image_dir is None:
         return
 
     dataset_dir = Path(cfg.EvalDataset.get("dataset_dir", ""))
     if anno_file is None:
-        anno_file = dataset_dir / cfg.EvalDataset["anno_path"]
+        configured_anno = cfg.EvalDataset["anno_path"]
+        if isinstance(configured_anno, (list, tuple)):
+            raise ValueError(
+                "EvalDataset anno_path must be a single annotation file; "
+                "list-valued anno_path is only supported for training. "
+                "Pass --anno-file explicitly to override."
+            )
+        anno_file = dataset_dir / configured_anno
     if image_dir is None:
         image_dir = dataset_dir / cfg.EvalDataset["image_dir"]
 
@@ -235,14 +246,26 @@ def main(argv=None):
             use_ema=args.use_ema,
         )
 
-        annotation_path = os.path.join(
-            trainer.dataset.dataset_dir,
-            trainer.dataset.anno_path,
-        )
-        metric = COCOMetric(
-            annotation_path,
-            output_eval=evaluation_directory,
-        )
+        metric: Metric
+        if str(cfg.get("metric", "COCO")).upper() == "YOLO":
+            metric = YOLOMetric(
+                trainer.dataset,
+                output_eval=evaluation_directory,
+            )
+        else:
+            if isinstance(trainer.dataset.anno_path, (list, tuple)):
+                raise ValueError(
+                    "EvalDataset anno_path must be a single annotation file; "
+                    "list-valued anno_path is only supported for training."
+                )
+            annotation_path = os.path.join(
+                trainer.dataset.dataset_dir,
+                trainer.dataset.anno_path,
+            )
+            metric = COCOMetric(
+                annotation_path,
+                output_eval=evaluation_directory,
+            )
         raw_results = evaluate(
             trainer.model,
             trainer.loader,

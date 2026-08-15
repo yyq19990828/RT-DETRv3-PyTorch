@@ -17,6 +17,7 @@
 
 ## 已完成记录
 
+- [多文件夹数据集支持计划](2026-08-15-multi-folder-datasets.md)：2026-08-15 完成 YOLO 格式数据集(多文件夹)、COCO/LVIS `anno_path` 列表逻辑合并与 `YOLOMetric`(pycocotools 口径)接入;复用结论沉淀于 `docs/migrations/dataset-extension.md`。
 - [包与 CLI 重命名计划](2026-08-15-rename-to-detrs.md)：2026-08-15 完成 `ppdet_pytorch` → `detrs` 包名/项目名切换,六个 `rtdetrv3-*` 命令收敛为单 `detrs` 入口 + 子命令;TorchScript 跨设备修复与 CI 恢复另见后续提交。
 - [DEIMv2 集成计划](../archive/2026-08-14-deimv2-integration.md)：2026-08-15 维护者接受,归档;8 个 COCO 变体的实现、数值对齐、完整 val2017、reduced train/resume、导出与打包验收完成。
 - [D-FINE、DEIM 与 RT-DETRv4 集成计划](../archive/2026-08-12-dfine-deim-rtdetrv4-integration.md)：2026-08-15 维护者接受,归档;全部实现阶段与最终审计通过,模型报告、逐变体指标和证据索引见 [`docs/models`](../models/README.md)。

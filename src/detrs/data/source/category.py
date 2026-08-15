@@ -111,6 +111,21 @@ def get_categories(
             logger.info(f"metric_type: {metric_type}, using default VOC categories")
             return _voc_category()
 
+    elif metric_type.lower() == "yolo":
+        if anno_file and os.path.isfile(anno_file):
+            cats = []
+            with open(anno_file) as f:
+                for line in f.readlines():
+                    cats.append(line.strip())
+
+            clsid2catid = {i: i for i in range(len(cats))}
+            catid2name = {i: name for i, name in enumerate(cats)}
+            return clsid2catid, catid2name
+        else:
+            raise ValueError(
+                f"YOLO metric requires a class-name list file, got '{anno_file}'"
+            )
+
     else:
         raise ValueError(f"unknown metric type {metric_type}")
 

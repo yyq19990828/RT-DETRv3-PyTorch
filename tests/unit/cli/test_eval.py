@@ -155,7 +155,8 @@ def test_configure_dataset_preserves_non_overridden_path(tmp_path):
                 "dataset_dir": str(dataset_root),
                 "anno_path": "annotations/instances_val2017.json",
                 "image_dir": "val2017",
-            }
+            },
+            "get": lambda self, key, default=None: default,
         },
     )()
 

@@ -225,6 +225,12 @@ class DetDataset(Dataset):
         """Get full path to annotation file."""
         if self.anno_path is None:
             return None
+        if isinstance(self.anno_path, (list, tuple)):
+            raise ValueError(
+                "anno_path is a list which is only supported for training "
+                "datasets; evaluation and inference require a single "
+                "annotation file."
+            )
         return os.path.join(self.dataset_dir, self.anno_path)
 
 

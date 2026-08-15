@@ -46,7 +46,7 @@ from .. import data as _data  # noqa: F401 - trigger component registration
 from .. import modeling as _modeling  # noqa: F401 - trigger component registration
 from ..core.config.schema import SchemaDict
 from ..core.workspace import create
-from ..metrics import COCOMetric
+from ..metrics import COCOMetric, YOLOMetric
 from ..optimizer import ModelEMA
 from ..utils.checkpoint import (
     convert_to_dict,
@@ -400,8 +400,18 @@ class Trainer:
         reader_config = dict(self.cfg["EvalReader"])
         reader_config["seed"] = self.cfg.get("seed", 0) or 0
         self._validation_loader = create(reader_config)(dataset, self.cfg.worker_num)
-        annotation_path = os.path.join(dataset.dataset_dir, dataset.anno_path)
-        self._validation_metric = COCOMetric(annotation_path, output_eval=self.save_dir)
+        if str(self.cfg.get("metric", "COCO")).upper() == "YOLO":
+            self._validation_metric = YOLOMetric(dataset, output_eval=self.save_dir)
+        else:
+            if isinstance(dataset.anno_path, (list, tuple)):
+                raise ValueError(
+                    "EvalDataset anno_path must be a single annotation file; "
+                    "list-valued anno_path is only supported for training."
+                )
+            annotation_path = os.path.join(dataset.dataset_dir, dataset.anno_path)
+            self._validation_metric = COCOMetric(
+                annotation_path, output_eval=self.save_dir
+            )
 
     @torch.no_grad()
     def _validate_epoch(self) -> Mapping[str, float]:
