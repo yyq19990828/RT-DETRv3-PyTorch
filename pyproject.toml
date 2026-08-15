@@ -30,6 +30,7 @@ dependencies = [
     "pycocotools>=2.0.7",
     "pyyaml>=6.0",
     "rich>=13,<15",
+    "rich-argparse>=1.4,<2",
     "scipy>=1.10",
     "shapely>=2.0",
     "terminaltables>=3.1",

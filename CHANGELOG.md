@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   metrics table on interactive terminals. Piped or CI output automatically
   degrades to plain text; JSON outputs and the Paddle-style log line for
   non-terminal runs are unchanged.
+- Beautified `--help` output with rich-argparse. A custom formatter keeps
+  argparse's native lowercase `usage:`/`options:` headings so tests, piped
+  output, and the generated CLI reference page stay byte-compatible with the
+  historical format.
 - Auto-generated CLI reference page: `scripts/generate_cli_reference.py`
   renders the live `--help` output of `detrs` and every subcommand into
   `docs/guides/cli-reference.md` (committed), and the Docs workflow fails

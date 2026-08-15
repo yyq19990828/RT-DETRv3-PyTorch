@@ -21,6 +21,7 @@ from rich.table import Table
 from detrs.core.workspace import load_config
 from detrs.engine import Trainer
 from detrs.metrics import COCOMetric, Metric, YOLOMetric
+from detrs.utils.cli import DetrsHelpFormatter
 from detrs.utils.config import apply_overrides
 from detrs.utils.console import get_console
 from detrs.utils.logger import setup_logger
@@ -48,7 +49,10 @@ _COCO_METRIC_NAMES = (
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description="RT-DETRv3 COCO evaluation")
+    parser = argparse.ArgumentParser(
+        description="RT-DETRv3 COCO evaluation",
+        formatter_class=DetrsHelpFormatter,
+    )
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument("--anno-file", "--anno_file", dest="anno_file")

@@ -16,12 +16,16 @@ from detrs.deploy import (
     run_torchscript,
     validate_detection_outputs,
 )
+from detrs.utils.cli import DetrsHelpFormatter
 from detrs.utils.config import apply_overrides
 from detrs.utils.console import get_console
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description="Export a detector for deployment")
+    parser = argparse.ArgumentParser(
+        description="Export a detector for deployment",
+        formatter_class=DetrsHelpFormatter,
+    )
     parser.add_argument("-c", "--config", required=True)
     parser.add_argument("--checkpoint", required=True)
     parser.add_argument(

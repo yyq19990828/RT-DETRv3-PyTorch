@@ -16,6 +16,7 @@ from detrs.core.workspace import create, load_config
 from detrs.data.reader import BatchCompose, Compose
 from detrs.data.source.category import get_categories
 from detrs.deploy import TORCHSCRIPT_METADATA_FILE
+from detrs.utils.cli import DetrsHelpFormatter
 from detrs.utils.config import apply_overrides
 from detrs.utils.console import get_console
 from detrs.utils.logger import setup_logger
@@ -47,7 +48,10 @@ _COLORS = (
 
 
 def create_argument_parser():
-    parser = argparse.ArgumentParser(description="RT-DETRv3 inference")
+    parser = argparse.ArgumentParser(
+        description="RT-DETRv3 inference",
+        formatter_class=DetrsHelpFormatter,
+    )
     parser.add_argument("-c", "--config", required=True)
     model_group = parser.add_mutually_exclusive_group(required=True)
     model_group.add_argument("--checkpoint")

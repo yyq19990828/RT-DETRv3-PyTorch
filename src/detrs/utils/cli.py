@@ -13,14 +13,32 @@
 # limitations under the License.
 
 import re
-from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, Namespace
 from typing import Any, Optional, Sequence, TypeVar, overload
 
 import yaml
+from rich_argparse import RawDescriptionRichHelpFormatter, RichHelpFormatter
 
 from detrs.core.workspace import dump_value, get_registered_modules
 
-__all__ = ["ColorTTY", "ArgsParser"]
+__all__ = [
+    "ColorTTY",
+    "ArgsParser",
+    "DetrsHelpFormatter",
+    "DetrsRawDescriptionHelpFormatter",
+]
+
+
+class DetrsHelpFormatter(RichHelpFormatter):
+    """Rich help formatter that keeps native lowercase argparse headings.
+
+    ``RichHelpFormatter`` title-cases section names (``Usage:``/``Options:``);
+    this subclass keeps argparse's ``usage:``/``options:`` so tests and the
+    generated CLI reference page keep matching the historical output.
+    """
+
+    group_name_formatter = str
+
 
 _NamespaceT = TypeVar("_NamespaceT")
 
@@ -47,9 +65,17 @@ class ColorTTY(object):
         return "[{}m{}[0m".format(code, message)
 
 
+class DetrsRawDescriptionHelpFormatter(
+    DetrsHelpFormatter, RawDescriptionRichHelpFormatter
+):
+    """`DetrsHelpFormatter` that keeps description/epilog formatting verbatim."""
+
+
 class ArgsParser(ArgumentParser):
     def __init__(self):
-        super(ArgsParser, self).__init__(formatter_class=RawDescriptionHelpFormatter)
+        super(ArgsParser, self).__init__(
+            formatter_class=DetrsRawDescriptionHelpFormatter
+        )
         self.add_argument(
             "-c", "--config", required=True, help="configuration file to use"
         )

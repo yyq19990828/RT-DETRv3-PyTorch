@@ -7,6 +7,8 @@ import importlib
 import sys
 from typing import Optional, Sequence
 
+from detrs.utils.cli import DetrsHelpFormatter
+
 COMMANDS = {
     "train": ("detrs.cli.train", "Train a detector from a YAML config."),
     "eval": ("detrs.cli.eval", "Evaluate a checkpoint on COCO-style data."),
@@ -31,6 +33,7 @@ def create_argument_parser(command: Optional[str] = None) -> argparse.ArgumentPa
     """
     parser = argparse.ArgumentParser(
         prog="detrs",
+        formatter_class=DetrsHelpFormatter,
         description=(
             "DETR-series PyTorch toolbox: train, evaluate, run inference on, "
             "export, and convert detectors, and manage released checkpoints."
@@ -48,12 +51,18 @@ def create_argument_parser(command: Optional[str] = None) -> argparse.ArgumentPa
             subparsers.add_parser(
                 name,
                 parents=[module_parser],
+                formatter_class=DetrsHelpFormatter,
                 help=help_text,
                 description=module_parser.description,
                 add_help=False,
             )
         else:
-            subparsers.add_parser(name, help=help_text, add_help=False)
+            subparsers.add_parser(
+                name,
+                formatter_class=DetrsHelpFormatter,
+                help=help_text,
+                add_help=False,
+            )
     return parser
 
 

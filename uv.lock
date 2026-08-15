@@ -651,6 +651,7 @@ dependencies = [
     { name = "pycocotools" },
     { name = "pyyaml" },
     { name = "rich" },
+    { name = "rich-argparse" },
     { name = "scipy", version = "1.13.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-export') or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-test') or (extra == 'extra-5-detrs-export' and extra == 'extra-5-detrs-export-gpu') or (extra == 'extra-5-detrs-export-gpu' and extra == 'extra-5-detrs-test')" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*' or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-export') or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-test') or (extra == 'extra-5-detrs-export' and extra == 'extra-5-detrs-export-gpu') or (extra == 'extra-5-detrs-export-gpu' and extra == 'extra-5-detrs-test')" },
     { name = "scipy", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-export') or (extra == 'extra-5-detrs-dev' and extra == 'extra-5-detrs-test') or (extra == 'extra-5-detrs-export' and extra == 'extra-5-detrs-export-gpu') or (extra == 'extra-5-detrs-export-gpu' and extra == 'extra-5-detrs-test')" },
@@ -785,6 +786,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "regex", marker = "extra == 'teacher'" },
     { name = "rich", specifier = ">=13,<15" },
+    { name = "rich-argparse", specifier = ">=1.4,<2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15" },
     { name = "ruff", marker = "extra == 'docs'", specifier = ">=0.15" },
     { name = "ruff", marker = "extra == 'quality'", specifier = ">=0.15" },
@@ -3435,6 +3437,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/67/cae617f1351490c25a4b8ac3b8b63a4dda609295d8222bad12242dfdc629/rich-14.3.4.tar.gz", hash = "sha256:817e02727f2b25b40ef56f5aa2217f400c8489f79ca8f46ea2b70dd5e14558a9", size = 230524, upload-time = "2026-04-11T02:57:45.419Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b3/76/6d163cfac87b632216f71879e6b2cf17163f773ff59c00b5ff4900a80fa3/rich-14.3.4-py3-none-any.whl", hash = "sha256:07e7adb4690f68864777b1450859253bed81a99a31ac321ac1817b2313558952", size = 310480, upload-time = "2026-04-11T02:57:47.484Z" },
+]
+
+[[package]]
+name = "rich-argparse"
+version = "1.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "rich" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6a/e5/1064c43203a357d668cd42435f7a15fe6af51512d85b2104fecb937aa861/rich_argparse-1.8.0.tar.gz", hash = "sha256:679df3d832fa94ad6e4bdb07ded088cd7ea2dddc58ae9b2b46346a40b06cbc0c", size = 38940, upload-time = "2026-05-01T15:18:43.604Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/35/1cceccc5fcb50fa2ed53e2aa278cd032f3902682a73e763fb1ac3be8e6fa/rich_argparse-1.8.0-py3-none-any.whl", hash = "sha256:d2a3ce7854654e2253c578763ab0a32f05016f23a55fadba7b9a91b6c0e92142", size = 25616, upload-time = "2026-05-01T15:18:42.395Z" },
 ]
 
 [[package]]

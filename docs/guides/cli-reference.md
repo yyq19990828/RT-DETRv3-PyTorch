@@ -38,13 +38,10 @@ usage: detrs train [-h] -c CONFIG [-o [OPT ...]] [--eval] [-r RESUME] [--slim_co
 
 options:
   -h, --help            show this help message and exit
-  -c CONFIG, --config CONFIG
-                        configuration file to use
-  -o [OPT ...], --opt [OPT ...]
-                        set configuration options
+  -c, --config CONFIG   configuration file to use
+  -o, --opt [OPT ...]   set configuration options
   --eval                Whether to perform evaluation in train
-  -r RESUME, --resume RESUME
-                        weights path for resume
+  -r, --resume RESUME   weights path for resume
   --slim_config SLIM_CONFIG
                         Configuration file of slim method.
   --enable_ce ENABLE_CE
@@ -83,17 +80,17 @@ RT-DETRv3 COCO evaluation
 
 options:
   -h, --help            show this help message and exit
-  -c CONFIG, --config CONFIG
+  -c, --config CONFIG
   --checkpoint CHECKPOINT
-  --anno-file ANNO_FILE, --anno_file ANNO_FILE
-  --image-dir IMAGE_DIR, --image_dir IMAGE_DIR
-  --batch-size BATCH_SIZE, --batch_size BATCH_SIZE
-  --num-workers NUM_WORKERS, --num_workers NUM_WORKERS
-  --output-dir OUTPUT_DIR, --output_dir OUTPUT_DIR
+  --anno-file, --anno_file ANNO_FILE
+  --image-dir, --image_dir IMAGE_DIR
+  --batch-size, --batch_size BATCH_SIZE
+  --num-workers, --num_workers NUM_WORKERS
+  --output-dir, --output_dir OUTPUT_DIR
                         Keep COCO prediction files in this directory.
   --use-ema, --use_ema  Evaluate the EMA state stored in a training checkpoint.
   --device DEVICE
-  -o [OVERRIDE ...], --override [OVERRIDE ...]
+  -o, --override [OVERRIDE ...]
 ```
 
 ## detrs infer
@@ -110,28 +107,28 @@ RT-DETRv3 inference
 
 options:
   -h, --help            show this help message and exit
-  -c CONFIG, --config CONFIG
+  -c, --config CONFIG
   --checkpoint CHECKPOINT
   --onnx-model ONNX_MODEL
                         Run a tensor-only ONNX export with ONNX Runtime CPU or CUDA.
   --torchscript-model TORCHSCRIPT_MODEL
                         Run a tensor-only traced TorchScript export on a PyTorch device.
-  --infer-img INFER_IMG, --infer_img INFER_IMG
+  --infer-img, --infer_img INFER_IMG
                         Path to one image.
-  --infer-dir INFER_DIR, --infer_dir INFER_DIR
+  --infer-dir, --infer_dir INFER_DIR
                         Directory containing images (non-recursive).
-  --output-dir OUTPUT_DIR, --output_dir OUTPUT_DIR
+  --output-dir, --output_dir OUTPUT_DIR
   --save-results, --save_results
                         Save thresholded detections to detections.json.
-  --threshold THRESHOLD, --draw-threshold THRESHOLD
+  --threshold, --draw-threshold THRESHOLD
                         Minimum score used for visualization and saved results.
-  --batch-size BATCH_SIZE, --batch_size BATCH_SIZE
+  --batch-size, --batch_size BATCH_SIZE
   --imgsz IMGSZ         Override the square Resize target in TestReader.
   --anno-file ANNO_FILE
                         Optional annotation JSON/TXT used for category names.
   --use-ema             Use EMA weights from a training checkpoint.
   --device DEVICE
-  -o [OVERRIDE ...], --override [OVERRIDE ...]
+  -o, --override [OVERRIDE ...]
 ```
 
 ## detrs export
@@ -146,7 +143,7 @@ Export a detector for deployment
 
 options:
   -h, --help            show this help message and exit
-  -c CONFIG, --config CONFIG
+  -c, --config CONFIG
   --checkpoint CHECKPOINT
   --format {onnx,torchscript,both}
   --output-dir OUTPUT_DIR
@@ -158,7 +155,7 @@ options:
   --use-ema
   --force
   --no-verify           Skip ONNX Runtime/TorchScript output comparison.
-  -o [OVERRIDE ...], --override [OVERRIDE ...]
+  -o, --override [OVERRIDE ...]
 ```
 
 ## detrs convert
@@ -175,27 +172,23 @@ Convert RT-DETRv3 model weights from PaddlePaddle to PyTorch format
 
 options:
   -h, --help            show this help message and exit
-  --input INPUT, -i INPUT
-                        Source PaddlePaddle checkpoint, or a directory/glob when --batch is set
-  --output OUTPUT, -o OUTPUT
-                        Output .pth file, or output directory when --batch is set
-  --config CONFIG, -c CONFIG
-                        PyTorch model config used to build the target state_dict (required unless
+  --input, -i INPUT     Source PaddlePaddle checkpoint, or a directory/glob when --batch is set
+  --output, -o OUTPUT   Output .pth file, or output directory when --batch is set
+  --config, -c CONFIG   PyTorch model config used to build the target state_dict (required unless
                         --no-validate is set)
-  --manual-mapping MANUAL_MAPPING, -m MANUAL_MAPPING
+  --manual-mapping, -m MANUAL_MAPPING
                         Path to JSON file with manual parameter name mapping overrides
-  --save-mapping SAVE_MAPPING, -s SAVE_MAPPING
+  --save-mapping, -s SAVE_MAPPING
                         Export generated parameter name mapping to JSON file
   --strict              Fail on tensor conversion errors and shape mismatches
   --permissive          Enable permissive mode (skip mismatched parameters, continue conversion)
-                        [default]
   --no-validate         Skip shape validation against target model
   --force, -f           Overwrite existing output files without confirmation
   --batch               Convert every discovered input independently and continue on failures
   --summary SUMMARY     Write a JSON batch summary (only valid with --batch)
   --memory-efficient    Release source tensors incrementally during conversion
   --parameter-batch-size PARAMETER_BATCH_SIZE
-                        Source tensors released between garbage-collection passes [default: 64]
+                        Source tensors released between garbage-collection passes
   --log-level {DEBUG,INFO,WARNING,ERROR}
                         Set logging verbosity level
   --quiet, -q           Suppress all output except errors

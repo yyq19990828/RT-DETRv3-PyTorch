@@ -59,6 +59,7 @@ CLI 输出为朴素 print/logging 文本;`models list` 是手写定宽表,训练
 | 2026-08-15 | 防漂移用脚本 `--check` 而非 `git diff` | 不依赖 checkout 状态,报错信息直接指向再生成命令 |
 | 2026-08-15 | CLI 参考页采用提交生成文件形态 | 维护者选择;GitHub 上可读,CI `--check` 防漂移 |
 | 2026-08-15 | `--help` 保持 argparse 纯文本 | 是测试契约(`usage: detrs`)与文档页生成源,不引入 rich_argparse |
+| 2026-08-15 | 追加:引入 rich-argparse 美化 `--help`,自定义 formatter 保留小写标题 | 维护者确认期望帮助文本也美化;`DetrsHelpFormatter` 覆盖 `group_name_formatter` 保持 `usage:` 小写,测试契约与生成页格式不变 |
 
 ## 完成记录
 

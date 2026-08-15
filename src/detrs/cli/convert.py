@@ -16,6 +16,7 @@ from typing import Iterable
 from ..conversion import __version__, configure_logging
 from ..conversion.converter import WeightConverter
 from ..conversion.models import ConversionConfig
+from ..utils.cli import DetrsRawDescriptionHelpFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     """
     parser = argparse.ArgumentParser(
         description="Convert RT-DETRv3 model weights from PaddlePaddle to PyTorch format",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=DetrsRawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Target-aware conversion (recommended)

@@ -17,6 +17,7 @@ import yaml
 from rich import box
 from rich.table import Table
 
+from detrs.utils.cli import DetrsHelpFormatter
 from detrs.utils.console import get_console
 
 DEFAULT_FAMILY = "rtdetrv3"
@@ -68,17 +69,24 @@ def _add_manifest_options(
 
 def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="List, verify, or download PyTorch model weights."
+        description="List, verify, or download PyTorch model weights.",
+        formatter_class=DetrsHelpFormatter,
     )
     _add_manifest_options(parser)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    list_parser = subparsers.add_parser("list", help="List known model artifacts")
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List known model artifacts",
+        formatter_class=DetrsHelpFormatter,
+    )
     _add_manifest_options(list_parser, suppress_defaults=True)
     list_parser.add_argument("--json", action="store_true", help="Emit JSON")
 
     verify_parser = subparsers.add_parser(
-        "verify", help="Verify a local model against the manifest"
+        "verify",
+        help="Verify a local model against the manifest",
+        formatter_class=DetrsHelpFormatter,
     )
     _add_manifest_options(verify_parser, suppress_defaults=True)
     verify_parser.add_argument(
@@ -92,7 +100,9 @@ def create_argument_parser() -> argparse.ArgumentParser:
     )
 
     download_parser = subparsers.add_parser(
-        "download", help="Download and verify a published model"
+        "download",
+        help="Download and verify a published model",
+        formatter_class=DetrsHelpFormatter,
     )
     _add_manifest_options(download_parser, suppress_defaults=True)
     download_parser.add_argument(
