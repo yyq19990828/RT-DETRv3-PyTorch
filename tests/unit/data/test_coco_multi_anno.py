@@ -195,9 +195,7 @@ def test_lvis_string_list_merges_two_datasets(tmp_path):
         json_path = tmp_path / prefix / "annotations" / "train.json"
         annotations = json.loads(json_path.read_text(encoding="utf-8"))
         for image in annotations["images"]:
-            image["coco_url"] = (
-                f"http://images.cocodataset.org/{image['file_name']}"
-            )
+            image["coco_url"] = f"http://images.cocodataset.org/{image['file_name']}"
         json_path.write_text(json.dumps(annotations), encoding="utf-8")
 
     dataset = create(

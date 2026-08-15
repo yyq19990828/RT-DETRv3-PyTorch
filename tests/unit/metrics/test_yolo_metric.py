@@ -42,9 +42,7 @@ def _perfect_outputs(dataset):
     bbox_num = []
     for rec in dataset.roidbs:
         for bbox, cls in zip(rec["gt_bbox"], rec["gt_class"]):
-            rows.append(
-                [int(cls[0]), 0.9, bbox[0], bbox[1], bbox[2], bbox[3]]
-            )
+            rows.append([int(cls[0]), 0.9, bbox[0], bbox[1], bbox[2], bbox[3]])
         bbox_num.append(len(rec["gt_bbox"]))
     return {
         "bbox": np.array(rows, dtype=np.float32),

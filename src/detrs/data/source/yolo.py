@@ -247,9 +247,7 @@ class YOLODataSet(DetDataset):
         assert ct > 0, f"Not found any YOLO record in {self.image_dir}"
 
         if class_names is None:
-            self.cname2cid = {
-                f"class_{i}": i for i in range(max_class_id + 1)
-            }
+            self.cname2cid = {f"class_{i}": i for i in range(max_class_id + 1)}
         elif max_class_id >= 0:
             logger.info(
                 f"Loaded {len(records)} YOLO samples with {len(class_names)} "

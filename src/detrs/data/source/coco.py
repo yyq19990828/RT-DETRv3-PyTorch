@@ -165,9 +165,7 @@ class COCODataSet(DetDataset):
         reference_anno = None
 
         for anno_rel, image_dir_rel in entries:
-            sample_limit = (
-                self.sample_num - total_ct if self.sample_num > 0 else -1
-            )
+            sample_limit = self.sample_num - total_ct if self.sample_num > 0 else -1
             (
                 part_records,
                 part_empty,

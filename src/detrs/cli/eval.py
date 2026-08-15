@@ -181,8 +181,10 @@ def evaluate(model, data_loader, metric, prepare_batch, device):
 
 def _configure_dataset(cfg, anno_file=None, image_dir=None):
     if str(cfg.get("metric", "COCO")).upper() == "YOLO":
-        logger.info("YOLO metric evaluates against the dataset labels; "
-                    "ignoring --anno-file/--image-dir overrides.")
+        logger.info(
+            "YOLO metric evaluates against the dataset labels; "
+            "ignoring --anno-file/--image-dir overrides."
+        )
         return
     if anno_file is None and image_dir is None:
         return
