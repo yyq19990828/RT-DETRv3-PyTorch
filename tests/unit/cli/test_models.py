@@ -2,6 +2,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+from typing import Optional
 
 import pytest
 import yaml
@@ -104,6 +105,114 @@ def test_verify_checks_size_and_sha256(tmp_path):
     checkpoint.write_bytes(b"wrong-size")
     with pytest.raises(ValueError, match="size mismatch"):
         models_cli.verify_artifact(checkpoint, artifacts["r18"])
+
+
+def _verified_r18(tmp_path, payload: bytes, *, config: Optional[str] = None):
+    manifest = tmp_path / "manifest.yml"
+    checkpoint = tmp_path / "r18.pth"
+    if config is None:
+        _write_manifest(manifest, payload)
+    else:
+        manifest.write_text(
+            yaml.safe_dump(
+                {
+                    "models": {
+                        "rtdetrv3_r18vd_6x_coco": {
+                            "config": config,
+                            "converted_artifact": {
+                                "alias": "r18",
+                                "path": "pretrained_models/pytorch/r18.pth",
+                                "size_bytes": len(payload),
+                                "sha256": hashlib.sha256(payload).hexdigest(),
+                                "distribution_status": "unpublished",
+                            },
+                        }
+                    },
+                    "pretraining": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+    checkpoint.write_bytes(payload)
+    return manifest, checkpoint
+
+
+def test_verify_renders_plain_panel_by_default(tmp_path, capsys):
+    manifest, checkpoint = _verified_r18(tmp_path, b"converted checkpoint")
+
+    assert (
+        models_cli.main(["verify", "--manifest", str(manifest), "r18", str(checkpoint)])
+        == 0
+    )
+
+    captured = capsys.readouterr().out
+    assert "r18" in captured
+    assert "verified" in captured
+    assert "sha256" in captured
+    assert "\x1b[" not in captured
+
+
+def test_verify_json_flag_keeps_machine_fields_and_degrades_gracefully(
+    tmp_path, capsys
+):
+    manifest, checkpoint = _verified_r18(tmp_path, b"converted checkpoint")
+
+    assert (
+        models_cli.main(
+            ["verify", "--manifest", str(manifest), "r18", str(checkpoint), "--json"]
+        )
+        == 0
+    )
+
+    record = json.loads(capsys.readouterr().out)
+    assert record["model"] == "r18"
+    assert record["verified"] is True
+    assert record["sha256"] == hashlib.sha256(b"converted checkpoint").hexdigest()
+    assert record["hosting"] == "project"
+    # The fake config path does not exist and the payload is not a torch
+    # checkpoint, so the enrichment fields must degrade to null.
+    assert record["input_shape"] is None
+    assert record["num_queries"] is None
+    assert record["params"] is None
+
+
+def test_verify_reports_checkpoint_parameter_count(tmp_path, capsys):
+    import torch
+
+    buffer = io.BytesIO()
+    torch.save({"model": {"head.weight": torch.arange(6)}}, buffer)
+    payload = buffer.getvalue()
+    manifest, checkpoint = _verified_r18(tmp_path, payload)
+
+    assert (
+        models_cli.main(
+            ["verify", "--manifest", str(manifest), "r18", str(checkpoint), "--json"]
+        )
+        == 0
+    )
+
+    record = json.loads(capsys.readouterr().out)
+    assert record["params"] == 6
+
+
+def test_verify_extracts_input_and_output_shapes_from_config(tmp_path, capsys):
+    manifest, checkpoint = _verified_r18(
+        tmp_path,
+        b"converted checkpoint",
+        config="configs/dfine/dfine_hgnetv2_n_coco.yml",
+    )
+
+    assert (
+        models_cli.main(
+            ["verify", "--manifest", str(manifest), "r18", str(checkpoint), "--json"]
+        )
+        == 0
+    )
+
+    record = json.loads(capsys.readouterr().out)
+    assert record["input_shape"] == [3, 640, 640]
+    assert record["num_queries"] == 300
+    assert record["num_classes"] == 80
 
 
 def test_download_refuses_unpublished_model(tmp_path, capsys):

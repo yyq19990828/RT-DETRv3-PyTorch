@@ -62,6 +62,7 @@ CLI 输出为朴素 print/logging 文本;`models list` 是手写定宽表,训练
 | 2026-08-15 | 追加:引入 rich-argparse 美化 `--help`,自定义 formatter 保留小写标题 | 维护者确认期望帮助文本也美化;`DetrsHelpFormatter` 覆盖 `group_name_formatter` 保持 `usage:` 小写,测试契约与生成页格式不变 |
 | 2026-08-16 | 追加:`setup_logger` 控制台 handler 换为 `RichHandler`(共享 console,`show_path=True`,彩色回溯) | 与 Progress 共用 console 根治日志/进度条交错;文件日志保持原格式,非 TTY 自动纯文本;logger 名从控制台布局中移除由 `file:line` 补偿 |
 | 2026-08-16 | 追加:pycocotools 的裸 `print()` 经 `relay_prints`(utils/stdio.py)实时转投 logger;`summarize()` AP 表保持原生布局 | 维护者要求统一终端观感;逐行实时转发(非块末统一 flush)保证 25s 级 `evaluate()` 期间进度可见;`stacklevel=3` 显示第三方来源 `coco.py:79` 等;递归守卫防止 logger 自身输出回流 |
+| 2026-08-16 | 追加:`models verify/download` 默认 rich 面板,`--json` 保留机器输出;best-effort 增补 config 维度与 checkpoint 参数量 | 维护者要求美化并增加输入/输出维度等信息,推翻此前「verify/download JSON 不动」决策(检索确认仓库内无 stdout 消费者);维度/参数提取失败仅置 null,校验语义(大小+sha256、退出码)不变 |
 
 ## 完成记录
 

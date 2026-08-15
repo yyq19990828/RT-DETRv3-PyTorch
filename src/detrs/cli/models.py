@@ -15,8 +15,10 @@ from typing import Any, Optional, Sequence, cast
 
 import yaml
 from rich import box
+from rich.panel import Panel
 from rich.table import Table
 
+from detrs.core.workspace import load_config
 from detrs.utils.cli import DetrsHelpFormatter
 from detrs.utils.console import get_console
 
@@ -98,6 +100,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Local file; defaults to the path recorded in the manifest",
     )
+    verify_parser.add_argument("--json", action="store_true", help="Emit JSON")
 
     download_parser = subparsers.add_parser(
         "download",
@@ -118,20 +121,27 @@ def create_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Replace an existing file that does not match the manifest",
     )
+    download_parser.add_argument("--json", action="store_true", help="Emit JSON")
     return parser
 
 
+def _resolve_repository_file(relative: Path) -> Optional[Path]:
+    """Locate a repository-relative file beside the package or the checkout."""
+    module_file = Path(__file__).resolve()
+    for base in (module_file.parents[1], module_file.parents[3]):
+        candidate = base / relative
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def default_manifest_path(family: str = DEFAULT_FAMILY) -> Path:
-    relative_path = FAMILY_MANIFESTS[family]
-    package_manifest = Path(__file__).resolve().parents[1] / relative_path
-    if package_manifest.is_file():
-        return package_manifest
-    repository_manifest = Path(__file__).resolve().parents[3] / relative_path
-    if repository_manifest.is_file():
-        return repository_manifest
-    raise FileNotFoundError(
-        "checkpoint manifest is unavailable; pass --manifest explicitly"
-    )
+    resolved = _resolve_repository_file(FAMILY_MANIFESTS[family])
+    if resolved is None:
+        raise FileNotFoundError(
+            "checkpoint manifest is unavailable; pass --manifest explicitly"
+        )
+    return resolved
 
 
 def _require(condition: bool, message: str) -> None:
@@ -417,6 +427,133 @@ def _list_artifacts(artifacts: dict[str, ModelArtifact], as_json: bool) -> None:
     get_console().print(table)
 
 
+def _find_first_config_value(node: Any, key: str) -> Any:
+    """Depth-first search for ``key`` anywhere in a merged config tree."""
+    if isinstance(node, dict):
+        if key in node:
+            return node[key]
+        for value in node.values():
+            found = _find_first_config_value(value, key)
+            if found is not None:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_first_config_value(item, key)
+            if found is not None:
+                return found
+    return None
+
+
+def _count_parameters(path: Path) -> Optional[int]:
+    """Best-effort parameter count; the file was hash-verified beforehand."""
+    try:
+        import torch
+
+        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+        state_dict: Any = checkpoint
+        if isinstance(checkpoint, dict):
+            for key in ("model", "model_state_dict", "state_dict"):
+                if isinstance(checkpoint.get(key), dict):
+                    state_dict = checkpoint[key]
+                    break
+        return sum(
+            tensor.numel()
+            for tensor in state_dict.values()
+            if isinstance(tensor, torch.Tensor)
+        )
+    except Exception:
+        # Not a loadable torch checkpoint (or an unexpected layout); the
+        # verification result itself stays authoritative.
+        return None
+
+
+def _artifact_details(artifact: ModelArtifact, path: Path) -> dict[str, Any]:
+    """Best-effort display metadata; never affects verification results."""
+    details: dict[str, Any] = {
+        "name": artifact.name,
+        "config": artifact.config,
+        "hosting": artifact.hosting,
+        "input_shape": None,
+        "num_queries": None,
+        "num_classes": None,
+        "params": None,
+    }
+    config_path = _resolve_repository_file(Path(artifact.config))
+    if config_path is not None:
+        try:
+            config = load_config(str(config_path))
+            spatial = _find_first_config_value(config, "eval_spatial_size")
+            if isinstance(spatial, (list, tuple)) and len(spatial) == 2:
+                details["input_shape"] = [3, int(spatial[0]), int(spatial[1])]
+            queries = _find_first_config_value(config, "num_queries")
+            if isinstance(queries, int) and not isinstance(queries, bool):
+                details["num_queries"] = queries
+            classes = _find_first_config_value(config, "num_classes")
+            if isinstance(classes, int) and not isinstance(classes, bool):
+                details["num_classes"] = classes
+        except Exception:
+            # A broken or exotic config must not fail an already verified file.
+            pass
+    details["params"] = _count_parameters(path)
+    return details
+
+
+def _format_bytes(num_bytes: int) -> str:
+    if num_bytes >= 1_000_000_000:
+        return f"{num_bytes / 1_000_000_000:.2f} GB"
+    if num_bytes >= 1_000_000:
+        return f"{num_bytes / 1_000_000:.1f} MB"
+    if num_bytes >= 1_000:
+        return f"{num_bytes / 1_000:.1f} KB"
+    return f"{num_bytes} B"
+
+
+def _format_count(count: int) -> str:
+    if count >= 1_000_000_000:
+        return f"{count / 1_000_000_000:.2f} B"
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:.2f} M"
+    if count >= 1_000:
+        return f"{count / 1_000:.1f} K"
+    return str(count)
+
+
+def _render_verification(
+    result: dict[str, Any], details: dict[str, Any], action: str
+) -> None:
+    rows = Table(box=None, show_header=False, pad_edge=False)
+    rows.add_column(style="bold", no_wrap=True)
+    rows.add_column(overflow="fold")
+    rows.add_row("name", str(details["name"]))
+    rows.add_row("config", str(details["config"]))
+    rows.add_row("hosting", str(details["hosting"]))
+    rows.add_row("file", str(result["path"]))
+    size_bytes = int(result["size_bytes"])
+    rows.add_row("size", f"{size_bytes:,} bytes ({_format_bytes(size_bytes)})")
+    rows.add_row("sha256", str(result["sha256"]))
+    input_shape = details["input_shape"]
+    if input_shape is not None:
+        rows.add_row("input", " × ".join(str(d) for d in input_shape) + " (C × H × W)")
+    queries = details["num_queries"]
+    classes = details["num_classes"]
+    if queries is not None and classes is not None:
+        rows.add_row(
+            "output",
+            f"{queries} × {classes + 4} ({queries} queries, {classes} classes + 4 box)",
+        )
+    params = details["params"]
+    if params is not None:
+        rows.add_row("params", _format_count(params))
+    panel = Panel(
+        rows,
+        title=f"[green]✔[/] {result['model']} · {action}",
+        title_align="left",
+        box=box.ROUNDED,
+        expand=False,
+    )
+    get_console().print(panel)
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = create_argument_parser().parse_args(argv)
     try:
@@ -439,12 +576,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.command == "verify":
             path = args.path or Path(artifact.path)
             result = verify_artifact(path, artifact)
+            action = "verified"
         elif args.command == "download":
             destination = args.output or Path(artifact.path)
             result = download_artifact(artifact, destination, force=args.force)
+            action = "downloaded"
         else:
             raise ValueError(f"unsupported command: {args.command}")
-        print(json.dumps(result, indent=2))
+        details = _artifact_details(artifact, Path(result["path"]))
+        if args.json:
+            print(json.dumps({**result, **details}, indent=2))
+        else:
+            _render_verification(result, details, action)
         return 0
     except (OSError, ValueError, yaml.YAMLError) as error:
         print(f"model artifact error: {error}", file=sys.stderr)

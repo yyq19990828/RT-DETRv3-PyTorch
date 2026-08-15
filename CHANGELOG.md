@@ -37,6 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relayed as they are printed, and the native multi-column AP summary table
   is left untouched. Dataset-build chatter now goes to module loggers that
   have no console handler, so it is silent instead of interleaved bare text.
+- Beautified `detrs models verify`/`download` output: a rich panel shows the
+  manifest name, config, hosting, file size, SHA-256, plus best-effort model
+  facts extracted from the config (input shape, queries/classes and the
+  resulting output dimension) and from the checkpoint (parameter count).
+  `--json` keeps the machine-readable payload, extended with the new fields;
+  enrichment never affects verification results.
 - Replaced deprecated `torch.cuda.amp` usage (trainer `GradScaler`, matcher
   autocast) with the `torch.amp` equivalents, silencing FutureWarnings at
   trainer startup and during matcher forward.
