@@ -29,7 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rendered logger console output through rich (`RichHandler` on the shared
   console): colored levels, `file:line` source paths, rich tracebacks, and
   coordinated interleaving with live progress bars. Log files keep the
-  original Paddle-style format and piped/CI output stays plain text.
+  original Paddle-style format and piped/CI output stays plain text. The
+  file:line column now shows paths relative to the repository root
+  (`src/detrs/engine/trainer.py:551`) instead of bare filenames, and
+  third-party frames relative to their package
+  (`pycocotools/cocoeval.py:127`); terminal hyperlinks still point at the
+  absolute file location.
 - Relayed third-party pycocotools progress prints (annotation loading,
   `Running per image evaluation...`) through the structured logger via
   `detrs.utils.stdio.relay_prints`, so evaluation output shares the rich log

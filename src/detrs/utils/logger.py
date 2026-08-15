@@ -6,7 +6,11 @@ while using PyTorch's distributed training APIs.
 
 import logging
 import os
-from typing import List, Optional, Union
+import sys
+from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, List, Optional, Tuple, Union
 
 import torch.distributed as dist
 from rich.logging import RichHandler
@@ -16,6 +20,68 @@ from detrs.utils.console import get_console
 __all__ = ["setup_logger"]
 
 logger_initialized = []
+
+
+@lru_cache(maxsize=1)
+def _path_roots() -> Tuple[Path, ...]:
+    """Roots that log paths are displayed relative to.
+
+    Source-checkout files render as ``src/detrs/...``; site-packages entries
+    keep third-party frames recognizable (e.g. ``pycocotools/coco.py``). The
+    venv usually lives inside the repository, so the most specific matching
+    root must win (see ``_display_path``).
+    """
+    roots = []
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").is_file():
+            roots.append(parent)
+            break
+    for entry in sys.path:
+        if entry and Path(entry).name in {"site-packages", "dist-packages"}:
+            roots.append(Path(entry))
+    return tuple(roots)
+
+
+@lru_cache(maxsize=512)
+def _display_path(pathname: str) -> str:
+    resolved = Path(pathname).resolve()
+    shortest: Optional[Path] = None
+    for root in _path_roots():
+        try:
+            relative = resolved.relative_to(root)
+        except ValueError:
+            continue
+        if shortest is None or len(relative.parts) < len(shortest.parts):
+            shortest = relative
+    return shortest.as_posix() if shortest is not None else os.path.basename(pathname)
+
+
+class ProjectPathRichHandler(RichHandler):
+    """RichHandler whose file:line column shows project-relative paths."""
+
+    # Mirrors RichHandler.render with os.path.basename(record.pathname)
+    # replaced by _display_path; the terminal link keeps the absolute path.
+    def render(
+        self,
+        *,
+        record: logging.LogRecord,
+        traceback: Any,
+        message_renderable: Any,
+    ) -> Any:
+        level = self.get_level_text(record)
+        time_format = None if self.formatter is None else self.formatter.datefmt
+        log_time = datetime.fromtimestamp(record.created)
+
+        return self._log_render(
+            self.console,
+            [message_renderable] if not traceback else [message_renderable, traceback],
+            log_time=log_time,
+            time_format=time_format,
+            level=level,
+            path=_display_path(record.pathname),
+            line_no=record.lineno,
+            link_path=record.pathname if self.enable_link_path else None,
+        )
 
 
 def setup_logger(
@@ -70,7 +136,7 @@ def setup_logger(
     # shared console so log lines coordinate with live progress bars; piped or
     # CI output automatically degrades to plain text without ANSI escapes.
     if local_rank in log_ranks:
-        ch = RichHandler(
+        ch = ProjectPathRichHandler(
             console=get_console(),
             show_time=True,
             show_path=True,
