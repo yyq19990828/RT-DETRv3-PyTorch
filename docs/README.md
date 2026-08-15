@@ -4,6 +4,7 @@
 
 ## 分区
 
+- [文档站](https://yyq19990828.github.io/DETR-series/)：本目录内容的在线站点(快速开始、使用手册、模型文档与 API 参考),由 `mkdocs.yml` 与 `Docs` workflow 构建部署;`api/` 分区的页面由 mkdocstrings 从 `src/detrs` 自动生成。
 - [`guides/`](guides/README.md)：面向模型用户的安装、checkpoint、训练、评估、推理、转换与导出流程。
 - [`development/`](development/README.md)：面向维护者的测试、质量、文档治理和发布检查。
 - [`migrations/`](migrations/README.md)：跨模型复用的 PaddlePaddle 到 PyTorch 迁移知识，包括框架语义对比、权重转换规则、注册与配置行为、训练与数值验证方法及排错经验。内容不绑定某个具体模型。

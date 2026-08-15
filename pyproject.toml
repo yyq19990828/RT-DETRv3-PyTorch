@@ -62,6 +62,12 @@ dev = [
     "types-PyYAML>=6.0",
     "visualdl>=2.2",
 ]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+    "ruff>=0.15",
+]
 export = [
     "onnx>=1.16",
     "onnxruntime>=1.18,<1.20; python_version < '3.10'",
@@ -102,7 +108,7 @@ teacher = [
 detrs = "detrs.cli.main:main"
 
 [project.urls]
-Documentation = "https://github.com/yyq19990828/DETR-series/tree/main/docs"
+Documentation = "https://yyq19990828.github.io/DETR-series/"
 Issues = "https://github.com/yyq19990828/DETR-series/issues"
 Repository = "https://github.com/yyq19990828/DETR-series"
 

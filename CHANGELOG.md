@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Chinese documentation site for GitHub Pages (MkDocs Material): quick start,
+  curated user/model/migration navigation, and mkdocstrings-generated API
+  reference for every `detrs` subpackage. The new `Docs` workflow builds with
+  `uv sync --extra docs` and `mkdocs build --strict`, and `scripts/docs_hooks.py`
+  rewrites docs links that escape `docs/` into absolute GitHub URLs at build
+  time so existing documents remain unchanged.
+
 ## [1.0.0] - 2026-08-15
 
 First stable release. The repository has grown from the RT-DETRv3

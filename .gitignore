@@ -71,6 +71,9 @@ htmlcov/
 .hypothesis/
 *.cover
 
+# Docs site build output
+site/
+
 # Jupyter Notebook
 .ipynb_checkpoints/
 

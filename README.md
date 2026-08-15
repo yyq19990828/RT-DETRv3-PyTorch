@@ -112,6 +112,7 @@ uv run --extra quality python scripts/check_quality.py
 
 ## 文档导航
 
+- [文档站](https://yyq19990828.github.io/DETR-series/):快速开始、使用手册、模型文档与自动生成 API 参考的在线站点。
 - [使用指南](docs/guides/README.md):安装、模型资产、训练、评估、推理、转换与导出。
 - [模型文档](docs/models/README.md):当前支持合同、逐变体指标、验证报告与证据索引。
 - [迁移经验](docs/migrations/README.md):框架语义、配置、权重转换、训练验证和排错。

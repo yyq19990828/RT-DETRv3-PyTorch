@@ -1,0 +1,113 @@
+site_name: DETR-series
+site_url: https://yyq19990828.github.io/DETR-series/
+site_description: >-
+  DETR 系列实时目标检测模型的统一 PyTorch 实现:RT-DETRv3、D-FINE、DEIM、RT-DETRv4
+  与 DEIMv2,六个模型族共享同一训练、评估、推理与部署运行时。
+repo_url: https://github.com/yyq19990828/DETR-series
+repo_name: yyq19990828/DETR-series
+docs_dir: docs
+
+# 根 README.md 是仓库文档索引,站点首页由 index.md 承担;其余 README.md 仍作为各分区首页。
+exclude_docs: /README.md
+
+# 构建期把逃逸出 docs/ 的相对链接(configs/、src/、ROADMAP.md 等)改写为 GitHub 绝对 URL
+hooks:
+  - scripts/docs_hooks.py
+
+# plans/、archive/、development/ 及维护者向的验证文档会被构建(保证站内链接可达),
+# 但不出现在导航中。
+nav:
+  - 首页: index.md
+  - 快速开始: guides/quickstart.md
+  - 使用指南: guides/README.md
+  - 模型文档:
+      - 模型总览: models/README.md
+      - RT-DETRv3:
+          - 支持与合同: models/rtdetrv3/README.md
+          - 配置指南: models/rtdetrv3/configuration-guide.md
+          - CLI 与导出: models/rtdetrv3/cli-and-export.md
+          - 已知限制: models/rtdetrv3/limitations.md
+          - 指标记录: models/rtdetrv3/metrics.md
+      - D-FINE:
+          - 支持与合同: models/dfine/README.md
+          - 指标记录: models/dfine/metrics.md
+      - DEIM:
+          - 支持与合同: models/deim/README.md
+          - 指标记录: models/deim/metrics.md
+      - RT-DETRv4:
+          - 支持与合同: models/rtdetrv4/README.md
+          - 指标记录: models/rtdetrv4/metrics.md
+      - DEIMv2:
+          - 支持与合同: models/deimv2/README.md
+          - 指标记录: models/deimv2/metrics.md
+  - API 参考:
+      - 总览: api/index.md
+      - 核心注册与配置: api/core.md
+      - 命令行入口: api/cli.md
+      - 数据管道: api/data.md
+      - 训练引擎: api/engine.md
+      - 模型结构:
+          - 模块总览: api/modeling.md
+          - 架构: api/modeling-architectures.md
+          - 骨干网络: api/modeling-backbones.md
+          - 检测头: api/modeling-heads.md
+          - Transformer 模块: api/modeling-transformers.md
+          - 标签分配: api/modeling-assigners.md
+          - 损失函数: api/modeling-losses.md
+          - 教师模型: api/modeling-teachers.md
+      - 优化器与 EMA: api/optimizer.md
+      - 评估指标: api/metrics.md
+      - 部署导出: api/deploy.md
+      - 权重转换: api/conversion.md
+      - 工具函数: api/utils.md
+  - 迁移经验:
+      - 故障排查: migrations/troubleshooting.md
+      - 数据集扩展: migrations/dataset-extension.md
+      - 权重转换协议: migrations/weight-conversion.md
+      - 注册与配置语义: migrations/registry-and-configuration.md
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.top
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+
+plugins:
+  # 免费版 Material 无内置中文分词,这里用逐字切分让中文检索可用;
+  # 精确分词需要 Material Insiders 的 jieba 支持。
+  - search:
+      separator: '[\s\-\.]+|(?=[\u3400-\u9fff])'
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            # src/detrs 的 docstring 覆盖尚不完整,先渲染完整签名与成员清单
+            show_if_no_docstring: true
+            show_source: false
+            separate_signature: true
+            show_signature_annotations: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      # 保留中文标题字符的锚点 slug,小写以匹配 GitHub 风格锚点
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+      permalink: true

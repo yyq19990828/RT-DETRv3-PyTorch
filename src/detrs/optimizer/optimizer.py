@@ -102,7 +102,7 @@ class CosineDecay(object):
             the last few epochs. Default: 0.
 
     Note:
-        In PyTorch, base_lr is automatically retrieved from optimizer.param_groups[0]['lr'].
+        In PyTorch, base_lr is automatically retrieved from `optimizer.param_groups[0]["lr"]`.
         The scheduler binds to the optimizer and modifies its learning rate directly.
     """
 
@@ -158,7 +158,7 @@ class PiecewiseDecay(object):
         use_warmup (bool): Whether to use warmup. Default: True.
 
     Note:
-        In PyTorch, base_lr is automatically retrieved from optimizer.param_groups[0]['lr'].
+        In PyTorch, base_lr is automatically retrieved from `optimizer.param_groups[0]["lr"]`.
         The scheduler binds to the optimizer and modifies its learning rate directly.
     """
 
@@ -461,7 +461,7 @@ class LearningRate(object):
 
     Note:
         In PyTorch, the optimizer holds the actual learning rate via
-        optimizer.param_groups[0]['lr']. The base_lr parameter here is optional
+        `optimizer.param_groups[0]["lr"]`. The base_lr parameter here is optional
         and only used for config compatibility. All schedulers will read the
         learning rate directly from the optimizer.
     """
@@ -496,7 +496,7 @@ class LearningRate(object):
             PyTorch LR scheduler instance (SequentialLR if warmup+decay, otherwise single scheduler)
 
         Note:
-            All schedulers read base_lr from optimizer.param_groups[0]['lr'].
+            All schedulers read base_lr from `optimizer.param_groups[0]["lr"]`.
             Each scheduler class has a build_scheduler() method that returns PyTorch native schedulers.
         """
         assert len(self.schedulers) >= 1
@@ -560,7 +560,7 @@ class OptimizerBuilder:
     Note:
         In PyTorch, learning rate schedulers are bound to optimizers, so the
         base learning rate is set in the optimizer and retrieved by schedulers
-        via optimizer.param_groups[0]['lr'].
+        via `optimizer.param_groups[0]["lr"]`.
     """
 
     __category__ = "optim"
