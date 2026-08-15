@@ -1,0 +1,75 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.0.0] - 2026-08-15
+
+First stable release. The repository has grown from the RT-DETRv3
+Paddle-to-PyTorch migration into DETR-series: six real-time DETR families
+(30 COCO variants) on a single PyTorch runtime.
+
+### Added
+
+- Five new model families with 27 COCO variants, each shipping configs,
+  upstream-hosted checkpoint manifests, full val2017 parity evidence against
+  the published APs, reduced train/resume validation, and ONNX/TorchScript
+  export acceptance:
+  - D-FINE (N/S/M/L/X), official COCO AP 42.8 – 55.8.
+  - DEIM-D-FINE (N/S/M/L/X), official COCO AP 43.0 – 56.5.
+  - DEIM-RT-DETRv2 (S/M/M*/L/X), official COCO AP 49.0 – 55.5.
+  - RT-DETRv4 (S/M/L/X), official COCO AP 49.8 – 57.0.
+  - DEIMv2 (X/L/M/S; N/Pico/Femto/Atto), official COCO AP 23.8 – 57.8,
+    spanning 50.3M down to 0.5M parameters for GPU, edge, and mobile targets.
+- YOLO-format data support end to end: `YOLODataSet` (images/labels folders)
+  and `YOLOMetric` built on the pycocotools protocol, so no COCO annotation
+  file is required for evaluation.
+- List-valued `anno_path` for `COCODataSet`/`LVISDataSet`: multi-folder
+  datasets merge logically with per-file `image_dir` override, identical
+  category-table enforcement, `im_id` offsetting, and a global `sample_num`
+  quota.
+- ONNX and TorchScript inference validated on CUDA; R34/R50 export device
+  matrix closed.
+
+### Changed
+
+- Package and CLI renamed to `detrs` (previously `rtdetrv3_pytorch`), with
+  all workflows unified under one entry point:
+  `detrs train | eval | infer | export | convert | models`.
+- Repository reorganized as DETR-series with a refreshed README and official
+  citations; migration plans, validation reports, and benchmark evidence
+  archived under `docs/`.
+
+### Fixed
+
+- TorchScript exports are now portable across devices.
+- CI now passes on clean checkouts.
+- Teacher asset preflight now runs before the Python version gate.
+
+## [0.1.0] - 2026-07-19
+
+First alpha release of the RT-DETRv3 Paddle-to-PyTorch migration.
+
+### Added
+
+- Installable PyTorch package for Python 3.9–3.12 with Train, Eval, Infer,
+  Convert, Export, and Models CLIs.
+- RT-DETRv3 R18/R34/R50 COCO configurations and converted official
+  checkpoints, plus a separate R18-vd ImageNet backbone initialization
+  checkpoint for training reproduction.
+- Manifest-driven model aliases: `r18`, `r34`, `r50`, and `r18-backbone`.
+- Auditable conversion mapping reports and `SHA256SUMS` for every uploaded
+  binary.
+- ONNX opset 17 and traced TorchScript export paths with documented
+  boundaries.
+- Verified R18 official shared-checkpoint CPU/FP32 COCO val2017 parity:
+  Paddle/PyTorch AP `0.480477300367`/`0.480477134768`, absolute difference
+  `1.65599e-7`.
+
+[Unreleased]: https://github.com/yyq19990828/DETR-series/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/yyq19990828/DETR-series/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/yyq19990828/DETR-series/releases/tag/v0.1.0
