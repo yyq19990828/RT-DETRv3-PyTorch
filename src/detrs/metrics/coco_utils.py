@@ -21,6 +21,7 @@ import sys
 import numpy as np
 
 from ..utils.logger import setup_logger
+from ..utils.stdio import relay_prints
 from .json_results import (
     get_det_poly_res,
     get_det_res,
@@ -124,9 +125,11 @@ def cocoapi_eval(
             from pycocotools.cocoeval import COCOeval
 
     if coco_gt is None:
-        coco_gt = COCO(anno_file)
+        with relay_prints(logger):
+            coco_gt = COCO(anno_file)
     logger.info("Start evaluate...")
-    coco_dt = coco_gt.loadRes(jsonfile)
+    with relay_prints(logger):
+        coco_dt = coco_gt.loadRes(jsonfile)
     if style == "proposal":
         coco_eval = COCOeval(coco_gt, coco_dt, "bbox")
         coco_eval.params.useCats = 0
@@ -135,8 +138,10 @@ def cocoapi_eval(
         coco_eval = COCOeval(coco_gt, coco_dt, style, sigmas, use_area)
     else:
         coco_eval = COCOeval(coco_gt, coco_dt, style)
-    coco_eval.evaluate()
-    coco_eval.accumulate()
+    with relay_prints(logger):
+        coco_eval.evaluate()
+        coco_eval.accumulate()
+    # summarize() prints a multi-column AP table; keep its native layout.
     coco_eval.summarize()
     if classwise:
         # Compute per-category AP and PR curve

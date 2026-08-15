@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
+from detrs.utils.stdio import relay_prints
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,7 +51,8 @@ class COCOEvaluator:
 
         # Load COCO ground truth
         logger.info(f"Loading COCO annotations from {anno_file}")
-        self.coco_gt = COCO(anno_file)
+        with relay_prints(logger):
+            self.coco_gt = COCO(anno_file)
 
         # Storage for predictions
         self.predictions: List[Dict[str, Any]] = []
@@ -145,15 +148,18 @@ class COCOEvaluator:
         results = {}
         try:
             for iou_type in self.iou_types:
-                coco_dt = self.coco_gt.loadRes(pred_file)
+                with relay_prints(logger):
+                    coco_dt = self.coco_gt.loadRes(pred_file)
                 coco_eval = COCOeval(self.coco_gt, coco_dt, iou_type)
 
                 # Set image IDs to evaluate
                 coco_eval.params.imgIds = sorted(set(self.image_ids))
 
                 # Run evaluation
-                coco_eval.evaluate()
-                coco_eval.accumulate()
+                with relay_prints(logger):
+                    coco_eval.evaluate()
+                    coco_eval.accumulate()
+                # summarize() prints a multi-column AP table; keep its layout.
                 coco_eval.summarize()
 
                 # Extract metrics

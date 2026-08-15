@@ -32,6 +32,7 @@ import torch
 
 from ..data.source.category import get_categories
 from ..utils.logger import setup_logger
+from ..utils.stdio import relay_prints
 from .coco_utils import cocoapi_eval, get_infer_results
 
 logger = setup_logger(__name__)
@@ -488,7 +489,8 @@ class YOLOMetric(Metric):
 
                 coco_gt = COCO()
                 coco_gt.dataset = self._build_coco_gt()
-                coco_gt.createIndex()
+                with relay_prints(logger):
+                    coco_gt.createIndex()
                 bbox_stats = cocoapi_eval(
                     output, "bbox", coco_gt=coco_gt, classwise=self.classwise
                 )

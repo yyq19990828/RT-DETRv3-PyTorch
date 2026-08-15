@@ -23,6 +23,7 @@ from torch.utils.data import Dataset
 
 from detrs.core.workspace import register, serializable
 from detrs.data import source
+from detrs.utils.stdio import relay_prints
 
 logger = logging.getLogger(__name__)
 
@@ -337,7 +338,8 @@ class ImageFolder(DetDataset):
         if self.anno_path is None:
             raise ValueError("anno_path is required to load images from COCO metadata")
         images_path = []
-        coco = COCO(os.path.join(self.dataset_dir, self.anno_path))
+        with relay_prints(logger):
+            coco = COCO(os.path.join(self.dataset_dir, self.anno_path))
         imgIds = coco.getImgIds(catIds=[])
         for imgId in imgIds:
             filename = coco.loadImgs(imgId)[0]["file_name"]
@@ -353,7 +355,8 @@ class ImageFolder(DetDataset):
         if do_eval:
             if anno_file is None:
                 raise ValueError("anno_path is required when do_eval=True")
-            coco = COCO(anno_file)
+            with relay_prints(logger):
+                coco = COCO(anno_file)
         for image in images:
             assert image != "" and os.path.isfile(image), "Image {} not found".format(
                 image

@@ -21,6 +21,7 @@ except Exception:
 import logging
 
 from detrs.core.workspace import register, serializable
+from detrs.utils.stdio import relay_prints
 
 from .dataset import DetDataset
 
@@ -228,7 +229,8 @@ class COCODataSet(DetDataset):
         from pycocotools.coco import COCO
 
         logger.info(f"Loading COCO annotations from {anno_path}")
-        coco = COCO(anno_path)
+        with relay_prints(logger):
+            coco = COCO(anno_path)
 
         # Get image and category IDs
         img_ids = coco.getImgIds()

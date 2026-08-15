@@ -26,6 +26,8 @@ import logging
 import os
 from typing import Dict, Optional, Tuple
 
+from detrs.utils.stdio import relay_prints
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["get_categories"]
@@ -62,7 +64,8 @@ def get_categories(
                 try:
                     from pycocotools.coco import COCO
 
-                    coco = COCO(anno_file)
+                    with relay_prints(logger):
+                        coco = COCO(anno_file)
                     cats = coco.loadCats(coco.getCatIds())
 
                     clsid2catid = {i: cat["id"] for i, cat in enumerate(cats)}

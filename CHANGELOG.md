@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   console): colored levels, `file:line` source paths, rich tracebacks, and
   coordinated interleaving with live progress bars. Log files keep the
   original Paddle-style format and piped/CI output stays plain text.
+- Relayed third-party pycocotools progress prints (annotation loading,
+  `Running per image evaluation...`) through the structured logger via
+  `detrs.utils.stdio.relay_prints`, so evaluation output shares the rich log
+  format and shows each line's third-party origin (`coco.py:79`). Lines are
+  relayed as they are printed, and the native multi-column AP summary table
+  is left untouched. Dataset-build chatter now goes to module loggers that
+  have no console handler, so it is silent instead of interleaved bare text.
+- Replaced deprecated `torch.cuda.amp` usage (trainer `GradScaler`, matcher
+  autocast) with the `torch.amp` equivalents, silencing FutureWarnings at
+  trainer startup and during matcher forward.
 - Beautified `--help` output with rich-argparse. A custom formatter keeps
   argparse's native lowercase `usage:`/`options:` headings so tests, piped
   output, and the generated CLI reference page stay byte-compatible with the
