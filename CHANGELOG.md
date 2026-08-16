@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Made English the primary repository README (CI/Docs/License/Python badges,
+  full translation of every section) and moved the Chinese README to
+  `README.zh-CN.md` with a GitHub language switcher link, so English search
+  queries can index the project; the repository description and topics were
+  updated on GitHub accordingly.
 - Chinese documentation site for GitHub Pages (MkDocs Material): quick start,
   curated user/model/migration navigation, and mkdocstrings-generated API
   reference for every `detrs` subpackage. The new `Docs` workflow builds with
